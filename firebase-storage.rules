@@ -1,0 +1,27 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload event images
+    match /event-images/{userId}/{eventId}/{fileName} {
+      allow read: if true; // Anyone can read event images
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to upload temporary images
+    match /event-images/{userId}/temp/{fileName} {
+      allow read: if true; // Anyone can read temp images
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to upload profile images
+    match /profile-images/{userId}/{fileName} {
+      allow read: if true; // Anyone can read profile images
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Default rule - deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+} 

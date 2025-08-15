@@ -1,0 +1,533 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Dimensions,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+
+const { width } = Dimensions.get('window');
+
+const TicketScreen = ({ navigation, route }) => {
+  const { event, quantity = 1, purchaseId, qrCode, status } = route.params || {};
+  const { user, userProfile } = useAuth();
+  const [showQR, setShowQR] = useState(true);
+
+  const QRCodePlaceholder = () => (
+    <View style={styles.qrSection}>
+      <View style={styles.qrCodeWrapper}>
+        <View style={styles.qrCode}>
+          <View style={styles.qrPattern}>
+            {Array.from({ length: 12 }, (_, row) => (
+              <View key={row} style={styles.qrRow}>
+                {Array.from({ length: 12 }, (_, col) => (
+                  <View
+                    key={col}
+                    style={[
+                      styles.qrPixel,
+                      {
+                        backgroundColor: Math.random() > 0.5 ? '#000' : '#fff',
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+      <View style={styles.qrLabelContainer}>
+        <Feather name="camera" size={16} color="#6B7280" style={{ marginRight: 8 }} />
+        <Text style={styles.qrLabel}>Scan at venue entrance</Text>
+      </View>
+      {qrCode && (
+        <View style={styles.qrCodeTextContainer}>
+          <Feather name="hash" size={12} color="#9CA3AF" style={{ marginRight: 4 }} />
+          <Text style={styles.qrCodeText}>{qrCode}</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const TicketCard = ({ ticketNumber = 1 }) => (
+    <View style={styles.ticketCard}>
+      <View style={styles.ticketHeader}>
+        <View style={styles.ticketHeaderContent}>
+          <View style={styles.ticketTitleContainer}>
+            <Feather name="tag" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={styles.ticketTitle}>EVENT TICKET</Text>
+          </View>
+          <View style={styles.ticketNumberContainer}>
+            <Feather name="hash" size={14} color="rgba(255, 255, 255, 0.9)" style={{ marginRight: 4 }} />
+            <Text style={styles.ticketNumber}>{(purchaseId || 'TKT-12345') + `-${ticketNumber}`}</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.ticketBody}>
+        <Text style={styles.eventName}>{event?.name || 'Sample Event'}</Text>
+        
+        <View style={styles.ticketDetails}>
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconContainer}>
+              <Feather name="calendar" size={16} color="#10B981" />
+            </View>
+            <Text style={styles.detailLabel}>Date:</Text>
+            <Text style={styles.detailValue}>{event?.date || '2025-09-15'}</Text>
+          </View>
+          
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconContainer}>
+              <Feather name="clock" size={16} color="#F59E0B" />
+            </View>
+            <Text style={styles.detailLabel}>Time:</Text>
+            <Text style={styles.detailValue}>{event?.time || '6:00 PM'}</Text>
+          </View>
+          
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconContainer}>
+              <Feather name="map-pin" size={16} color="#EF4444" />
+            </View>
+            <Text style={styles.detailLabel}>Venue:</Text>
+            <Text style={styles.detailValue}>{event?.location || 'Sample Venue'}</Text>
+          </View>
+          
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconContainer}>
+              <Feather name="dollar-sign" size={16} color="#10B981" />
+            </View>
+            <Text style={styles.detailLabel}>Price:</Text>
+            <Text style={styles.detailValue}>{event?.price || '₵80'}</Text>
+          </View>
+          
+          {status && (
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconContainer}>
+                <Feather 
+                  name={status === 'confirmed' ? 'check-circle' : status === 'used' ? 'clock' : 'x-circle'} 
+                  size={16} 
+                  color={status === 'confirmed' ? '#10B981' : status === 'used' ? '#6B7280' : '#EF4444'} 
+                />
+              </View>
+              <Text style={styles.detailLabel}>Status:</Text>
+              <Text style={[styles.detailValue, styles.statusText, { 
+                color: status === 'confirmed' ? '#10B981' : status === 'used' ? '#6B7280' : '#EF4444' 
+              }]}>
+                {status === 'confirmed' ? 'Confirmed' : status === 'used' ? 'Used' : 'Cancelled'}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {showQR && <QRCodePlaceholder />}
+
+        <View style={styles.attendeeSection}>
+          <View style={styles.attendeeHeader}>
+            <Feather name="user" size={18} color="#6366F1" />
+            <Text style={styles.attendeeLabel}>Attendee:</Text>
+          </View>
+          <View style={styles.attendeeInfo}>
+            <Feather name="user-check" size={16} color="#10B981" style={{ marginRight: 8 }} />
+            <Text style={styles.attendeeName}>
+              {userProfile?.displayName || user?.displayName || 'Attendee'}
+            </Text>
+          </View>
+          <View style={styles.attendeeInfo}>
+            <Feather name="mail" size={16} color="#6B7280" style={{ marginRight: 8 }} />
+            <Text style={styles.attendeeEmail}>
+              {user?.email || 'No email available'}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.ticketFooter}>
+        <Text style={styles.footerText}>Valid for event date only</Text>
+        <Text style={styles.footerText}>Powered by Tikiti</Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Feather name="arrow-left" size={20} color="#6366F1" />
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.headerTitleContainer}>
+          <Feather name="tag" size={20} color="#1F2937" style={{ marginRight: 8 }} />
+          <Text style={styles.headerTitle}>My Ticket{quantity > 1 ? 's' : ''}</Text>
+        </View>
+        
+        <TouchableOpacity style={styles.shareButton}>
+          <Feather name="share-2" size={20} color="#6366F1" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.purchaseConfirmation}>
+          <View style={styles.confirmationIconContainer}>
+            <Feather name="check-circle" size={32} color="#10B981" />
+          </View>
+          <Text style={styles.confirmationTitle}>Purchase Confirmed!</Text>
+          <View style={styles.confirmationTextContainer}>
+            <Feather name="mail" size={16} color="#6B7280" style={{ marginRight: 8 }} />
+            <Text style={styles.confirmationText}>
+              Your ticket{quantity > 1 ? 's have' : ' has'} been sent to your email
+            </Text>
+          </View>
+        </View>
+
+        {Array.from({ length: quantity }, (_, index) => (
+          <TicketCard key={index} ticketNumber={index + 1} />
+        ))}
+
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.walletButton}>
+            <Feather name="credit-card" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={styles.walletButtonText}>Add to Wallet</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.toggleQRButton}
+            onPress={() => setShowQR(!showQR)}
+          >
+            <Feather 
+              name={showQR ? 'eye-off' : 'eye'} 
+              size={18} 
+              color="#6366F1" 
+              style={{ marginRight: 8 }} 
+            />
+            <Text style={styles.toggleQRButtonText}>
+              {showQR ? 'Hide QR' : 'Show QR'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: 'white',
+  },
+  backButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#6366F1',
+    fontWeight: '600',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#212529',
+  },
+  shareButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  shareButtonText: {
+    fontSize: 16,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  purchaseConfirmation: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  confirmationIconContainer: {
+    marginBottom: 12,
+  },
+  confirmationTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#10B981',
+    marginBottom: 12,
+  },
+  confirmationTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  confirmationText: {
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+  },
+  ticketCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  ticketHeader: {
+    backgroundColor: '#007bff',
+    padding: 16,
+  },
+  ticketHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ticketTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  ticketNumber: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  ticketBody: {
+    padding: 20,
+  },
+  eventName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#212529',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  ticketDetails: {
+    marginBottom: 24,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  detailIconContainer: {
+    width: 24,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '600',
+    flex: 1,
+    marginLeft: 8,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '500',
+    flex: 2,
+    textAlign: 'right',
+  },
+  statusText: {
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    fontSize: 12,
+  },
+  qrSection: {
+    alignItems: 'center',
+    marginVertical: 24,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  qrCodeWrapper: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  qrCode: {
+    width: 160,
+    height: 160,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  qrPattern: {
+    flex: 1,
+  },
+  qrRow: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  qrPixel: {
+    flex: 1,
+    margin: 0.5,
+  },
+  qrLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  qrLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  qrCodeTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  qrCodeText: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontFamily: 'monospace',
+    fontWeight: '600',
+  },
+  attendeeSection: {
+    backgroundColor: '#F8FAFC',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  attendeeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  attendeeLabel: {
+    fontSize: 13,
+    color: '#6366F1',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    marginLeft: 8,
+  },
+  attendeeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  attendeeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  attendeeEmail: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  ticketFooter: {
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  footerText: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  walletButton: {
+    flex: 1,
+    backgroundColor: '#6366F1',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  walletButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  toggleQRButton: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#6366F1',
+  },
+  toggleQRButtonText: {
+    color: '#6366F1',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // New icon container styles
+  ticketTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ticketNumberContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+
+});
+
+export default TicketScreen;
