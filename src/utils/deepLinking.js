@@ -7,7 +7,11 @@ export const linkingConfig = {
     'tikiti://',
     'https://tikiti.com',
     'https://www.tikiti.com',
-    'https://tikiti-95x58v7y9-lansahs-projects-ff07a47b.vercel.app' // Vercel deployment
+    'https://tikiti-nfnqign7m-lansahs-projects-ff07a47b.vercel.app', // Current simple HTML deployment (fixed routing)
+    'https://tikiti-l6rq2k9uc-lansahs-projects-ff07a47b.vercel.app', // Previous debug version
+    'https://tikiti-67zzjidwd-lansahs-projects-ff07a47b.vercel.app', // Previous deployment
+    'https://tikiti-o9kg3ukbh-lansahs-projects-ff07a47b.vercel.app', // Previous deployment
+    'https://tikiti-95x58v7y9-lansahs-projects-ff07a47b.vercel.app' // Legacy Vercel deployment
   ],
   config: {
     screens: {
@@ -80,9 +84,8 @@ export const handleDeepLink = (url, navigation) => {
 
 // Generate shareable event link
 export const generateEventLink = (eventId) => {
-  // For testing: use Vercel deployment, for production: use tikiti.com
-  const isProduction = false; // Change to true for production
-  const domain = isProduction ? 'https://tikiti.com' : 'https://tikiti-95x58v7y9-lansahs-projects-ff07a47b.vercel.app';
+  // Use current Vercel deployment for simple HTML version
+  const domain = 'https://tikiti-nfnqign7m-lansahs-projects-ff07a47b.vercel.app';
   return `${domain}/events/${eventId}`;
 };
 

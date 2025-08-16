@@ -11,8 +11,8 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="Tikiti - Discover Amazing Events" id="og-title">
     <meta property="og:description" content="Join amazing events and connect with your community" id="og-description">
-    <meta property="og:image" content="https://tikiti-ozrqqbnjt-lansahs-projects-ff07a47b.vercel.app/og-image.png" id="og-image">
-    <meta property="og:url" content="https://tikiti-ozrqqbnjt-lansahs-projects-ff07a47b.vercel.app" id="og-url">
+    <meta property="og:image" content="https://tikiti-o9kg3ukbh-lansahs-projects-ff07a47b.vercel.app/og-image.png" id="og-image">
+    <meta property="og:url" content="https://tikiti-o9kg3ukbh-lansahs-projects-ff07a47b.vercel.app" id="og-url">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     
@@ -20,7 +20,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Tikiti - Discover Amazing Events" id="twitter-title">
     <meta name="twitter:description" content="Join amazing events and connect with your community" id="twitter-description">
-    <meta name="twitter:image" content="https://tikiti-ozrqqbnjt-lansahs-projects-ff07a47b.vercel.app/og-image.png" id="twitter-image">
+    <meta name="twitter:image" content="https://tikiti-o9kg3ukbh-lansahs-projects-ff07a47b.vercel.app/og-image.png" id="twitter-image">
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
@@ -385,27 +385,57 @@
         // Get event ID from URL
         function getEventId() {
             const path = window.location.pathname;
-            const match = path.match(/\/events\/(.+)/);
-            return match ? match[1] : null;
+            console.log('🔍 Full pathname:', path);
+            
+            // Try different URL patterns
+            let match = path.match(/\/events\/(.+)$/);
+            if (!match) {
+                // Try without trailing slash
+                match = path.match(/\/events\/([^\/]+)/);
+            }
+            if (!match) {
+                // Try with query parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const eventIdFromQuery = urlParams.get('eventId');
+                if (eventIdFromQuery) {
+                    return eventIdFromQuery;
+                }
+            }
+            
+            const eventId = match ? match[1] : null;
+            console.log('🔍 Extracted event ID:', eventId);
+            console.log('🔍 Match result:', match);
+            
+            return eventId;
         }
         
         // Load event data
         async function loadEvent() {
             const eventId = getEventId();
+            console.log('🔍 Extracted Event ID:', eventId);
+            console.log('🔍 Current URL:', window.location.href);
+            console.log('🔍 Pathname:', window.location.pathname);
+            
             if (!eventId) {
+                console.error('❌ No event ID found in URL');
                 showError();
                 return;
             }
             
             try {
+                console.log('🔥 Connecting to Firebase...');
                 const doc = await db.collection('events').doc(eventId).get();
+                console.log('📄 Document exists:', doc.exists);
+                
                 if (doc.exists) {
+                    console.log('✅ Event data:', doc.data());
                     displayEvent(doc.data(), eventId);
                 } else {
+                    console.error('❌ Event not found in database');
                     showError();
                 }
             } catch (error) {
-                console.error('Error loading event:', error);
+                console.error('❌ Error loading event:', error);
                 showError();
             }
         }
@@ -619,6 +649,23 @@
         function showError() {
             document.getElementById('loading').style.display = 'none';
             document.getElementById('error').style.display = 'block';
+            
+            // Add debug info to error message
+            const errorDiv = document.getElementById('error');
+            errorDiv.innerHTML += `
+                <div style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; font-size: 14px;">
+                    <strong>Debug Info:</strong><br>
+                    URL: ${window.location.href}<br>
+                    Path: ${window.location.pathname}<br>
+                    Event ID: ${getEventId()}<br>
+                    <br>
+                    <strong>Possible Issues:</strong><br>
+                    • Event ID not found in URL<br>
+                    • Event doesn't exist in database<br>
+                    • Firebase connection issue<br>
+                    • Check browser console for more details
+                </div>
+            `;
         }
         
         // Load event when page loads

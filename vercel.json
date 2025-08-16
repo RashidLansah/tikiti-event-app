@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "routes": [
+  "rewrites": [
     {
-      "src": "/events/([^/]+)",
-      "dest": "/api/og.js?eventId=$1"
+      "source": "/events/(.*)",
+      "destination": "/index.html"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/api/og",
+      "destination": "/api/og.js"
     }
   ]
 }
