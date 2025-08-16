@@ -10,9 +10,12 @@ import {
   Platform,
   Image,
   Linking,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
+import { eventService, bookingService } from '../../services/firestoreService';
 
 const { width } = Dimensions.get('window');
 const isWeb = Platform.OS === 'web';
@@ -22,34 +25,46 @@ const EventWebScreen = ({ route, navigation }) => {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [ticketQuantity, setTicketQuantity] = useState(1);
+  
+  // RSVP Form states
+  const [showRSVPForm, setShowRSVPForm] = useState(false);
+  const [submittingRSVP, setSubmittingRSVP] = useState(false);
+  const [rsvpForm, setRSVPForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    gender: '',
+  });
 
-  // Mock event data - in real app, fetch from API using eventId
+  // Fetch real event data from Firestore
   useEffect(() => {
     const fetchEvent = async () => {
-      // Simulate API call
-      setTimeout(() => {
-        const mockEvent = {
-          id: eventId || '1',
-          name: 'Northern Music Festival 2025',
-          date: 'September 15, 2025',
-          time: '6:00 PM - 11:00 PM',
-          location: 'Tamale Cultural Centre, Sports Stadium Road',
-          price: '₵80.00',
-          category: 'Music & Entertainment',
-          description: 'Join us for an unforgettable night of music featuring the biggest stars from Northern Ghana and special guest artists from across West Africa.',
-          organizer: 'Northern Events Ltd.',
-          contactEmail: 'info@northernevents.com',
-          contactPhone: '+233 20 123 4567',
-          totalTickets: 500,
-          soldTickets: 320,
-          availableTickets: 180,
-          status: 'active',
-          eventType: 'paid', // or 'free'
-          shareUrl: `https://tikiti.com/events/${eventId || '1'}`,
-        };
-        setEvent(mockEvent);
+      if (!eventId) {
+        console.error('No eventId provided');
         setLoading(false);
-      }, 1000);
+        return;
+      }
+
+      try {
+        console.log('🌐 Fetching event for web view:', eventId);
+        const eventDoc = await eventService.getById(eventId);
+        
+        if (eventDoc) {
+          console.log('✅ Event loaded for web:', eventDoc.name);
+          setEvent({
+            ...eventDoc,
+            eventType: eventDoc.type, // Map 'type' to 'eventType' for compatibility
+            shareUrl: `https://tikiti.com/events/${eventId}`,
+          });
+        } else {
+          console.error('❌ Event not found:', eventId);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching event:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchEvent();
@@ -57,11 +72,8 @@ const EventWebScreen = ({ route, navigation }) => {
 
   const handleTicketPurchase = () => {
     if (event.eventType === 'free') {
-      Alert.alert(
-        'RSVP Successful!',
-        `You have successfully reserved ${ticketQuantity} spot${ticketQuantity > 1 ? 's' : ''} for ${event.name}. Check your email for confirmation.`,
-        [{ text: 'OK' }]
-      );
+      // Show RSVP form for free events
+      setShowRSVPForm(true);
     } else {
       Alert.alert(
         'Redirecting to Payment',
@@ -69,6 +81,104 @@ const EventWebScreen = ({ route, navigation }) => {
         [{ text: 'Continue' }]
       );
     }
+  };
+
+  const handleRSVPSubmit = async () => {
+    // Validate form
+    if (!rsvpForm.firstName.trim() || !rsvpForm.lastName.trim() || 
+        !rsvpForm.email.trim() || !rsvpForm.phoneNumber.trim() || !rsvpForm.gender) {
+      Alert.alert('Missing Information', 'Please fill in all required fields.');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(rsvpForm.email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
+    setSubmittingRSVP(true);
+
+    try {
+      console.log('📝 Submitting web RSVP for event:', event.id);
+      
+      // Create booking data for web user
+      const bookingData = {
+        eventId: event.id,
+        userId: `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique web user ID
+        quantity: 1, // Free events are limited to 1 spot
+        totalPrice: 0,
+        status: 'confirmed',
+        createdAt: new Date(),
+        userEmail: rsvpForm.email,
+        userName: `${rsvpForm.firstName} ${rsvpForm.lastName}`,
+        registrationType: 'rsvp',
+        // Web user specific data
+        firstName: rsvpForm.firstName,
+        lastName: rsvpForm.lastName,
+        phoneNumber: rsvpForm.phoneNumber,
+        gender: rsvpForm.gender,
+        source: 'web', // Track that this came from web
+        eventName: event.name,
+        eventDate: event.date,
+        eventTime: event.startTime || event.time,
+        eventLocation: event.location || event.address,
+      };
+
+      await bookingService.create(bookingData);
+      
+      console.log('✅ Web RSVP successful');
+      
+      setShowRSVPForm(false);
+      setSubmittingRSVP(false);
+      
+      Alert.alert(
+        'RSVP Confirmed!',
+        `Thank you ${rsvpForm.firstName}! You have successfully registered for ${event.name}. Check your email for confirmation details.`,
+        [{ text: 'OK' }]
+      );
+      
+      // Reset form
+      setRSVPForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phoneNumber: '',
+        gender: '',
+      });
+
+      // Refresh event data to show updated attendee count
+      const updatedEvent = await eventService.getById(eventId);
+      if (updatedEvent) {
+        setEvent({
+          ...updatedEvent,
+          eventType: updatedEvent.type,
+          shareUrl: `https://tikiti.com/events/${eventId}`,
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ Error submitting RSVP:', error);
+      setSubmittingRSVP(false);
+      Alert.alert(
+        'RSVP Failed',
+        'There was an error processing your RSVP. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleRSVPCancel = () => {
+    setShowRSVPForm(false);
+    // Reset form
+    setRSVPForm({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phoneNumber: '',
+      gender: '',
+    });
   };
 
   const handleShare = async () => {
@@ -170,10 +280,18 @@ const EventWebScreen = ({ route, navigation }) => {
       >
         {/* Event Banner */}
         <View style={styles.eventBanner}>
-          <View style={styles.eventImagePlaceholder}>
-            <Feather name="image" size={isWeb ? 64 : 48} color="#9CA3AF" />
-            <Text style={styles.imagePlaceholderText}>Event Poster</Text>
-          </View>
+          {event.imageBase64 ? (
+            <Image
+              source={{ uri: event.imageBase64.startsWith('data:') ? event.imageBase64 : `data:image/jpeg;base64,${event.imageBase64}` }}
+              style={styles.eventImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.eventImagePlaceholder}>
+              <Feather name="image" size={isWeb ? 64 : 48} color="#9CA3AF" />
+              <Text style={styles.imagePlaceholderText}>Event Poster</Text>
+            </View>
+          )}
           
           {/* Status Badge */}
           <View style={[styles.statusBadge, { backgroundColor: '#10B981' }]}>
@@ -314,6 +432,138 @@ const EventWebScreen = ({ route, navigation }) => {
           </View>
         </View>
       </View>
+
+      {/* RSVP Form Modal */}
+      <Modal
+        visible={showRSVPForm}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleRSVPCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={handleRSVPCancel}
+          />
+          
+          <View style={styles.rsvpModalContainer}>
+            {/* Handle bar */}
+            <View style={styles.modalHandle} />
+            
+            {/* Modal content */}
+            <View style={styles.rsvpModalContent}>
+              <Text style={styles.rsvpModalTitle}>Complete Your RSVP</Text>
+              <Text style={styles.rsvpModalSubtitle}>
+                Please provide your details to register for {event?.name}
+              </Text>
+              
+              {/* Form Fields */}
+              <View style={styles.formContainer}>
+                <View style={styles.formRow}>
+                  <View style={styles.formFieldHalf}>
+                    <Text style={styles.formLabel}>First Name *</Text>
+                    <TextInput
+                      style={styles.formInput}
+                      value={rsvpForm.firstName}
+                      onChangeText={(text) => setRSVPForm({...rsvpForm, firstName: text})}
+                      placeholder="Enter first name"
+                      placeholderTextColor={Colors.text.tertiary}
+                    />
+                  </View>
+                  <View style={styles.formFieldHalf}>
+                    <Text style={styles.formLabel}>Last Name *</Text>
+                    <TextInput
+                      style={styles.formInput}
+                      value={rsvpForm.lastName}
+                      onChangeText={(text) => setRSVPForm({...rsvpForm, lastName: text})}
+                      placeholder="Enter last name"
+                      placeholderTextColor={Colors.text.tertiary}
+                    />
+                  </View>
+                </View>
+                
+                <View style={styles.formField}>
+                  <Text style={styles.formLabel}>Email Address *</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={rsvpForm.email}
+                    onChangeText={(text) => setRSVPForm({...rsvpForm, email: text})}
+                    placeholder="Enter email address"
+                    placeholderTextColor={Colors.text.tertiary}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+                
+                <View style={styles.formField}>
+                  <Text style={styles.formLabel}>Phone Number *</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    value={rsvpForm.phoneNumber}
+                    onChangeText={(text) => setRSVPForm({...rsvpForm, phoneNumber: text})}
+                    placeholder="Enter phone number"
+                    placeholderTextColor={Colors.text.tertiary}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                
+                <View style={styles.formField}>
+                  <Text style={styles.formLabel}>Gender *</Text>
+                  <View style={styles.genderContainer}>
+                    {['Male', 'Female', 'Other'].map((gender) => (
+                      <TouchableOpacity
+                        key={gender}
+                        style={[
+                          styles.genderOption,
+                          rsvpForm.gender === gender && styles.genderOptionSelected
+                        ]}
+                        onPress={() => setRSVPForm({...rsvpForm, gender})}
+                      >
+                        <Text style={[
+                          styles.genderOptionText,
+                          rsvpForm.gender === gender && styles.genderOptionTextSelected
+                        ]}>
+                          {gender}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+              
+              {/* Action buttons */}
+              <View style={styles.rsvpModalActions}>
+                <TouchableOpacity 
+                  style={[
+                    styles.rsvpCancelButton,
+                    submittingRSVP && styles.buttonDisabled
+                  ]}
+                  onPress={handleRSVPCancel}
+                  disabled={submittingRSVP}
+                >
+                  <Text style={styles.rsvpCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.rsvpSubmitButton,
+                    submittingRSVP && styles.rsvpSubmitButtonLoading
+                  ]}
+                  onPress={handleRSVPSubmit}
+                  disabled={submittingRSVP}
+                >
+                  {submittingRSVP ? (
+                    <Text style={styles.rsvpSubmitText}>Submitting...</Text>
+                  ) : (
+                    <Text style={styles.rsvpSubmitText}>Complete RSVP</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -412,6 +662,12 @@ const styles = StyleSheet.create({
     position: 'relative',
     margin: Spacing[5],
     marginBottom: 0,
+  },
+  eventImage: {
+    height: isWeb ? 280 : 200,
+    width: '100%',
+    borderRadius: BorderRadius['2xl'],
+    backgroundColor: Colors.background.tertiary,
   },
   eventImagePlaceholder: {
     height: isWeb ? 280 : 200,
@@ -655,6 +911,162 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
+  },
+
+  // RSVP Form Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    flex: 1,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.gray[300],
+    borderRadius: BorderRadius.full,
+    alignSelf: 'center',
+    marginBottom: Spacing[4],
+  },
+  rsvpModalContainer: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: BorderRadius['3xl'],
+    borderTopRightRadius: BorderRadius['3xl'],
+    paddingTop: Spacing[3],
+    paddingBottom: Spacing[8],
+    paddingHorizontal: Spacing[6],
+    ...Shadows['2xl'],
+    maxHeight: '90%',
+    ...(isWeb && {
+      maxWidth: 600,
+      alignSelf: 'center',
+      borderRadius: BorderRadius['3xl'],
+      marginTop: 50,
+    }),
+  },
+  rsvpModalContent: {
+    flex: 1,
+  },
+  rsvpModalTitle: {
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginBottom: Spacing[2],
+  },
+  rsvpModalSubtitle: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: Spacing[6],
+    lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.base,
+  },
+  formContainer: {
+    flex: 1,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: Spacing[3],
+    marginBottom: Spacing[4],
+  },
+  formField: {
+    marginBottom: Spacing[4],
+  },
+  formFieldHalf: {
+    flex: 1,
+  },
+  formLabel: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.primary,
+    marginBottom: Spacing[2],
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    backgroundColor: Colors.white,
+    ...Shadows.sm,
+    ...(isWeb && {
+      outlineStyle: 'none',
+    }),
+  },
+  genderContainer: {
+    flexDirection: 'row',
+    gap: Spacing[2],
+  },
+  genderOption: {
+    flex: 1,
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
+  genderOptionSelected: {
+    borderColor: Colors.primary[500],
+    backgroundColor: Colors.primary[50],
+  },
+  genderOptionText: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.text.secondary,
+  },
+  genderOptionTextSelected: {
+    color: Colors.primary[600],
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  rsvpModalActions: {
+    flexDirection: 'row',
+    gap: Spacing[4],
+    paddingTop: Spacing[4],
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.light,
+  },
+  rsvpCancelButton: {
+    flex: 1,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[6],
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.gray[100],
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+    ...Shadows.sm,
+  },
+  rsvpCancelText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.gray[700],
+    textAlign: 'center',
+  },
+  rsvpSubmitButton: {
+    flex: 1,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[6],
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.primary[500],
+    ...Shadows.lg,
+  },
+  rsvpSubmitButtonLoading: {
+    backgroundColor: Colors.primary[400],
+  },
+  rsvpSubmitText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.white,
+    textAlign: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
 

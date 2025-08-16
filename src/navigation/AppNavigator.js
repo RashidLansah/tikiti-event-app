@@ -32,8 +32,8 @@ const AppNavigator = () => {
   console.log('  - AccountType:', userProfile?.accountType);
   console.log('  - Loading:', loading);
   
-  // Only use deep link routing for non-authenticated users
-  const initialRoute = !user ? getInitialRoute() : null;
+  // Get initial route (for web deep linking)
+  const initialRoute = getInitialRoute();
   
   // Wait for user profile to load for authenticated users
   // Show loading if we're still loading auth state, OR if we have a user but no profile yet
@@ -51,6 +51,12 @@ const AppNavigator = () => {
 
   // Determine the initial route
   const getInitialRouteName = () => {
+    // If we have a web deep link (like EventWeb), use it regardless of auth state
+    if (initialRoute?.name === 'EventWeb') {
+      console.log('🌐 Web deep link detected, routing to EventWeb');
+      return 'EventWeb';
+    }
+    
     if (!user) {
       return initialRoute?.name || 'Onboarding';
     }
@@ -76,10 +82,10 @@ const AppNavigator = () => {
 
   return (
     <NavigationContainer
-      linking={!user ? linkingConfig : undefined}
+      linking={linkingConfig}
       onReady={() => {
         // Handle any pending deep links when navigation is ready
-        if (Platform.OS === 'web' && !user) {
+        if (Platform.OS === 'web') {
           // Web deep link handling is automatic via linking config
         }
       }}
@@ -124,16 +130,14 @@ const AppNavigator = () => {
           </>
         )}
 
-        {/* Web Event View - Only available for non-authenticated users or specific deep links */}
-        {!user && (
-          <Stack.Screen
-            name="EventWeb"
-            component={require('../screens/Web/EventWebScreen').default}
-            options={{
-              title: 'Event Details',
-            }}
-          />
-        )}
+        {/* Web Event View - Available for all users (public sharing) */}
+        <Stack.Screen
+          name="EventWeb"
+          component={require('../screens/Web/EventWebScreen').default}
+          options={{
+            title: 'Event Details',
+          }}
+        />
         
         {/* Main App Flows - Only shown when authenticated */}
         {user && (

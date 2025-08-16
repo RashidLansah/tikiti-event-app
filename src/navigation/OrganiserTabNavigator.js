@@ -9,6 +9,7 @@ import DashboardScreen from '../screens/Organiser/DashboardScreen';
 import CreateEventScreen from '../screens/Organiser/CreateEventScreen';
 import ScanTicketScreen from '../screens/Organiser/ScanTicketScreen';
 import EventDetailScreen from '../screens/Organiser/EventDetailScreen';
+import EventAttendeesScreen from '../screens/Organiser/EventAttendeesScreen';
 import { createStackNavigator } from '@react-navigation/stack';
 
 const Tab = createBottomTabNavigator();
@@ -24,6 +25,7 @@ const DashboardStack = () => (
     <Stack.Screen name="Dashboard" component={DashboardScreen} />
     <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
     <Stack.Screen name="EventDetail" component={EventDetailScreen} />
+    <Stack.Screen name="EventAttendees" component={EventAttendeesScreen} />
     <Stack.Screen name="ScanTicket" component={ScanTicketScreen} />
   </Stack.Navigator>
 );

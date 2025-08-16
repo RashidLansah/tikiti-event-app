@@ -6,7 +6,8 @@ export const linkingConfig = {
   prefixes: [
     'tikiti://',
     'https://tikiti.com',
-    'https://www.tikiti.com'
+    'https://www.tikiti.com',
+    'https://tikiti-95x58v7y9-lansahs-projects-ff07a47b.vercel.app' // Vercel deployment
   ],
   config: {
     screens: {
@@ -79,40 +80,85 @@ export const handleDeepLink = (url, navigation) => {
 
 // Generate shareable event link
 export const generateEventLink = (eventId) => {
-  // For testing: use IP address for phone access, for production: use tikiti.com
+  // For testing: use Vercel deployment, for production: use tikiti.com
   const isProduction = false; // Change to true for production
-  const domain = isProduction ? 'https://tikiti.com' : 'http://172.20.10.4:8082';
+  const domain = isProduction ? 'https://tikiti.com' : 'https://tikiti-95x58v7y9-lansahs-projects-ff07a47b.vercel.app';
   return `${domain}/events/${eventId}`;
 };
 
 // Share event function
 export const shareEvent = async (event) => {
   const eventUrl = generateEventLink(event.id);
+  
+  // Create event description with details
+  const eventDetails = `📅 ${event.date || 'Date TBA'}
+📍 ${event.location || event.address || 'Location TBA'}
+${event.type === 'free' ? '🎟️ Free Event' : `💰 ${event.price || 'Price TBA'}`}
+
+${event.description || 'Join us for this amazing event!'}`;
+
   const shareData = {
     title: event.name,
-    text: `Check out this event: ${event.name}`,
+    text: `🎉 ${event.name}\n\n${eventDetails}\n\n🔗 Register here:`,
     url: eventUrl,
   };
 
   try {
-    // Web Share API (modern browsers)
+    console.log('🔗 Sharing event:', {
+      title: shareData.title,
+      text: shareData.text,
+      url: shareData.url,
+      finalMessage: `${shareData.text} ${shareData.url}`
+    });
+
+    // Web Share API (modern browsers) - supports images
     if (Platform.OS === 'web' && navigator.share) {
-      await navigator.share(shareData);
+      const webShareData = {
+        title: shareData.title,
+        text: `${shareData.text} ${shareData.url}`,
+      };
+      
+      // Add image if available (Web Share API Level 2)
+      if (event.imageBase64 && navigator.canShare) {
+        try {
+          // Convert base64 to blob for web sharing
+          const base64Data = event.imageBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'image/jpeg' });
+          const file = new File([blob], `${event.name}-poster.jpg`, { type: 'image/jpeg' });
+          
+          if (navigator.canShare({ files: [file] })) {
+            webShareData.files = [file];
+          }
+        } catch (imageError) {
+          console.log('Could not add image to share:', imageError);
+        }
+      }
+      
+      await navigator.share(webShareData);
     } 
     // Mobile sharing
     else if (Platform.OS !== 'web') {
       const { Share } = require('react-native');
-      await Share.share({
-        message: `${shareData.text}\n\n${shareData.url}`,
-        url: shareData.url,
+      
+      const shareOptions = {
+        message: `${shareData.text} ${shareData.url}`,
         title: shareData.title,
-      });
+        // Don't add separate URL field to avoid duplication
+      };
+      
+      await Share.share(shareOptions);
     }
     // Fallback: copy to clipboard
     else {
       if (navigator.clipboard) {
-        await navigator.clipboard.writeText(eventUrl);
-        return { success: true, message: 'Link copied to clipboard!' };
+        await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+        return { success: true, message: 'Event details copied to clipboard!' };
       }
     }
     

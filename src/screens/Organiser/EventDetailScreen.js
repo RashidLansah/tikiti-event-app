@@ -9,35 +9,53 @@ import {
   Dimensions,
   Linking,
   Platform,
+  Image,
+  ActionSheetIOS,
+  Modal,
+  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import ShareButton from '../../components/ShareButton';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
+import { eventService } from '../../services/firestoreService';
 
 const { width } = Dimensions.get('window');
 
 const EventDetailScreen = ({ navigation, route }) => {
   const { event } = route.params || {};
-  const [isActive, setIsActive] = useState(event?.status === 'active');
+  
+  // Ensure we have event data, otherwise navigate back
+  if (!event) {
+    navigation.goBack();
+    return null;
+  }
 
-  // Use actual event data or provide minimal fallback
-  const eventData = event || {
-    id: 'new',
-    name: 'New Event',
-    date: 'TBD',
-    time: 'TBD',
-    location: 'TBD',
-    price: 0,
-    category: 'General',
-    description: 'Event details not available.',
-    organizerName: 'Event Organizer',
-    organizerEmail: '',
-    totalTickets: 0,
-    soldTickets: 0,
-    availableTickets: 0,
-    revenue: 0,
-    status: 'draft',
-    type: 'free',
+  const [isActive, setIsActive] = useState(event?.status === 'active');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Use the real event data directly
+  const eventData = {
+    ...event,
+    // Ensure we have all required fields with proper fallbacks
+    name: event.name || 'Untitled Event',
+    date: event.date || 'Date not set',
+    startTime: event.startTime || 'Time not set',
+    endTime: event.endTime || '',
+    location: event.location || event.address || 'Location not set',
+    price: event.price || 0,
+    category: event.category || 'General',
+    description: event.description || 'No description provided.',
+    organizerName: event.organizerName || 'Event Organizer',
+    organizerEmail: event.organizerEmail || '',
+    totalTickets: event.totalTickets || 0,
+    soldTickets: event.soldTickets || 0,
+    availableTickets: event.availableTickets || event.totalTickets || 0,
+    revenue: (event.soldTickets || 0) * (event.price || 0),
+    status: event.status || 'draft',
+    type: event.type || (event.price > 0 ? 'paid' : 'free'),
+    imageBase64: event.imageBase64 || null,
   };
 
   const handleToggleEventStatus = () => {
@@ -58,7 +76,20 @@ const EventDetailScreen = ({ navigation, route }) => {
   };
 
   const handleViewAttendees = () => {
-    navigation.navigate('EventAttendees', { event: eventData });
+    console.log('🎯 View Attendees button pressed');
+    console.log('📊 Event data being passed:', {
+      id: eventData.id,
+      name: eventData.name,
+      totalTickets: eventData.totalTickets,
+      soldTickets: eventData.soldTickets
+    });
+    
+    try {
+      navigation.navigate('EventAttendees', { event: eventData });
+      console.log('✅ Navigation to EventAttendees initiated');
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+    }
   };
 
   const openGoogleMaps = () => {
@@ -94,21 +125,49 @@ const EventDetailScreen = ({ navigation, route }) => {
   };
 
   const handleDeleteEvent = () => {
-    Alert.alert(
-      'Delete Event',
-      'Are you sure you want to delete this event? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('Event Deleted', 'The event has been successfully deleted.');
-            navigation.goBack();
-          },
-        },
-      ]
-    );
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteEvent = async () => {
+    try {
+      setIsDeleting(true);
+      
+      // Use permanent delete - completely removes the event from Firestore
+      await eventService.deletePermanently(event.id);
+      
+      setShowDeleteModal(false);
+      
+      // Add a small delay for smooth animation
+      setTimeout(() => {
+        Alert.alert(
+          'Event Deleted',
+          `"${eventData.name}" has been permanently deleted.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+      }, 200);
+      
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      setIsDeleting(false);
+      
+      Alert.alert(
+        'Delete Failed',
+        'There was an error deleting the event. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const cancelDeleteEvent = () => {
+    // Prevent canceling while delete is in progress
+    if (!isDeleting) {
+      setShowDeleteModal(false);
+    }
   };
 
   const salesPercentage = Math.round((eventData.soldTickets / eventData.totalTickets) * 100);
@@ -135,10 +194,22 @@ const EventDetailScreen = ({ navigation, route }) => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Event Banner */}
         <View style={styles.eventBanner}>
-          <View style={styles.eventImagePlaceholder}>
-            <Feather name="image" size={48} color="#9CA3AF" />
-            <Text style={styles.imagePlaceholderText}>Event Poster</Text>
-          </View>
+          {eventData.imageBase64 ? (
+            <Image
+              source={{ 
+                uri: eventData.imageBase64.startsWith('data:') 
+                  ? eventData.imageBase64 
+                  : `data:image/jpeg;base64,${eventData.imageBase64}` 
+              }}
+              style={styles.eventImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.eventImagePlaceholder}>
+              <Feather name="image" size={48} color="#9CA3AF" />
+              <Text style={styles.imagePlaceholderText}>Event Poster</Text>
+            </View>
+          )}
           
           {/* Status Badge */}
           <View style={[
@@ -169,7 +240,10 @@ const EventDetailScreen = ({ navigation, route }) => {
             
             <View style={styles.detailRow}>
               <Feather name="clock" size={20} color={Colors.primary[500]} />
-              <Text style={styles.detailText}>{eventData.time}</Text>
+              <Text style={styles.detailText}>
+                {eventData.startTime}
+                {eventData.endTime && ` - ${eventData.endTime}`}
+              </Text>
             </View>
             
             <View style={styles.detailRow}>
@@ -205,27 +279,27 @@ const EventDetailScreen = ({ navigation, route }) => {
             
             <View style={styles.infoGrid}>
               <View style={styles.infoItem}>
-                <Feather name="user" size={16} color="Colors.primary[500]" />
+                <Feather name="user" size={16} color={Colors.primary[500]} />
                 <Text style={styles.infoLabel}>Organizer</Text>
-                <Text style={styles.infoValue}>{eventData.organizer}</Text>
+                <Text style={styles.infoValue}>{eventData.organizerName}</Text>
               </View>
               
               <View style={styles.infoItem}>
-                <Feather name="users" size={16} color="Colors.primary[500]" />
-                <Text style={styles.infoLabel}>Age Restriction</Text>
-                <Text style={styles.infoValue}>{eventData.ageRestriction}</Text>
+                <Feather name="mail" size={16} color={Colors.primary[500]} />
+                <Text style={styles.infoLabel}>Contact</Text>
+                <Text style={styles.infoValue}>{eventData.organizerEmail || 'Not provided'}</Text>
               </View>
               
               <View style={styles.infoItem}>
-                <Feather name="truck" size={16} color="Colors.primary[500]" />
-                <Text style={styles.infoLabel}>Parking</Text>
-                <Text style={styles.infoValue}>{eventData.parking}</Text>
+                <Feather name="tag" size={16} color={Colors.primary[500]} />
+                <Text style={styles.infoLabel}>Category</Text>
+                <Text style={styles.infoValue}>{eventData.category}</Text>
               </View>
               
               <View style={styles.infoItem}>
-                <Feather name="heart" size={16} color="Colors.primary[500]" />
-                <Text style={styles.infoLabel}>Accessibility</Text>
-                <Text style={styles.infoValue}>{eventData.accessibility}</Text>
+                <Feather name="clock" size={16} color={Colors.primary[500]} />
+                <Text style={styles.infoLabel}>Status</Text>
+                <Text style={styles.infoValue}>{eventData.status || 'Active'}</Text>
               </View>
             </View>
           </View>
@@ -277,72 +351,41 @@ const EventDetailScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Ticket Types */}
-        {eventData.ticketTypes && (
-          <View style={styles.ticketTypesContainer}>
-            <Text style={styles.sectionTitle}>Ticket Types & Pricing</Text>
-            
-            {eventData.ticketTypes.map((ticket, index) => (
-              <View key={index} style={styles.ticketTypeCard}>
-                <View style={styles.ticketTypeHeader}>
-                  <View style={styles.ticketTypeInfo}>
-                    <Text style={styles.ticketTypeName}>{ticket.type}</Text>
-                    <Text style={styles.ticketTypePrice}>{ticket.price}</Text>
-                  </View>
-                  <View style={styles.ticketTypeStats}>
-                    <Text style={styles.ticketTypeSold}>{ticket.sold}/{ticket.total}</Text>
-                    <Text style={styles.ticketTypeLabel}>Sold</Text>
-                  </View>
-                </View>
-                <View style={styles.ticketProgressBar}>
-                  <View 
-                    style={[
-                      styles.ticketProgressFill,
-                      { width: `${(ticket.sold / ticket.total) * 100}%` }
-                    ]} 
-                  />
-                </View>
+        {/* Pricing Information */}
+        <View style={styles.pricingContainer}>
+          <Text style={styles.sectionTitle}>Pricing Details</Text>
+          
+          <View style={styles.pricingCard}>
+            <View style={styles.pricingHeader}>
+              <View style={styles.pricingInfo}>
+                <Text style={styles.pricingType}>
+                  {eventData.type === 'free' ? 'Free Event' : 'General Admission'}
+                </Text>
+                <Text style={styles.pricingPrice}>
+                  {eventData.type === 'free' ? 'FREE' : `₵${eventData.price}`}
+                </Text>
               </View>
-            ))}
-          </View>
-        )}
-
-        {/* Amenities & Features */}
-        {eventData.amenities && (
-          <View style={styles.amenitiesContainer}>
-            <Text style={styles.sectionTitle}>Amenities & Features</Text>
-            
-            <View style={styles.amenitiesGrid}>
-              {eventData.amenities.map((amenity, index) => (
-                <View key={index} style={styles.amenityItem}>
-                  <Feather name="check-circle" size={16} color="Colors.success[500]" />
-                  <Text style={styles.amenityText}>{amenity}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Additional Info */}
-            <View style={styles.additionalInfoSection}>
-              <View style={styles.additionalInfoItem}>
-                <Feather name="mail" size={16} color="Colors.primary[500]" />
-                <Text style={styles.additionalInfoLabel}>Contact Email</Text>
-                <Text style={styles.additionalInfoValue}>{eventData.contactEmail}</Text>
-              </View>
-              
-              <View style={styles.additionalInfoItem}>
-                <Feather name="phone" size={16} color="Colors.primary[500]" />
-                <Text style={styles.additionalInfoLabel}>Contact Phone</Text>
-                <Text style={styles.additionalInfoValue}>{eventData.contactPhone}</Text>
-              </View>
-              
-              <View style={styles.additionalInfoItem}>
-                <Feather name="cloud" size={16} color="Colors.primary[500]" />
-                <Text style={styles.additionalInfoLabel}>Venue Type</Text>
-                <Text style={styles.additionalInfoValue}>{eventData.weather}</Text>
+              <View style={styles.pricingStats}>
+                <Text style={styles.pricingSold}>
+                  {eventData.soldTickets || 0}/{eventData.totalTickets || 0}
+                </Text>
+                <Text style={styles.pricingLabel}>
+                  {eventData.type === 'free' ? 'RSVPs' : 'Sold'}
+                </Text>
               </View>
             </View>
+            <View style={styles.pricingProgress}>
+              <View 
+                style={[
+                  styles.pricingProgressFill,
+                  { width: `${salesPercentage}%` }
+                ]} 
+              />
+            </View>
           </View>
-        )}
+        </View>
+
+
 
         {/* Quick Actions */}
         <View style={styles.actionsContainer}>
@@ -353,16 +396,20 @@ const EventDetailScreen = ({ navigation, route }) => {
               style={[styles.actionButton, styles.primaryAction]}
               onPress={handleScanTickets}
             >
-              <Feather name="camera" size={24} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Scan Tickets</Text>
+              <View style={styles.actionIconContainer}>
+                <Feather name="camera" size={20} color={Colors.white} />
+              </View>
+              <Text style={[styles.actionButtonText, { color: Colors.white }]}>Scan Tickets</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={[styles.actionButton, styles.secondaryAction]}
               onPress={handleViewAttendees}
             >
-              <Feather name="users" size={24} color="Colors.primary[500]" />
-              <Text style={[styles.actionButtonText, { color: 'Colors.primary[500]' }]}>View Attendees</Text>
+              <View style={[styles.actionIconContainer, { backgroundColor: Colors.primary[100] }]}>
+                <Feather name="users" size={20} color={Colors.primary[500]} />
+              </View>
+              <Text style={[styles.actionButtonText, { color: Colors.primary[600] }]}>View Attendees</Text>
             </TouchableOpacity>
           </View>
 
@@ -371,8 +418,10 @@ const EventDetailScreen = ({ navigation, route }) => {
               style={[styles.actionButton, styles.secondaryAction]}
               onPress={handleEditEvent}
             >
-              <Feather name="edit-3" size={24} color="Colors.primary[500]" />
-              <Text style={[styles.actionButtonText, { color: 'Colors.primary[500]' }]}>Edit Event</Text>
+              <View style={[styles.actionIconContainer, { backgroundColor: Colors.success[100] }]}>
+                <Feather name="edit-3" size={20} color={Colors.success[500]} />
+              </View>
+              <Text style={[styles.actionButtonText, { color: Colors.success[600] }]}>Edit Event</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -382,12 +431,14 @@ const EventDetailScreen = ({ navigation, route }) => {
               ]}
               onPress={handleToggleEventStatus}
             >
-              <Feather 
-                name={isActive ? 'pause' : 'play'} 
-                size={24} 
-                color="#FFFFFF" 
-              />
-              <Text style={styles.actionButtonText}>
+              <View style={styles.actionIconContainer}>
+                <Feather 
+                  name={isActive ? 'pause' : 'play'} 
+                  size={20} 
+                  color={Colors.white} 
+                />
+              </View>
+              <Text style={[styles.actionButtonText, { color: Colors.white }]}>
                 {isActive ? 'Deactivate' : 'Activate'}
               </Text>
             </TouchableOpacity>
@@ -396,16 +447,103 @@ const EventDetailScreen = ({ navigation, route }) => {
 
         {/* Danger Zone */}
         <View style={styles.dangerZone}>
-          <Text style={styles.dangerTitle}>Danger Zone</Text>
+          <View style={styles.dangerHeader}>
+            <Text style={styles.dangerTitle}>Danger Zone</Text>
+            <Text style={styles.dangerSubtitle}>
+              Once you delete an event, there is no going back. Please be certain.
+            </Text>
+          </View>
+          
           <TouchableOpacity 
             style={styles.deleteButton}
             onPress={handleDeleteEvent}
           >
-            <Feather name="trash-2" size={20} color="#EF4444" />
+            <View style={[styles.actionIconContainer, { backgroundColor: Colors.error[100] }]}>
+              <Feather name="trash-2" size={20} color={Colors.error[500]} />
+            </View>
             <Text style={styles.deleteButtonText}>Delete Event</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Custom Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={cancelDeleteEvent}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={cancelDeleteEvent}
+            disabled={isDeleting}
+          />
+          
+          <View style={styles.modalContainer}>
+            {/* Handle bar */}
+            <View style={styles.modalHandle} />
+            
+            {/* Modal content */}
+            <View style={styles.modalContent}>
+              {/* Icon */}
+              <View style={styles.modalIconContainer}>
+                <Feather name="trash-2" size={32} color={Colors.error[500]} />
+              </View>
+              
+              {/* Title and message */}
+              <View style={styles.modalTextContainer}>
+                <Text style={styles.modalTitle}>Delete Event</Text>
+                <Text style={styles.modalMessage}>
+                  Are you sure you want to delete "{eventData.name}"? This action cannot be undone and all attendee data will be permanently removed.
+                </Text>
+              </View>
+              
+              {/* Action buttons */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity 
+                  style={[
+                    styles.modalCancelButton,
+                    isDeleting && styles.buttonDisabled
+                  ]}
+                  onPress={cancelDeleteEvent}
+                  disabled={isDeleting}
+                >
+                  <Text style={[
+                    styles.modalCancelText,
+                    isDeleting && styles.textDisabled
+                  ]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.modalDeleteButton,
+                    isDeleting && styles.deleteButtonLoading
+                  ]}
+                  onPress={confirmDeleteEvent}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator 
+                        size="small" 
+                        color={Colors.white} 
+                        style={styles.loadingSpinner}
+                      />
+                      <Text style={styles.modalDeleteText}>Deleting...</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.modalDeleteText}>Delete Event</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -449,6 +587,11 @@ const styles = StyleSheet.create({
     position: 'relative',
     margin: Spacing[5],
     marginBottom: 0,
+  },
+  eventImage: {
+    height: 200,
+    width: '100%',
+    borderRadius: BorderRadius['2xl'],
   },
   eventImagePlaceholder: {
     height: 200,
@@ -633,22 +776,32 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing[4],
+    paddingVertical: Spacing[5],
+    paddingHorizontal: Spacing[3],
     borderRadius: BorderRadius.xl,
-    gap: Spacing[2],
+    gap: Spacing[3],
+    minHeight: 80,
+  },
+  actionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   primaryAction: {
     backgroundColor: Colors.primary[500],
     ...Shadows.lg,
   },
   secondaryAction: {
-    backgroundColor: Colors.background.tertiary,
+    backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: Colors.border.medium,
-    ...Shadows.sm,
+    borderColor: Colors.border.light,
+    ...Shadows.md,
   },
   successAction: {
     backgroundColor: Colors.success[500],
@@ -661,7 +814,8 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.semibold,
-    color: Colors.white,
+    textAlign: 'center',
+    lineHeight: Typography.lineHeight.tight * Typography.fontSize.sm,
   },
   dangerZone: {
     ...Components.card.primary,
@@ -670,28 +824,45 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[10],
     padding: Spacing[6],
     borderColor: Colors.error[200],
+    borderWidth: 1,
+    backgroundColor: Colors.error[25],
+  },
+  dangerHeader: {
+    marginBottom: Spacing[6],
+    paddingBottom: Spacing[4],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.error[100],
   },
   dangerTitle: {
-    fontSize: Typography.fontSize.base,
+    fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.bold,
+    color: Colors.error[600],
+    marginBottom: Spacing[2],
+  },
+  dangerSubtitle: {
+    fontSize: Typography.fontSize.sm,
     color: Colors.error[500],
-    marginBottom: 12,
+    lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.sm,
   },
   deleteButton: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.error[50],
-    paddingVertical: Spacing[3],
-    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.white,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[3],
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
     borderColor: Colors.error[200],
-    gap: Spacing[2],
+    gap: Spacing[3],
+    minHeight: 80,
+    ...Shadows.sm,
   },
   deleteButtonText: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.semibold,
-    color: Colors.error[500],
+    color: Colors.error[600],
+    textAlign: 'center',
   },
   // Additional styles for new sections
   additionalDetails: {
@@ -719,7 +890,7 @@ const styles = StyleSheet.create({
     color: Colors.text.tertiary,
     flex: 2,
   },
-  ticketTypesContainer: {
+  pricingContainer: {
     backgroundColor: '#FFFFFF',
     margin: 20,
     marginTop: 0,
@@ -733,55 +904,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  ticketTypeCard: {
+  pricingCard: {
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  ticketTypeHeader: {
+  pricingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  ticketTypeInfo: {
+  pricingInfo: {
     flex: 1,
   },
-  ticketTypeName: {
+  pricingType: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 4,
   },
-  ticketTypePrice: {
+  pricingPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: 'Colors.primary[500]',
+    color: Colors.primary[500],
   },
-  ticketTypeStats: {
+  pricingStats: {
     alignItems: 'flex-end',
   },
-  ticketTypeSold: {
+  pricingSold: {
     fontSize: 16,
     fontWeight: '700',
-    color: 'Colors.success[500]',
+    color: Colors.success[500],
   },
-  ticketTypeLabel: {
+  pricingLabel: {
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
   },
-  ticketProgressBar: {
+  pricingProgress: {
     height: 6,
     backgroundColor: '#E5E7EB',
     borderRadius: 3,
   },
-  ticketProgressFill: {
+  pricingProgressFill: {
     height: '100%',
-    backgroundColor: 'Colors.success[500]',
+    backgroundColor: Colors.success[500],
     borderRadius: 3,
   },
   amenitiesContainer: {
@@ -833,6 +1003,119 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     flex: 2,
+  },
+  
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    flex: 1,
+  },
+  modalContainer: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: BorderRadius['3xl'],
+    borderTopRightRadius: BorderRadius['3xl'],
+    paddingTop: Spacing[3],
+    paddingBottom: Spacing[8],
+    paddingHorizontal: Spacing[6],
+    ...Shadows['2xl'],
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.gray[300],
+    borderRadius: BorderRadius.full,
+    alignSelf: 'center',
+    marginBottom: Spacing[6],
+  },
+  modalContent: {
+    alignItems: 'center',
+  },
+  modalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.error[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing[6],
+    borderWidth: 2,
+    borderColor: Colors.error[100],
+  },
+  modalTextContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing[8],
+    paddingHorizontal: Spacing[4],
+  },
+  modalTitle: {
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.gray[900],
+    marginBottom: Spacing[3],
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.gray[600],
+    textAlign: 'center',
+    lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.base,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: Spacing[4],
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[6],
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.gray[100],
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+    ...Shadows.sm,
+  },
+  modalCancelText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.gray[700],
+    textAlign: 'center',
+  },
+  modalDeleteButton: {
+    flex: 1,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[6],
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.error[500],
+    ...Shadows.lg,
+  },
+  modalDeleteText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.white,
+    textAlign: 'center',
+  },
+  
+  // Loading states
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  textDisabled: {
+    opacity: 0.6,
+  },
+  deleteButtonLoading: {
+    backgroundColor: Colors.error[400],
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingSpinner: {
+    marginRight: Spacing[2],
   },
 });
 

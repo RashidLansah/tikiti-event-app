@@ -33,6 +33,8 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [userBooking, setUserBooking] = useState(null);
   const [checkingBooking, setCheckingBooking] = useState(false);
+  
+  // Note: RSVP form removed - app users use their existing profile data
 
   // Load real-time event data
   useEffect(() => {
@@ -123,6 +125,13 @@ const EventDetailScreen = ({ navigation, route }) => {
       return;
     }
 
+    // For app users, proceed directly since we already have their details
+    await processBooking();
+  };
+
+  // Form handlers removed - direct RSVP for app users
+
+  const processBooking = async () => {
     setBooking(true);
 
     try {
@@ -139,6 +148,11 @@ const EventDetailScreen = ({ navigation, route }) => {
         userEmail: user.email,
         userName: user.displayName || 'Guest',
         registrationType: event.type === 'free' ? 'rsvp' : 'purchase',
+        // For app users, we use their existing profile information
+        firstName: user.displayName?.split(' ')[0] || '',
+        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+        phoneNumber: user.phoneNumber || '',
+        gender: user.gender || '',
       };
 
       await bookingService.create(bookingData);
@@ -151,7 +165,7 @@ const EventDetailScreen = ({ navigation, route }) => {
       // Refresh user booking status
       const newBooking = await bookingService.getUserBookingForEvent(user.uid, event.id);
       setUserBooking(newBooking);
-      
+
       Alert.alert(
         successTitle,
         successMessage,
@@ -267,7 +281,7 @@ const EventDetailScreen = ({ navigation, route }) => {
         <View style={[styles.imagePlaceholder, { backgroundColor: colors.background.secondary }]}>
           <Feather name="image" size={48} color={colors.text.tertiary} />
           <Text style={[styles.imageText, { color: colors.text.tertiary }]}>No image available</Text>
-        </View>
+      </View>
       )}
       
       <View style={[styles.categoryBadge, { backgroundColor: `${colors.primary[500]}E6` }]}>
@@ -328,8 +342,8 @@ const EventDetailScreen = ({ navigation, route }) => {
         <Text style={[styles.emptyStateSubtitle, { color: colors.text.secondary }]}>
           Be the first to share your experience about this event
         </Text>
-      </View>
-    </View>
+            </View>
+            </View>
   );
 
   const renderBookingStatus = () => {
@@ -363,26 +377,26 @@ const EventDetailScreen = ({ navigation, route }) => {
               </Text>
             </>
           )}
-        </TouchableOpacity>
-      </View>
-    );
+      </TouchableOpacity>
+    </View>
+  );
   };
 
   const renderRelatedEvents = () => (
     <View style={[styles.relatedSection, { backgroundColor: colors.background.secondary }]}>
       <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>You Might Also Like</Text>
       {relatedEvents.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {relatedEvents.map((relatedEvent) => (
-            <TouchableOpacity key={relatedEvent.id} style={styles.relatedEventCard}>
-              <View style={styles.relatedEventImage}>
-                <Text style={styles.relatedEventEmoji}>🎪</Text>
-              </View>
-              <Text style={styles.relatedEventName}>{relatedEvent.name}</Text>
-              <Text style={styles.relatedEventPrice}>{relatedEvent.price}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {relatedEvents.map((relatedEvent) => (
+          <TouchableOpacity key={relatedEvent.id} style={styles.relatedEventCard}>
+            <View style={styles.relatedEventImage}>
+              <Text style={styles.relatedEventEmoji}>🎪</Text>
+            </View>
+            <Text style={styles.relatedEventName}>{relatedEvent.name}</Text>
+            <Text style={styles.relatedEventPrice}>{relatedEvent.price}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
       ) : (
         <View style={styles.emptyState}>
           <Feather name="calendar" size={48} color={Colors.text.tertiary} />
@@ -466,9 +480,9 @@ const EventDetailScreen = ({ navigation, route }) => {
               </View>
               
               {event.type !== 'free' && (
-                <View style={styles.quantitySelector}>
+              <View style={styles.quantitySelector}>
                   <Text style={[styles.quantityLabel, { color: colors.text.secondary }]}>Quantity</Text>
-                  <View style={styles.quantityControls}>
+                <View style={styles.quantityControls}>
                   <TouchableOpacity
                     style={[
                       styles.quantityButton,
@@ -544,8 +558,10 @@ const EventDetailScreen = ({ navigation, route }) => {
             </>
           )}
         </TouchableOpacity>
-        </View>
+      </View>
       )}
+
+      {/* RSVP Form Modal removed - app users RSVP directly */}
     </>
   );
 };
@@ -1059,6 +1075,8 @@ const styles = StyleSheet.create({
   buyButtonDisabled: {
     opacity: 0.6,
   },
+  
+  // RSVP form styles removed - direct RSVP for app users
 });
 
 export default EventDetailScreen;

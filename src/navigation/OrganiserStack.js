@@ -6,6 +6,7 @@ import DashboardScreen from '../screens/Organiser/DashboardScreen';
 import CreateEventScreen from '../screens/Organiser/CreateEventScreen';
 import ScanTicketScreen from '../screens/Organiser/ScanTicketScreen';
 import EventAttendeesScreen from '../screens/Organiser/EventAttendeesScreen';
+import EventDetailScreen from '../screens/Organiser/EventDetailScreen';
 
 const Stack = createStackNavigator();
 
@@ -61,6 +62,15 @@ const OrganiserStack = () => {
           headerTintColor: '#fff',
           headerTransparent: true,
           headerTitle: '',
+        }}
+      />
+      
+      <Stack.Screen
+        name="EventDetail"
+        component={EventDetailScreen}
+        options={{
+          title: 'Event Details',
+          headerShown: false,
         }}
       />
       

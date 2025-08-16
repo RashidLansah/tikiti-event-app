@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tikiti - Event Details</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+    
+    <!-- Open Graph meta tags for better social sharing -->
+    <meta property="og:site_name" content="Tikiti">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Tikiti - Discover Amazing Events" id="og-title">
+    <meta property="og:description" content="Join amazing events and connect with your community" id="og-description">
+    <meta property="og:image" content="https://tikiti-ozrqqbnjt-lansahs-projects-ff07a47b.vercel.app/og-image.png" id="og-image">
+    <meta property="og:url" content="https://tikiti-ozrqqbnjt-lansahs-projects-ff07a47b.vercel.app" id="og-url">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tikiti - Discover Amazing Events" id="twitter-title">
+    <meta name="twitter:description" content="Join amazing events and connect with your community" id="twitter-description">
+    <meta name="twitter:image" content="https://tikiti-ozrqqbnjt-lansahs-projects-ff07a47b.vercel.app/og-image.png" id="twitter-image">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .tagline {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .event-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .event-image {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 0;
+        }
+        
+        .event-image-placeholder {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .event-content {
+            padding: 30px;
+        }
+        
+        .event-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .event-category {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        
+        .event-details {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .detail-icon {
+            width: 20px;
+            height: 20px;
+            color: #667eea;
+        }
+        
+        .detail-text {
+            font-size: 1rem;
+            color: #4a5568;
+        }
+        
+        .event-description {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .description-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .rsvp-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        
+        .rsvp-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #2d3748;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .gender-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        
+        .gender-option {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .gender-option.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+        
+        .rsvp-button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+        
+        .rsvp-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .rsvp-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 50px;
+            color: white;
+        }
+        
+        .success-message {
+            background: #48bb78;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .download-app {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .download-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .download-subtitle {
+            color: #718096;
+            margin-bottom: 20px;
+        }
+        
+        .download-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .download-button {
+            background: #2d3748;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .download-button:hover {
+            background: #4a5568;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .event-title {
+                font-size: 1.5rem;
+            }
+            
+            .event-image, .event-image-placeholder {
+                height: 200px;
+            }
+            
+            .event-content {
+                padding: 20px;
+            }
+            
+            .download-buttons {
+                flex-direction: column;
+            }
+            
+            .logo {
+                font-size: 2rem;
+            }
+            
+            .tagline {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎫 Tikiti</div>
+            <div class="tagline">Discover Amazing Events</div>
+        </div>
+        
+        <div id="loading" class="loading">
+            <h2>Loading event details...</h2>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            <h2>Event Not Found</h2>
+            <p>The event you're looking for doesn't exist or has been removed.</p>
+        </div>
+        
+        <div id="event-content" style="display: none;">
+            <!-- Event details will be populated here -->
+        </div>
+        
+        <div class="download-app">
+            <div class="download-title">Get the Tikiti App</div>
+            <div class="download-subtitle">Discover more events and manage your tickets</div>
+            <div class="download-buttons">
+                <a href="#" class="download-button">📱 Download for iOS</a>
+                <a href="#" class="download-button">🤖 Download for Android</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration - Your actual config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxY-IGHevGAi7tvOGZ9V4VwFhU28zCKQc",
+            authDomain: "tikiti-45ac4.firebaseapp.com",
+            projectId: "tikiti-45ac4",
+            storageBucket: "tikiti-45ac4.firebasestorage.app",
+            messagingSenderId: "843705368074",
+            appId: "1:843705368074:ios:15f123d0e423a5a0b069f3"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Get event ID from URL
+        function getEventId() {
+            const path = window.location.pathname;
+            const match = path.match(/\/events\/(.+)/);
+            return match ? match[1] : null;
+        }
+        
+        // Load event data
+        async function loadEvent() {
+            const eventId = getEventId();
+            if (!eventId) {
+                showError();
+                return;
+            }
+            
+            try {
+                const doc = await db.collection('events').doc(eventId).get();
+                if (doc.exists) {
+                    displayEvent(doc.data(), eventId);
+                } else {
+                    showError();
+                }
+            } catch (error) {
+                console.error('Error loading event:', error);
+                showError();
+            }
+        }
+        
+        // Update meta tags for social sharing
+        function updateMetaTags(event) {
+            // Update page title
+            document.title = `${event.name} - Tikiti`;
+            
+            // Update Open Graph tags
+            const ogTitle = document.querySelector('meta[property="og:title"]');
+            const ogDescription = document.querySelector('meta[property="og:description"]');
+            const ogImage = document.querySelector('meta[property="og:image"]');
+            
+            if (ogTitle) ogTitle.content = event.name;
+            if (ogDescription) ogDescription.content = event.description || `Join us for ${event.name} on ${event.date}`;
+            if (ogImage && event.imageBase64) {
+                ogImage.content = event.imageBase64.startsWith('data:') ? event.imageBase64 : 'data:image/jpeg;base64,' + event.imageBase64;
+            }
+            
+            // Update Twitter Card tags
+            const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+            const twitterDescription = document.querySelector('meta[name="twitter:description"]');
+            const twitterImage = document.querySelector('meta[name="twitter:image"]');
+            
+            if (twitterTitle) twitterTitle.content = event.name;
+            if (twitterDescription) twitterDescription.content = event.description || `Join us for ${event.name} on ${event.date}`;
+            if (twitterImage && event.imageBase64) {
+                twitterImage.content = event.imageBase64.startsWith('data:') ? event.imageBase64 : 'data:image/jpeg;base64,' + event.imageBase64;
+            }
+        }
+        
+        // Display event
+        function displayEvent(event, eventId) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('event-content').style.display = 'block';
+            
+            // Update meta tags for better social sharing
+            updateMetaTags(event);
+            
+            const content = `
+                <div class="event-card">
+                    ${event.imageBase64 ? 
+                        `<img src="${event.imageBase64.startsWith('data:') ? event.imageBase64 : 'data:image/jpeg;base64,' + event.imageBase64}" class="event-image" alt="${event.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                         <div class="event-image-placeholder" style="display: none;">🎉</div>` :
+                        '<div class="event-image-placeholder">🎉</div>'
+                    }
+                    
+                    <div class="event-content">
+                        <h1 class="event-title">${event.name}</h1>
+                        <div class="event-category">${event.category || 'Event'}</div>
+                        
+                        <div class="event-details">
+                            <div class="detail-item">
+                                <span class="detail-icon">📅</span>
+                                <span class="detail-text">${event.date}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">🕐</span>
+                                <span class="detail-text">${event.startTime || event.time}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">📍</span>
+                                <span class="detail-text">${event.location || event.address}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">🎫</span>
+                                <span class="detail-text">${event.type === 'free' ? 'Free Event' : event.price}</span>
+                            </div>
+                        </div>
+                        
+                        ${event.description ? `
+                            <div class="event-description">
+                                <div class="description-title">About This Event</div>
+                                <div>${event.description}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${event.type === 'free' ? `
+                            <div class="rsvp-section">
+                                <div class="rsvp-title">RSVP for Free</div>
+                                <form id="rsvp-form">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">First Name *</label>
+                                            <input type="text" class="form-input" id="firstName" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Last Name *</label>
+                                            <input type="text" class="form-input" id="lastName" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">Email Address *</label>
+                                        <input type="email" class="form-input" id="email" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">Phone Number *</label>
+                                        <input type="tel" class="form-input" id="phone" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="form-label">Gender *</label>
+                                        <div class="gender-options">
+                                            <div class="gender-option" data-gender="Male">Male</div>
+                                            <div class="gender-option" data-gender="Female">Female</div>
+                                            <div class="gender-option" data-gender="Other">Other</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="submit" class="rsvp-button">Complete RSVP</button>
+                                </form>
+                            </div>
+                        ` : `
+                            <div class="rsvp-section">
+                                <div class="rsvp-title">Get Tickets</div>
+                                <p style="text-align: center; margin-bottom: 20px;">Download the Tikiti app to purchase tickets for this event.</p>
+                                <button class="rsvp-button" onclick="alert('Download the Tikiti app to purchase tickets!')">Buy Tickets in App</button>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('event-content').innerHTML = content;
+            
+            // Set up form handlers if it's a free event
+            if (event.type === 'free') {
+                setupRSVPForm(eventId, event);
+            }
+        }
+        
+        // Setup RSVP form
+        function setupRSVPForm(eventId, event) {
+            // Gender selection
+            document.querySelectorAll('.gender-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.gender-option').forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                });
+            });
+            
+            // Form submission
+            document.getElementById('rsvp-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const firstName = document.getElementById('firstName').value.trim();
+                const lastName = document.getElementById('lastName').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const phone = document.getElementById('phone').value.trim();
+                const selectedGender = document.querySelector('.gender-option.selected');
+                
+                if (!firstName || !lastName || !email || !phone || !selectedGender) {
+                    alert('Please fill in all required fields.');
+                    return;
+                }
+                
+                const button = document.querySelector('.rsvp-button');
+                button.disabled = true;
+                button.textContent = 'Submitting...';
+                
+                try {
+                    // Create booking
+                    await db.collection('bookings').add({
+                        eventId: eventId,
+                        userId: `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        quantity: 1,
+                        totalPrice: 0,
+                        status: 'confirmed',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        userEmail: email,
+                        userName: `${firstName} ${lastName}`,
+                        registrationType: 'rsvp',
+                        firstName: firstName,
+                        lastName: lastName,
+                        phoneNumber: phone,
+                        gender: selectedGender.dataset.gender,
+                        source: 'web',
+                        eventName: event.name,
+                        eventDate: event.date,
+                        eventTime: event.startTime || event.time,
+                        eventLocation: event.location || event.address
+                    });
+                    
+                    // Update event attendee count
+                    await db.collection('events').doc(eventId).update({
+                        soldTickets: firebase.firestore.FieldValue.increment(1)
+                    });
+                    
+                    // Show success message
+                    document.querySelector('.rsvp-section').innerHTML = `
+                        <div class="success-message">
+                            <h3>🎉 RSVP Confirmed!</h3>
+                            <p>Thank you ${firstName}! You have successfully registered for ${event.name}.</p>
+                            <p>Check your email for confirmation details.</p>
+                        </div>
+                    `;
+                    
+                } catch (error) {
+                    console.error('Error submitting RSVP:', error);
+                    alert('There was an error processing your RSVP. Please try again.');
+                    button.disabled = false;
+                    button.textContent = 'Complete RSVP';
+                }
+            });
+        }
+        
+        // Show error
+        function showError() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        }
+        
+        // Load event when page loads
+        document.addEventListener('DOMContentLoaded', loadEvent);
+    </script>
+</body>
+</html>
