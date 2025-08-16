@@ -165,6 +165,14 @@ const EventDetailScreen = ({ navigation, route }) => {
       // Refresh user booking status
       const newBooking = await bookingService.getUserBookingForEvent(user.uid, event.id);
       setUserBooking(newBooking);
+      
+      // Update the event state to reflect new booking numbers
+      if (event?.id) {
+        const updatedEvent = await eventService.getById(event.id);
+        if (updatedEvent) {
+          setEvent(updatedEvent);
+        }
+      }
 
       Alert.alert(
         successTitle,

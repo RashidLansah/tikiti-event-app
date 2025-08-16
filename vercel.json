@@ -6,6 +6,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/ticket-pdf",
+      "destination": "/ticket-pdf.html"
+    },
+    {
       "source": "/api/og",
       "destination": "/api/og.js"
     }

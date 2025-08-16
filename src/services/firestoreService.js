@@ -382,6 +382,60 @@ export const bookingService = {
       throw error;
     }
   },
+
+  // Get a specific booking by ID
+  getById: async (bookingId) => {
+    try {
+      console.log('🔍 Getting booking by ID:', bookingId);
+      
+      if (!bookingId || typeof bookingId !== 'string') {
+        console.log('❌ Invalid booking ID:', bookingId);
+        return null;
+      }
+      
+      const bookingRef = doc(db, COLLECTIONS.BOOKINGS, bookingId);
+      const bookingSnap = await getDoc(bookingRef);
+      
+      if (bookingSnap.exists()) {
+        const booking = { id: bookingSnap.id, ...bookingSnap.data() };
+        console.log('✅ Booking found:', booking);
+        return booking;
+      }
+      
+      console.log('❌ Booking not found for ID:', bookingId);
+      return null;
+    } catch (error) {
+      console.error('❌ Error getting booking by ID:', error);
+      console.error('❌ Booking ID was:', bookingId);
+      console.error('❌ Error details:', error.message);
+      throw error;
+    }
+  },
+
+  // Update a booking
+  update: async (bookingId, updates) => {
+    try {
+      console.log('🔄 Updating booking:', bookingId, 'with:', updates);
+      
+      if (!bookingId || typeof bookingId !== 'string') {
+        console.log('❌ Invalid booking ID for update:', bookingId);
+        throw new Error('Invalid booking ID provided');
+      }
+      
+      const bookingRef = doc(db, COLLECTIONS.BOOKINGS, bookingId);
+      await updateDoc(bookingRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      });
+      console.log('✅ Booking updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating booking:', error);
+      console.error('❌ Booking ID was:', bookingId);
+      console.error('❌ Updates were:', updates);
+      console.error('❌ Error details:', error.message);
+      throw error;
+    }
+  },
 };
 
 // Categories Management
