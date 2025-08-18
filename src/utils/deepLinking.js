@@ -7,11 +7,7 @@ export const linkingConfig = {
     'tikiti://',
     'https://tikiti.com',
     'https://www.tikiti.com',
-    'https://tikiti-nfnqign7m-lansahs-projects-ff07a47b.vercel.app', // Current simple HTML deployment (fixed routing)
-    'https://tikiti-l6rq2k9uc-lansahs-projects-ff07a47b.vercel.app', // Previous debug version
-    'https://tikiti-67zzjidwd-lansahs-projects-ff07a47b.vercel.app', // Previous deployment
-    'https://tikiti-o9kg3ukbh-lansahs-projects-ff07a47b.vercel.app', // Previous deployment
-    'https://tikiti-95x58v7y9-lansahs-projects-ff07a47b.vercel.app' // Legacy Vercel deployment
+    'https://tikiti-hwf1ucnie-lansahs-projects-ff07a47b.vercel.app' // Production URL
   ],
   config: {
     screens: {
@@ -84,8 +80,8 @@ export const handleDeepLink = (url, navigation) => {
 
 // Generate shareable event link
 export const generateEventLink = (eventId) => {
-  // Use current Vercel deployment for simple HTML version
-  const domain = 'https://tikiti-nfnqign7m-lansahs-projects-ff07a47b.vercel.app';
+  // Use production Vercel URL
+  const domain = 'https://tikiti-hwf1ucnie-lansahs-projects-ff07a47b.vercel.app';
   return `${domain}/events/${eventId}`;
 };
 
@@ -181,16 +177,23 @@ export const getInitialRoute = () => {
     // Check if current URL is an event link
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
+      console.log('🔍 Checking web path for deep linking:', path);
+      
       const eventMatch = path.match(/^\/events\/(.+)$/);
       if (eventMatch) {
+        const eventId = eventMatch[1];
+        console.log('✅ Event deep link detected:', eventId);
         return {
           name: 'EventWeb',
-          params: { eventId: eventMatch[1] },
+          params: { eventId },
         };
       }
+      
+      console.log('⚠️ No event match found for path:', path);
     }
   }
   
   // Default to onboarding
+  console.log('🔍 Using default route: Onboarding');
   return { name: 'Onboarding' };
 };

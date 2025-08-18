@@ -12,6 +12,7 @@ import OrganiserTabNavigator from './OrganiserTabNavigator';
 
 // Import onboarding and auth screens
 import OnboardingScreen from '../screens/Onboarding/OnboardingScreen';
+import AuthChoiceScreen from '../screens/Auth/AuthChoiceScreen';
 import WelcomeScreen from '../screens/Auth/WelcomeScreen';
 import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
@@ -87,6 +88,12 @@ const AppNavigator = () => {
         // Handle any pending deep links when navigation is ready
         if (Platform.OS === 'web') {
           // Web deep link handling is automatic via linking config
+          console.log('🔗 Navigation ready, current URL:', window.location.href);
+        }
+      }}
+      onStateChange={(state) => {
+        if (Platform.OS === 'web') {
+          console.log('🔄 Navigation state changed:', state);
         }
       }}
     >
@@ -96,6 +103,17 @@ const AppNavigator = () => {
           headerShown: false,
         }}
       >
+        {/* Web Event View - Available for ALL users (public sharing) */}
+        <Stack.Screen
+          name="EventWeb"
+          component={require('../screens/Web/EventWebScreen').default}
+          options={{
+            title: 'Event Details',
+            headerShown: false, // Hide header for web view
+          }}
+          initialParams={initialRoute?.name === 'EventWeb' ? initialRoute.params : undefined}
+        />
+
         {/* Auth Flow - Only shown when not authenticated */}
         {!user && (
           <>
@@ -104,6 +122,13 @@ const AppNavigator = () => {
               component={OnboardingScreen}
               options={{
                 title: 'Welcome to Tikiti',
+              }}
+            />
+            <Stack.Screen
+              name="AuthChoice"
+              component={AuthChoiceScreen}
+              options={{
+                title: 'Get Started',
               }}
             />
             <Stack.Screen
@@ -129,15 +154,6 @@ const AppNavigator = () => {
             />
           </>
         )}
-
-        {/* Web Event View - Available for all users (public sharing) */}
-        <Stack.Screen
-          name="EventWeb"
-          component={require('../screens/Web/EventWebScreen').default}
-          options={{
-            title: 'Event Details',
-          }}
-        />
         
         {/* Main App Flows - Only shown when authenticated */}
         {user && (

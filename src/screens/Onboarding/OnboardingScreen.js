@@ -72,12 +72,12 @@ const OnboardingScreen = ({ navigation }) => {
         animated: true,
       });
     } else {
-      navigation.navigate('Welcome');
+      navigation.navigate('AuthChoice');
     }
   };
 
   const skipOnboarding = () => {
-    navigation.navigate('Welcome');
+    navigation.navigate('AuthChoice');
   };
 
   const goToSlide = (index) => {

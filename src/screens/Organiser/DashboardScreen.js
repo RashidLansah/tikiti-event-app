@@ -111,6 +111,7 @@ const DashboardScreen = ({ navigation }) => {
 
       <ScrollView 
         style={styles.eventsList}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }

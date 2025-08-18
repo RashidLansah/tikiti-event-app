@@ -187,12 +187,12 @@ const ScanTicketScreen = ({ navigation }) => {
       const isValid = await validateTicket(ticketData);
       
       const scanResult = {
-        ticketId: ticketData.ticketId,
+        ticketId: ticketData.ticketId || ticketData.bookingReference,
         eventName: ticketData.eventName,
-        attendeeName: ticketData.userName,
+        attendeeName: ticketData.attendeeName || ticketData.userName,
         userId: ticketData.userId,
         purchaseId: ticketData.purchaseId,
-        quantity: ticketData.quantity,
+        quantity: ticketData.quantity || 1,
         isValid: isValid,
         scannedAt: new Date().toISOString(),
         rawData: ticketData,
@@ -343,35 +343,37 @@ const ScanTicketScreen = ({ navigation }) => {
                 barcodeTypes: ['qr', 'pdf417', 'aztec', 'ean13', 'ean8', 'code39', 'code128', 'code93', 'codabar', 'itf14', 'datamatrix', 'upc_e', 'upc_a'],
               }}
               enableTorch={false}
-            >
-              <View style={styles.scanOverlay}>
-                <View style={styles.scanFrame}>
-                  <View style={[styles.corner, styles.topLeft]} />
-                  <View style={[styles.corner, styles.topRight]} />
-                  <View style={[styles.corner, styles.bottomLeft]} />
-                  <View style={[styles.corner, styles.bottomRight]} />
-                  <Animated.View
-                    style={[
-                      styles.scanLine,
-                      {
-                        transform: [
-                          {
-                            translateY: scanAnimation.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [-100, 100],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
-                </View>
-                
-                <Text style={styles.scanInstruction}>
-                  Point camera at QR code to scan ticket
-                </Text>
-                
-                <View style={styles.debugInfo}>
+            />
+            
+            {/* Overlay positioned absolutely to avoid CameraView children warning */}
+            <View style={styles.scanOverlay}>
+              <View style={styles.scanFrame}>
+                <View style={[styles.corner, styles.topLeft]} />
+                <View style={[styles.corner, styles.topRight]} />
+                <View style={[styles.corner, styles.bottomLeft]} />
+                <View style={[styles.corner, styles.bottomRight]} />
+                <Animated.View
+                  style={[
+                    styles.scanLine,
+                    {
+                      transform: [
+                        {
+                          translateY: scanAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-100, 100],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              </View>
+              
+              <Text style={styles.scanInstruction}>
+                Point camera at QR code to scan ticket
+              </Text>
+              
+              <View style={styles.debugInfo}>
                   <Text style={styles.debugText}>🔍 Scanner Active</Text>
                   <Text style={styles.debugText}>📱 Looking for QR codes...</Text>
                   <Text style={styles.debugText}>💡 Try different angles & distances</Text>
@@ -379,18 +381,17 @@ const ScanTicketScreen = ({ navigation }) => {
                 
 
                 
-                <TouchableOpacity
-                  style={styles.closeCameraButton}
-                  onPress={() => {
-                    setIsScanning(false);
-                    stopScanAnimation();
-                    console.log('❌ Camera closed by user');
-                  }}
-                >
-                  <Feather name="x" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </CameraView>
+              <TouchableOpacity
+                style={styles.closeCameraButton}
+                onPress={() => {
+                  setIsScanning(false);
+                  stopScanAnimation();
+                  console.log('❌ Camera closed by user');
+                }}
+              >
+                <Feather name="x" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </Modal>
       );
@@ -795,11 +796,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scanOverlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
   },
   closeCameraButton: {
     position: 'absolute',

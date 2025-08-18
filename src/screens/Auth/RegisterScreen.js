@@ -27,9 +27,10 @@ const RegisterScreen = ({ navigation, route }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedAccountType, setSelectedAccountType] = useState('user');
   
   const { createUserProfile } = useAuth();
-  const accountType = route.params?.accountType || 'user';
+  const accountType = selectedAccountType;
 
   const updateFormData = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -122,8 +123,99 @@ const RegisterScreen = ({ navigation, route }) => {
         <View style={styles.titleSection}>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>
-            Join Tikiti as {accountType === 'organizer' ? 'an event organizer' : 'an attendee'}
+            Join thousands of event enthusiasts and organizers on Tikiti
           </Text>
+        </View>
+
+        {/* User Type Selection */}
+        <View style={styles.userTypeSection}>
+          <Text style={styles.userTypeTitle}>I want to join as:</Text>
+          
+          <View style={styles.userTypeOptions}>
+            {/* Attendee Option */}
+            <TouchableOpacity
+              style={[
+                styles.userTypeOption,
+                selectedAccountType === 'user' && styles.userTypeOptionSelected
+              ]}
+              onPress={() => setSelectedAccountType('user')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.userTypeContent}>
+                <View style={[
+                  styles.userTypeIcon,
+                  { backgroundColor: selectedAccountType === 'user' ? Colors.primary[500] : Colors.background.secondary }
+                ]}>
+                  <Feather 
+                    name="user" 
+                    size={24} 
+                    color={selectedAccountType === 'user' ? Colors.white : Colors.text.secondary} 
+                  />
+                </View>
+                <View style={styles.userTypeInfo}>
+                  <Text style={[
+                    styles.userTypeOptionTitle,
+                    selectedAccountType === 'user' && styles.userTypeOptionTitleSelected
+                  ]}>
+                    Event Attendee
+                  </Text>
+                  <Text style={styles.userTypeOptionDescription}>
+                    Discover and book tickets for amazing events
+                  </Text>
+                </View>
+              </View>
+              <View style={[
+                styles.radioButton,
+                selectedAccountType === 'user' && styles.radioButtonSelected
+              ]}>
+                {selectedAccountType === 'user' && (
+                  <View style={styles.radioButtonInner} />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {/* Organizer Option */}
+            <TouchableOpacity
+              style={[
+                styles.userTypeOption,
+                selectedAccountType === 'organizer' && styles.userTypeOptionSelected
+              ]}
+              onPress={() => setSelectedAccountType('organizer')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.userTypeContent}>
+                <View style={[
+                  styles.userTypeIcon,
+                  { backgroundColor: selectedAccountType === 'organizer' ? Colors.success[500] : Colors.background.secondary }
+                ]}>
+                  <Feather 
+                    name="users" 
+                    size={24} 
+                    color={selectedAccountType === 'organizer' ? Colors.white : Colors.text.secondary} 
+                  />
+                </View>
+                <View style={styles.userTypeInfo}>
+                  <Text style={[
+                    styles.userTypeOptionTitle,
+                    selectedAccountType === 'organizer' && styles.userTypeOptionTitleSelected
+                  ]}>
+                    Event Organizer
+                  </Text>
+                  <Text style={styles.userTypeOptionDescription}>
+                    Create events, sell tickets and grow your audience
+                  </Text>
+                </View>
+              </View>
+              <View style={[
+                styles.radioButton,
+                selectedAccountType === 'organizer' && styles.radioButtonSelected
+              ]}>
+                {selectedAccountType === 'organizer' && (
+                  <View style={styles.radioButtonInner} />
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Form */}
@@ -365,6 +457,81 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.primary[500],
     fontWeight: Typography.fontWeight.semibold,
+  },
+  userTypeSection: {
+    marginBottom: Spacing[8],
+  },
+  userTypeTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.primary,
+    marginBottom: Spacing[4],
+    textAlign: 'center',
+  },
+  userTypeOptions: {
+    gap: Spacing[3],
+  },
+  userTypeOption: {
+    borderWidth: 2,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing[4],
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
+  userTypeOptionSelected: {
+    borderColor: Colors.primary[500],
+    backgroundColor: Colors.primary[25],
+  },
+  userTypeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  userTypeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing[3],
+  },
+  userTypeInfo: {
+    flex: 1,
+  },
+  userTypeOptionTitle: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  userTypeOptionTitleSelected: {
+    color: Colors.primary[700],
+  },
+  userTypeOptionDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: BorderRadius.full,
+    borderWidth: 2,
+    borderColor: Colors.border.medium,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: Spacing[2],
+  },
+  radioButtonSelected: {
+    borderColor: Colors.primary[500],
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.primary[500],
   },
 });
 

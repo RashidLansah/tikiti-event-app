@@ -11,11 +11,11 @@ import {
   Image,
   Linking,
   TextInput,
-  Modal,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { eventService, bookingService } from '../../services/firestoreService';
+import QRCode from 'qrcode';
 
 const { width } = Dimensions.get('window');
 const isWeb = Platform.OS === 'web';
@@ -27,7 +27,6 @@ const EventWebScreen = ({ route, navigation }) => {
   const [ticketQuantity, setTicketQuantity] = useState(1);
   
   // RSVP Form states
-  const [showRSVPForm, setShowRSVPForm] = useState(false);
   const [submittingRSVP, setSubmittingRSVP] = useState(false);
   const [rsvpForm, setRSVPForm] = useState({
     firstName: '',
@@ -36,6 +35,10 @@ const EventWebScreen = ({ route, navigation }) => {
     phoneNumber: '',
     gender: '',
   });
+  
+  // Ticket states
+  const [userBooking, setUserBooking] = useState(null);
+  const [showTicketDownload, setShowTicketDownload] = useState(false);
 
   // Fetch real event data from Firestore
   useEffect(() => {
@@ -71,10 +74,7 @@ const EventWebScreen = ({ route, navigation }) => {
   }, [eventId]);
 
   const handleTicketPurchase = () => {
-    if (event.eventType === 'free') {
-      // Show RSVP form for free events
-      setShowRSVPForm(true);
-    } else {
+    if (event.eventType !== 'free') {
       Alert.alert(
         'Redirecting to Payment',
         `You will be redirected to complete your purchase of ${ticketQuantity} ticket${ticketQuantity > 1 ? 's' : ''} for ${event.name}.`,
@@ -103,6 +103,9 @@ const EventWebScreen = ({ route, navigation }) => {
     try {
       console.log('📝 Submitting web RSVP for event:', event.id);
       
+      // Generate unique booking reference
+      const bookingReference = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
       // Create booking data for web user
       const bookingData = {
         eventId: event.id,
@@ -114,6 +117,7 @@ const EventWebScreen = ({ route, navigation }) => {
         userEmail: rsvpForm.email,
         userName: `${rsvpForm.firstName} ${rsvpForm.lastName}`,
         registrationType: 'rsvp',
+        bookingReference, // Add booking reference for ticket
         // Web user specific data
         firstName: rsvpForm.firstName,
         lastName: rsvpForm.lastName,
@@ -126,16 +130,24 @@ const EventWebScreen = ({ route, navigation }) => {
         eventLocation: event.location || event.address,
       };
 
-      await bookingService.create(bookingData);
+      const bookingResult = await bookingService.create(bookingData);
       
       console.log('✅ Web RSVP successful');
       
-      setShowRSVPForm(false);
+      // Store booking data for ticket generation
+      setUserBooking({
+        ...bookingData,
+        id: bookingResult.id || bookingReference,
+        bookingReference
+      });
+      
       setSubmittingRSVP(false);
+      setShowTicketDownload(true);
+      resetForm();
       
       Alert.alert(
         'RSVP Confirmed!',
-        `Thank you ${rsvpForm.firstName}! You have successfully registered for ${event.name}. Check your email for confirmation details.`,
+        `Thank you ${rsvpForm.firstName}! You have successfully registered for ${event.name}. You can now download your ticket.`,
         [{ text: 'OK' }]
       );
       
@@ -169,9 +181,156 @@ const EventWebScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleRSVPCancel = () => {
-    setShowRSVPForm(false);
-    // Reset form
+  // Generate and download ticket
+  const handleDownloadTicket = async () => {
+    if (!userBooking || !isWeb) return;
+
+    try {
+      console.log('🎫 Generating ticket for booking:', userBooking.bookingReference);
+      
+      // Generate QR code data
+      const qrData = JSON.stringify({
+        bookingId: userBooking.id,
+        bookingReference: userBooking.bookingReference,
+        eventId: event.id,
+        eventName: event.name,
+        attendeeName: userBooking.userName,
+        attendeeEmail: userBooking.userEmail,
+        eventDate: event.date,
+        eventTime: event.time,
+        eventLocation: event.location,
+        ticketType: 'RSVP',
+        status: 'confirmed'
+      });
+      
+      // Generate QR code as data URL
+      const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      // Create ticket HTML content
+      const ticketHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Event Ticket - ${event.name}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+            .ticket { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+            .ticket-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+            .ticket-title { font-size: 28px; font-weight: bold; margin: 0 0 10px 0; }
+            .ticket-subtitle { font-size: 16px; opacity: 0.9; margin: 0; }
+            .ticket-body { padding: 30px; }
+            .event-info { margin-bottom: 30px; }
+            .info-row { display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #eee; }
+            .info-label { font-weight: bold; color: #666; }
+            .info-value { color: #333; }
+            .qr-section { text-align: center; background: #f9f9f9; padding: 30px; margin: 20px 0; border-radius: 8px; }
+            .qr-code { margin: 20px 0; }
+            .booking-ref { font-family: monospace; font-size: 18px; font-weight: bold; color: #667eea; margin: 15px 0; }
+            .instructions { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .footer { text-align: center; color: #666; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+            @media print { body { background: white; } .ticket { box-shadow: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="ticket">
+            <div class="ticket-header">
+              <div class="ticket-title">${event.name}</div>
+              <div class="ticket-subtitle">Event Ticket</div>
+            </div>
+            
+            <div class="ticket-body">
+              <div class="event-info">
+                <div class="info-row">
+                  <span class="info-label">Attendee Name:</span>
+                  <span class="info-value">${userBooking.userName}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Email:</span>
+                  <span class="info-value">${userBooking.userEmail}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Event Date:</span>
+                  <span class="info-value">${event.date}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Event Time:</span>
+                  <span class="info-value">${event.time}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Location:</span>
+                  <span class="info-value">${event.location}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Ticket Type:</span>
+                  <span class="info-value">FREE RSVP</span>
+                </div>
+              </div>
+              
+              <div class="qr-section">
+                <h3 style="margin-top: 0; color: #333;">Entry QR Code</h3>
+                <div class="qr-code">
+                  <img src="${qrCodeDataURL}" alt="QR Code" style="max-width: 200px; height: auto;" />
+                </div>
+                <div class="booking-ref">Booking Reference: ${userBooking.bookingReference}</div>
+                <p style="color: #666; margin: 10px 0 0 0;">Present this QR code at the event entrance</p>
+              </div>
+              
+              <div class="instructions">
+                <h4 style="margin-top: 0; color: #856404;">Important Instructions:</h4>
+                <ul style="margin: 10px 0 0 0; color: #856404;">
+                  <li>Please arrive 15 minutes before the event starts</li>
+                  <li>Present this ticket (digital or printed) at the entrance</li>
+                  <li>Keep your booking reference safe: <strong>${userBooking.bookingReference}</strong></li>
+                  <li>Contact the organizer if you have any questions</li>
+                </ul>
+              </div>
+              
+              <div class="footer">
+                <p>Generated on ${new Date().toLocaleString()}</p>
+                <p>Powered by Tikiti</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Create and download the ticket
+      const blob = new Blob([ticketHTML], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Tikiti-Ticket-${userBooking.bookingReference}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      Alert.alert(
+        'Ticket Downloaded!',
+        'Your ticket has been downloaded successfully. You can open it in any browser or print it for the event.',
+        [{ text: 'OK' }]
+      );
+      
+    } catch (error) {
+      console.error('❌ Error generating ticket:', error);
+      Alert.alert(
+        'Download Failed',
+        'There was an error generating your ticket. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const resetForm = () => {
     setRSVPForm({
       firstName: '',
       lastName: '',
@@ -200,18 +359,7 @@ const EventWebScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleDownloadApp = () => {
-    const isIOS = Platform.OS === 'ios' || (isWeb && /iPad|iPhone|iPod/.test(navigator.userAgent));
-    const isAndroid = Platform.OS === 'android' || (isWeb && /Android/.test(navigator.userAgent));
-    
-    if (isIOS) {
-      window.open('https://apps.apple.com/app/tikiti', '_blank');
-    } else if (isAndroid) {
-      window.open('https://play.google.com/store/apps/details?id=com.tikiti', '_blank');
-    } else {
-      Alert.alert('Download App', 'Visit your app store to download Tikiti');
-    }
-  };
+
 
   const openGoogleMaps = () => {
     if (!event?.location) return;
@@ -265,10 +413,6 @@ const EventWebScreen = ({ route, navigation }) => {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <TouchableOpacity style={styles.downloadButton} onPress={handleDownloadApp}>
-              <Feather name="download" size={16} color="#FFFFFF" />
-              <Text style={styles.downloadButtonText}>Get App</Text>
-            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -342,123 +486,29 @@ const EventWebScreen = ({ route, navigation }) => {
             <Text style={styles.description}>{event.description}</Text>
           </View>
 
-          {/* Event Info Grid */}
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCard}>
-              <Feather name="users" size={24} color={Colors.primary[500]} />
-              <Text style={styles.infoNumber}>{event.totalTickets}</Text>
-              <Text style={styles.infoLabel}>Total Tickets</Text>
-            </View>
-            
-            <View style={styles.infoCard}>
-              <Feather name="user" size={24} color={Colors.success[500]} />
-              <Text style={styles.infoNumber}>{event.soldTickets}</Text>
-              <Text style={styles.infoLabel}>Sold</Text>
-            </View>
-            
-            <View style={styles.infoCard}>
-              <Feather name="ticket" size={24} color={Colors.warning[500]} />
-              <Text style={styles.infoNumber}>{event.availableTickets}</Text>
-              <Text style={styles.infoLabel}>Available</Text>
-            </View>
-          </View>
-        </View>
-
-
-
-        {/* Organizer Info */}
-        <View style={styles.organizerSection}>
-          <Text style={styles.sectionTitle}>Organized By</Text>
-          <View style={styles.organizerCard}>
-            <View style={styles.organizerInfo}>
-              <Text style={styles.organizerName}>{event.organizer}</Text>
-              <Text style={styles.organizerContact}>{event.contactEmail}</Text>
-              <Text style={styles.organizerContact}>{event.contactPhone}</Text>
-            </View>
-            <TouchableOpacity style={styles.contactButton}>
-              <Feather name="mail" size={16} color={Colors.primary[600]} />
-              <Text style={styles.contactButtonText}>Contact</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Sticky Bottom Action */}
-      <View style={styles.bottomAction}>
-        <View style={styles.actionContent}>
-          {/* Quantity Selector for Paid Events */}
-          {event.eventType === 'paid' && (
-            <View style={styles.quantitySelector}>
-              <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => setTicketQuantity(Math.max(1, ticketQuantity - 1))}
+          {/* Success Message or RSVP Form */}
+          {showTicketDownload && userBooking ? (
+            <View style={styles.successSection}>
+              <Feather name="check-circle" size={24} color={Colors.success[500]} />
+              <Text style={styles.successTitle}>Registration Confirmed!</Text>
+              <Text style={styles.successSubtitle}>
+                You're all set for {event.name}
+              </Text>
+              <TouchableOpacity 
+                style={styles.downloadTicketButton} 
+                onPress={handleDownloadTicket}
               >
-                <Feather name="minus" size={16} color={Colors.primary[500]} />
-              </TouchableOpacity>
-              
-              <Text style={styles.quantityText}>{ticketQuantity}</Text>
-              
-              <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => setTicketQuantity(Math.min(10, ticketQuantity + 1))}
-              >
-                <Feather name="plus" size={16} color={Colors.primary[500]} />
+                <Feather name="download" size={20} color="#FFFFFF" />
+                <Text style={styles.downloadButtonText}>Download Your Ticket</Text>
               </TouchableOpacity>
             </View>
-          )}
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-              <Feather name="share-2" size={20} color={Colors.primary[500]} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.purchaseButton} 
-              onPress={handleTicketPurchase}
-            >
-              <Feather 
-                name={event.eventType === 'free' ? 'user-plus' : 'credit-card'} 
-                size={20} 
-                color="#FFFFFF" 
-              />
-              <Text style={styles.purchaseButtonText}>
-                {event.eventType === 'free' 
-                  ? 'RSVP Free' 
-                  : `Buy ${ticketQuantity} Ticket${ticketQuantity > 1 ? 's' : ''}`
-                }
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      {/* RSVP Form Modal */}
-      <Modal
-        visible={showRSVPForm}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={handleRSVPCancel}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackdrop}
-            activeOpacity={1}
-            onPress={handleRSVPCancel}
-          />
-          
-          <View style={styles.rsvpModalContainer}>
-            {/* Handle bar */}
-            <View style={styles.modalHandle} />
-            
-            {/* Modal content */}
-            <View style={styles.rsvpModalContent}>
-              <Text style={styles.rsvpModalTitle}>Complete Your RSVP</Text>
-              <Text style={styles.rsvpModalSubtitle}>
-                Please provide your details to register for {event?.name}
+          ) : (
+            <View style={styles.rsvpSection}>
+              <Text style={styles.sectionTitle}>Register for this Event</Text>
+              <Text style={styles.rsvpSubtitle}>
+                Please provide your details to complete your registration
               </Text>
               
-              {/* Form Fields */}
               <View style={styles.formContainer}>
                 <View style={styles.formRow}>
                   <View style={styles.formFieldHalf}>
@@ -530,45 +580,106 @@ const EventWebScreen = ({ route, navigation }) => {
                     ))}
                   </View>
                 </View>
-              </View>
-              
-              {/* Action buttons */}
-              <View style={styles.rsvpModalActions}>
+
                 <TouchableOpacity 
                   style={[
-                    styles.rsvpCancelButton,
-                    submittingRSVP && styles.buttonDisabled
-                  ]}
-                  onPress={handleRSVPCancel}
-                  disabled={submittingRSVP}
-                >
-                  <Text style={styles.rsvpCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[
-                    styles.rsvpSubmitButton,
-                    submittingRSVP && styles.rsvpSubmitButtonLoading
+                    styles.submitButton,
+                    submittingRSVP && styles.submitButtonLoading
                   ]}
                   onPress={handleRSVPSubmit}
                   disabled={submittingRSVP}
                 >
                   {submittingRSVP ? (
-                    <Text style={styles.rsvpSubmitText}>Submitting...</Text>
+                    <Text style={styles.submitButtonText}>Submitting...</Text>
                   ) : (
-                    <Text style={styles.rsvpSubmitText}>Complete RSVP</Text>
+                    <Text style={styles.submitButtonText}>Complete Registration</Text>
                   )}
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          )}
         </View>
-      </Modal>
+
+
+
+
+      </ScrollView>
+
+      {/* Share Button */}
+      <View style={styles.bottomAction}>
+        <View style={styles.actionContent}>
+          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+            <Feather name="share-2" size={20} color={Colors.primary[500]} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  // New styles for simplified layout
+  rsvpSection: {
+    marginTop: Spacing[6],
+    paddingTop: Spacing[6],
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.light,
+  },
+  rsvpSubtitle: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+    marginBottom: Spacing[6],
+  },
+  submitButton: {
+    backgroundColor: Colors.primary[500],
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[6],
+    borderRadius: BorderRadius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing[6],
+    ...Shadows.lg,
+  },
+  submitButtonLoading: {
+    backgroundColor: Colors.primary[400],
+  },
+  submitButtonText: {
+    color: Colors.white,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  successSection: {
+    marginTop: Spacing[6],
+    paddingTop: Spacing[6],
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.light,
+    alignItems: 'center',
+  },
+  successTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.success[600],
+    marginTop: Spacing[4],
+    marginBottom: Spacing[2],
+  },
+  successSubtitle: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+    marginBottom: Spacing[6],
+  },
+  downloadTicketButton: {
+    backgroundColor: Colors.success[500],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[6],
+    borderRadius: BorderRadius.xl,
+    gap: Spacing[2],
+    ...Shadows.lg,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background.secondary,
@@ -768,75 +879,8 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.base,
   },
-  infoGrid: {
-    flexDirection: 'row',
-    gap: Spacing[3],
-  },
-  infoCard: {
-    flex: 1,
-    backgroundColor: Colors.background.tertiary,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing[4],
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-    minHeight: 100,
-    ...Shadows.sm,
-  },
-  infoNumber: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
-    marginTop: Spacing[2],
-    marginBottom: Spacing[1],
-  },
-  infoLabel: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.text.tertiary,
-    fontWeight: Typography.fontWeight.medium,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: Typography.letterSpacing.wide,
-  },
-  organizerSection: {
-    ...Components.card.primary,
-    margin: Spacing[5],
-    marginTop: 0,
-    marginBottom: 120, // Space for sticky bottom
-    padding: Spacing[6],
-  },
-  organizerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  organizerInfo: {
-    flex: 1,
-  },
-  organizerName: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text.primary,
-    marginBottom: Spacing[1],
-  },
-  organizerContact: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
-    marginBottom: Spacing[1],
-  },
-  contactButton: {
-    ...Components.button.secondary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[2],
-    gap: Spacing[2],
-  },
-  contactButtonText: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.primary[600],
-  },
+
+
 
   bottomAction: {
     position: isWeb ? 'fixed' : 'absolute',
@@ -913,56 +957,45 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
 
-  // RSVP Form Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  // Ticket Download Styles
+  ticketDownloadSection: {
+    alignItems: 'center',
+    gap: Spacing[4],
   },
-  modalBackdrop: {
-    flex: 1,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: Colors.gray[300],
-    borderRadius: BorderRadius.full,
-    alignSelf: 'center',
-    marginBottom: Spacing[4],
-  },
-  rsvpModalContainer: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: BorderRadius['3xl'],
-    borderTopRightRadius: BorderRadius['3xl'],
-    paddingTop: Spacing[3],
-    paddingBottom: Spacing[8],
-    paddingHorizontal: Spacing[6],
-    ...Shadows['2xl'],
-    maxHeight: '90%',
-    ...(isWeb && {
-      maxWidth: 600,
-      alignSelf: 'center',
-      borderRadius: BorderRadius['3xl'],
-      marginTop: 50,
-    }),
-  },
-  rsvpModalContent: {
-    flex: 1,
-  },
-  rsvpModalTitle: {
-    fontSize: Typography.fontSize['2xl'],
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
-    textAlign: 'center',
+  successMessage: {
+    alignItems: 'center',
     marginBottom: Spacing[2],
   },
-  rsvpModalSubtitle: {
-    fontSize: Typography.fontSize.base,
+  successTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.success[600],
+    marginTop: Spacing[2],
+    marginBottom: Spacing[1],
+  },
+  successSubtitle: {
+    fontSize: Typography.fontSize.sm,
     color: Colors.text.secondary,
     textAlign: 'center',
-    marginBottom: Spacing[6],
-    lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.base,
   },
+  downloadButton: {
+    ...Components.button.primary,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing[4],
+    gap: Spacing[2],
+    backgroundColor: Colors.success[500],
+    ...Shadows.lg,
+  },
+  downloadButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.white,
+  },
+
+
   formContainer: {
     flex: 1,
   },
