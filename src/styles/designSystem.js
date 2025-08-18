@@ -288,6 +288,23 @@ export const Components = {
       borderColor: Colors.primary[500],
       borderWidth: 2,
       ...Shadows.sm,
+      // Double stroke effect
+      shadowColor: Colors.primary[500],
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    active: {
+      borderColor: Colors.primary[500],
+      borderWidth: 2,
+      backgroundColor: Colors.primary[50],
+      // Enhanced double stroke effect
+      shadowColor: Colors.primary[500],
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.4,
+      shadowRadius: 6,
+      elevation: 3,
     },
   },
 };

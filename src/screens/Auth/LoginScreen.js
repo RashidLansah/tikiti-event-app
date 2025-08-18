@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
@@ -21,6 +22,7 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
 
   const { createUserProfile } = useAuth();
 
@@ -61,14 +63,17 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
-  return (
+    return (
     <KeyboardAvoidingView 
-      style={styles.container} 
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentInsetAdjustmentBehavior="automatic"
       >
         {/* Header */}
         <View style={styles.header}>
@@ -91,7 +96,10 @@ const LoginScreen = ({ navigation }) => {
           {/* Email Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address</Text>
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer, 
+              focusedInput === 'email' && styles.inputContainerFocused
+            ]}>
               <Feather name="mail" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
@@ -102,6 +110,8 @@ const LoginScreen = ({ navigation }) => {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput(null)}
               />
             </View>
           </View>
@@ -109,7 +119,10 @@ const LoginScreen = ({ navigation }) => {
           {/* Password Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer,
+              focusedInput === 'password' && styles.inputContainerFocused
+            ]}>
               <Feather name="lock" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
@@ -119,6 +132,8 @@ const LoginScreen = ({ navigation }) => {
                 placeholderTextColor={Colors.text.tertiary}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                onFocus={() => setFocusedInput('password')}
+                onBlur={() => setFocusedInput(null)}
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
@@ -217,6 +232,9 @@ const styles = StyleSheet.create({
     ...Components.input.primary,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  inputContainerFocused: {
+    ...Components.input.focused,
   },
   inputIcon: {
     marginRight: Spacing[3],

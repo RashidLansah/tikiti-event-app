@@ -37,6 +37,7 @@ const CreateEventScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [imageUri, setImageUri] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
 
   const pickImage = async () => {
     try {

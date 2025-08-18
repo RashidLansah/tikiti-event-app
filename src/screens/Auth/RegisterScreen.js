@@ -28,6 +28,7 @@ const RegisterScreen = ({ navigation, route }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedAccountType, setSelectedAccountType] = useState('user');
+  const [focusedInput, setFocusedInput] = useState(null);
   
   const { createUserProfile } = useAuth();
   const accountType = selectedAccountType;
@@ -104,10 +105,13 @@ const RegisterScreen = ({ navigation, route }) => {
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentInsetAdjustmentBehavior="automatic"
       >
         {/* Header */}
         <View style={styles.header}>
@@ -224,7 +228,10 @@ const RegisterScreen = ({ navigation, route }) => {
           <View style={styles.nameRow}>
             <View style={styles.nameInput}>
               <Text style={styles.label}>First Name</Text>
-              <View style={styles.inputContainer}>
+              <View style={[
+                styles.inputContainer,
+                focusedInput === 'firstName' && styles.inputContainerFocused
+              ]}>
                 <Feather name="user" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
@@ -233,13 +240,18 @@ const RegisterScreen = ({ navigation, route }) => {
                   placeholder="First name"
                   placeholderTextColor={Colors.text.tertiary}
                   autoCapitalize="words"
+                  onFocus={() => setFocusedInput('firstName')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </View>
             </View>
 
             <View style={styles.nameInput}>
               <Text style={styles.label}>Last Name</Text>
-              <View style={styles.inputContainer}>
+              <View style={[
+                styles.inputContainer,
+                focusedInput === 'lastName' && styles.inputContainerFocused
+              ]}>
                 <Feather name="user" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
@@ -248,6 +260,8 @@ const RegisterScreen = ({ navigation, route }) => {
                   placeholder="Last name"
                   placeholderTextColor={Colors.text.tertiary}
                   autoCapitalize="words"
+                  onFocus={() => setFocusedInput('lastName')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </View>
             </View>
@@ -256,7 +270,10 @@ const RegisterScreen = ({ navigation, route }) => {
           {/* Email Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address</Text>
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer,
+              focusedInput === 'email' && styles.inputContainerFocused
+            ]}>
               <Feather name="mail" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
@@ -267,6 +284,8 @@ const RegisterScreen = ({ navigation, route }) => {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput(null)}
               />
             </View>
           </View>
@@ -274,7 +293,10 @@ const RegisterScreen = ({ navigation, route }) => {
           {/* Password Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer,
+              focusedInput === 'password' && styles.inputContainerFocused
+            ]}>
               <Feather name="lock" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
@@ -284,6 +306,8 @@ const RegisterScreen = ({ navigation, route }) => {
                 placeholderTextColor={Colors.text.tertiary}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                onFocus={() => setFocusedInput('password')}
+                onBlur={() => setFocusedInput(null)}
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
@@ -301,7 +325,10 @@ const RegisterScreen = ({ navigation, route }) => {
           {/* Confirm Password Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Confirm Password</Text>
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer,
+              focusedInput === 'confirmPassword' && styles.inputContainerFocused
+            ]}>
               <Feather name="lock" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
@@ -311,6 +338,8 @@ const RegisterScreen = ({ navigation, route }) => {
                 placeholderTextColor={Colors.text.tertiary}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
+                onFocus={() => setFocusedInput('confirmPassword')}
+                onBlur={() => setFocusedInput(null)}
               />
               <TouchableOpacity
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -409,6 +438,9 @@ const styles = StyleSheet.create({
     ...Components.input.primary,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  inputContainerFocused: {
+    ...Components.input.focused,
   },
   inputIcon: {
     marginRight: Spacing[3],
