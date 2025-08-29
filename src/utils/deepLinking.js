@@ -90,8 +90,20 @@ export const shareEvent = async (event) => {
   const eventUrl = generateEventLink(event.id);
   
   // Create event description with details
+  // Handle location object properly
+  let locationText = 'Location TBA';
+  if (event.location) {
+    if (typeof event.location === 'object') {
+      locationText = event.location.name || event.location.address || 'Location TBA';
+    } else {
+      locationText = event.location;
+    }
+  } else if (event.address) {
+    locationText = event.address;
+  }
+
   const eventDetails = `📅 ${event.date || 'Date TBA'}
-📍 ${event.location || event.address || 'Location TBA'}
+📍 ${locationText}
 ${event.type === 'free' ? '🎟️ Free Event' : `💰 ${event.price || 'Price TBA'}`}
 
 ${event.description || 'Join us for this amazing event!'}`;
