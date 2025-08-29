@@ -317,7 +317,9 @@ const EventDetailScreen = ({ navigation, route }) => {
         </View>
         <View style={styles.infoContent}>
           <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Location</Text>
-          <Text style={[styles.infoValue, { color: colors.text.primary }]}>{event.location}</Text>
+          <Text style={[styles.infoValue, { color: colors.text.primary }]}>
+            {typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA')}
+          </Text>
           <TouchableOpacity>
             <Text style={[styles.mapLink, { color: colors.primary[500] }]}>View on map</Text>
           </TouchableOpacity>

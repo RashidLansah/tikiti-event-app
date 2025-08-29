@@ -82,7 +82,9 @@ const DashboardScreen = ({ navigation }) => {
            }) : 'Date TBD'}
          </Text>
         </View>
-                 <Text style={styles.eventLocation}>{event.address || event.location}</Text>
+                 <Text style={styles.eventLocation}>
+                   {event.address || (typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA'))}
+                 </Text>
         <View style={styles.eventStats}>
           <View style={styles.stat}>
             <Text style={styles.statValue}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>

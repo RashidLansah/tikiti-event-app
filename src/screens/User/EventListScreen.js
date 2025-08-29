@@ -163,9 +163,13 @@ const EventListScreen = ({ navigation }) => {
 
   // Filter events based on search query and selected category
   const filteredEvents = events.filter(event => {
+    const locationText = typeof event.location === 'object' ? 
+      (event.location.name || event.location.address || '') : 
+      (event.location || '');
+    
     const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchQuery.toLowerCase());
+      locationText.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesCategory = selectedCategory === 'All' || 
       event.category.toLowerCase() === selectedCategory.toLowerCase();
@@ -307,7 +311,9 @@ const EventListScreen = ({ navigation }) => {
               </View>
               <View style={styles.metaRow}>
                 <Feather name="map-pin" size={12} color={colors.text.tertiary} />
-                <Text style={[styles.metaText, { color: colors.text.tertiary }]} numberOfLines={1}>{event.location}</Text>
+                <Text style={[styles.metaText, { color: colors.text.tertiary }]} numberOfLines={1}>
+                  {typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA')}
+                </Text>
               </View>
             </View>
             
