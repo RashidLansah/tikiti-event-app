@@ -85,7 +85,7 @@ const EventListScreen = ({ navigation }) => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      
+
       // One-time cleanup of sample events from database
       try {
         await cleanupSampleEvents();
@@ -346,7 +346,7 @@ const EventListScreen = ({ navigation }) => {
       <View style={[styles.header, { backgroundColor: colors.background.primary }]}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={[styles.greeting, { color: colors.text.tertiary }]}>Discover</Text>
+              <Text style={[styles.greeting, { color: colors.text.tertiary }]}>Discover</Text>
             <Text style={[styles.title, { color: colors.text.primary }]}>Events near you</Text>
           </View>
           <TouchableOpacity style={[styles.notificationButton, { backgroundColor: colors.background.tertiary }]}>
@@ -373,39 +373,39 @@ const EventListScreen = ({ navigation }) => {
       </View>
 
       {/* Floating Category Pills */}
-      <View style={[styles.categoriesSection, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
-        <FlatList
-          data={categories}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.categoriesContainer}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.categoryPill,
-                { backgroundColor: colors.background.tertiary },
-                selectedCategory === item.name && { backgroundColor: colors.primary[500] }
-              ]}
-              onPress={() => setSelectedCategory(item.name)}
-              activeOpacity={0.7}
-            >
-              <Feather 
-                name={item.icon} 
-                size={14} 
-                color={selectedCategory === item.name ? colors.white : colors.text.secondary} 
-              />
-              <Text style={[
-                styles.categoryPillText,
-                { color: colors.text.secondary },
-                selectedCategory === item.name && { color: colors.white, fontWeight: Typography.fontWeight.semibold }
-              ]}>
-                {item.name}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
+        <View style={[styles.categoriesSection, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
+          <FlatList
+            data={categories}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.categoriesContainer}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.categoryPill,
+                  { backgroundColor: colors.background.tertiary },
+                  selectedCategory === item.name && { backgroundColor: colors.primary[500] }
+                ]}
+                onPress={() => setSelectedCategory(item.name)}
+                activeOpacity={0.7}
+              >
+                <Feather 
+                  name={item.icon} 
+                  size={14} 
+                  color={selectedCategory === item.name ? colors.white : colors.text.secondary} 
+                />
+                <Text style={[
+                  styles.categoryPillText,
+                  { color: colors.text.secondary },
+                  selectedCategory === item.name && { color: colors.white, fontWeight: Typography.fontWeight.semibold }
+                ]}>
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
 
       <ScrollView
         style={[styles.eventsList, { backgroundColor: colors.background.primary }]}

@@ -1,0 +1,9 @@
+{
+  "name": "tikiti-api",
+  "version": "1.0.0",
+  "description": "Tikiti API functions",
+  "main": "index.js",
+  "dependencies": {
+    "qrcode": "^1.5.3"
+  }
+}

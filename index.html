@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tikiti - Event Details</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+
     
     <!-- Open Graph meta tags for better social sharing -->
     <meta property="og:site_name" content="Tikiti">
@@ -657,12 +658,45 @@
 
                     const pdfUrl = `${window.location.origin}/ticket-pdf?data=${encodeURIComponent(JSON.stringify(pdfData))}`;
 
+                    // Send confirmation email via serverless function
+                    try {
+                        const emailResponse = await fetch('/api/send-email', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                userEmail: email,
+                                userName: `${firstName} ${lastName}`,
+                                eventName: event.name,
+                                eventDate: event.date,
+                                eventTime: event.startTime || event.time,
+                                eventLocation: event.location || event.address,
+                                quantity: 1,
+                                bookingReference: `TKT${docRef.id.slice(-8).toUpperCase()}`,
+                                bookingId: docRef.id,
+                                eventId: eventId,
+                                userId: 'web-user'
+                            })
+                        });
+
+                        const emailResult = await emailResponse.json();
+                        if (emailResult.success) {
+                            console.log('✅ Confirmation email sent successfully');
+                        } else {
+                            console.error('❌ Failed to send email:', emailResult.error);
+                        }
+                    } catch (emailError) {
+                        console.error('❌ Email error:', emailError);
+                    }
+
                     // Show success message with PDF download
                     document.querySelector('.rsvp-section').innerHTML = `
                         <div class="success-message">
                             <h3>🎉 RSVP Confirmed!</h3>
                             <p>Thank you ${firstName}! You have successfully registered for ${event.name}.</p>
-                            <p>Check your email for confirmation details.</p>
+                            <p>📧 A confirmation email with your ticket details has been sent to <strong>${email}</strong></p>
+                            <p>📱 You can also download your ticket below for offline access.</p>
                             
                             <div class="ticket-download" style="margin-top: 20px; padding: 20px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #0ea5e9;">
                                 <h4 style="margin: 0 0 10px 0; color: #0c4a6e;">📱 Get Your Digital Ticket</h4>

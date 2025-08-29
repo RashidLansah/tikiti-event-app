@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Event - Tikiti</title>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
     <script>
         // Ensure QRCode library is loaded
         window.qrCodeLoaded = false;
@@ -696,13 +697,45 @@
                 
                 console.log('✅ RSVP successful, updating UI...');
                 
+                // Send confirmation email via serverless function
+                try {
+                    const emailResponse = await fetch('/api/send-email', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            userEmail: email,
+                            userName: `${firstName} ${lastName}`,
+                            eventName: currentEvent.name,
+                            eventDate: currentEvent.date,
+                            eventTime: currentEvent.startTime || currentEvent.time,
+                            eventLocation: currentEvent.location || currentEvent.address,
+                            quantity: 1,
+                            bookingReference: bookingReference,
+                            bookingId: firestoreDocId,
+                            eventId: currentEvent.id,
+                            userId: userBooking.userId
+                        })
+                    });
+
+                    const emailResult = await emailResponse.json();
+                    if (emailResult.success) {
+                        console.log('✅ Confirmation email sent successfully');
+                    } else {
+                        console.error('❌ Failed to send email:', emailResult.error);
+                    }
+                } catch (emailError) {
+                    console.error('❌ Email error:', emailError);
+                }
+                
                 // Show success state
                 document.getElementById('rsvpSection').classList.add('hidden');
                 document.getElementById('successSection').classList.remove('hidden');
                 document.getElementById('downloadButton').classList.remove('hidden');
                 
                 console.log('🎉 UI updated, showing success message');
-                alert(`Thank you ${firstName}! You have successfully registered for ${currentEvent.name}. You can now download your ticket.`);
+                alert(`Thank you ${firstName}! You have successfully registered for ${currentEvent.name}. A confirmation email has been sent to ${email}. You can also download your ticket below.`);
                 
             } catch (error) {
                 console.error('Error submitting RSVP:', error);
