@@ -23,6 +23,7 @@ const EventListScreen = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState('All');
   const [events, setEvents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +66,60 @@ const EventListScreen = ({ navigation }) => {
         { id: 'business', name: 'Business', icon: 'briefcase' },
       ]);
     }
+  };
+
+  // Time filter options
+  const timeFilterOptions = [
+    { id: 'all', name: 'All', icon: 'calendar' },
+    { id: 'live', name: 'Live Now', icon: 'radio' },
+    { id: 'today', name: 'Today', icon: 'sun' },
+    { id: 'tomorrow', name: 'Tomorrow', icon: 'sunrise' },
+    { id: 'thisWeek', name: 'This Week', icon: 'calendar' },
+    { id: 'thisMonth', name: 'This Month', icon: 'calendar' },
+  ];
+
+  // Filter events by time
+  const filterEventsByTime = (events, timeFilter) => {
+    if (timeFilter === 'all') return events;
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const nextMonth = new Date(today);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    return events.filter(event => {
+      const eventDate = new Date(event.date);
+      
+      switch (timeFilter) {
+        case 'live':
+          // Events happening now (within 2 hours of current time)
+          const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+          return eventDate >= now && eventDate <= twoHoursFromNow;
+        
+        case 'today':
+          // Events happening today
+          return eventDate >= today && eventDate < tomorrow;
+        
+        case 'tomorrow':
+          // Events happening tomorrow
+          return eventDate >= tomorrow && eventDate < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
+        
+        case 'thisWeek':
+          // Events happening this week
+          return eventDate >= today && eventDate < nextWeek;
+        
+        case 'thisMonth':
+          // Events happening this month
+          return eventDate >= today && eventDate < nextMonth;
+        
+        default:
+          return true;
+      }
+    });
   };
 
   const onRefresh = async () => {
@@ -161,7 +216,7 @@ const EventListScreen = ({ navigation }) => {
     return categorized;
   };
 
-  // Filter events based on search query and selected category
+  // Filter events based on search query, selected category, and time filter
   const filteredEvents = events.filter(event => {
     const locationText = typeof event.location === 'object' ? 
       (event.location.name || event.location.address || '') : 
@@ -177,8 +232,11 @@ const EventListScreen = ({ navigation }) => {
     return matchesSearch && matchesCategory;
   });
 
+  // Apply time filter to the already filtered events
+  const timeFilteredEvents = filterEventsByTime(filteredEvents, selectedTimeFilter);
+
   // Categorize filtered events by time
-  const timeBasedEvents = categorizeEventsByTime(filteredEvents);
+  const timeBasedEvents = categorizeEventsByTime(timeFilteredEvents);
 
   // Get category color for modern tags
   const getCategoryColor = (category) => {
@@ -372,6 +430,41 @@ const EventListScreen = ({ navigation }) => {
         </View>
       </View>
 
+      {/* Time Filter Pills */}
+      <View style={[styles.timeFilterSection, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
+        <FlatList
+          data={timeFilterOptions}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.timeFilterContainer}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.timeFilterPill,
+                { backgroundColor: colors.background.tertiary },
+                selectedTimeFilter === item.id && { backgroundColor: colors.primary[500] }
+              ]}
+              onPress={() => setSelectedTimeFilter(item.id)}
+              activeOpacity={0.7}
+            >
+              <Feather 
+                name={item.icon} 
+                size={14} 
+                color={selectedTimeFilter === item.id ? colors.white : colors.text.secondary} 
+              />
+              <Text style={[
+                styles.timeFilterPillText,
+                { color: colors.text.secondary },
+                selectedTimeFilter === item.id && { color: colors.white, fontWeight: Typography.fontWeight.semibold }
+              ]}>
+                {item.name}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+
       {/* Floating Category Pills */}
         <View style={[styles.categoriesSection, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
           <FlatList
@@ -423,7 +516,7 @@ const EventListScreen = ({ navigation }) => {
         }
       >
         {/* Time-based Event Sections */}
-        {filteredEvents.length === 0 ? (
+        {timeFilteredEvents.length === 0 ? (
           <View style={[styles.noEventsContainer, { backgroundColor: colors.background.secondary }]}>
             <Feather name="calendar" size={48} color={colors.text.tertiary} />
             <Text style={[styles.noEventsText, { color: colors.text.secondary }]}>No events found</Text>
@@ -576,6 +669,33 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.normal,
   },
   
+  // Time Filter
+  timeFilterSection: {
+    backgroundColor: Colors.white,
+    paddingVertical: Spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.medium,
+    ...Shadows.sm,
+  },
+  timeFilterContainer: {
+    paddingHorizontal: Spacing[5],
+    gap: Spacing[2],
+  },
+  timeFilterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[2],
+    borderRadius: BorderRadius.full,
+    gap: Spacing[2],
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  timeFilterPillText: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+  },
+
   // Floating Categories
   categoriesSection: {
     backgroundColor: Colors.white,
