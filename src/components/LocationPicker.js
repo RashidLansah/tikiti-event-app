@@ -36,17 +36,24 @@ const LocationPicker = ({
       return;
     }
 
+    console.log('🔍 Searching for:', query);
+    console.log('🔑 API Key:', GOOGLE_PLACES_API_KEY ? 'Present' : 'Missing');
+    
     setIsSearching(true);
     try {
-      const response = await fetch(
-        `${GOOGLE_PLACES_BASE_URL}/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_PLACES_API_KEY}&region=gh`
-      );
+      const url = `${GOOGLE_PLACES_BASE_URL}/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_PLACES_API_KEY}&region=gh`;
+      console.log('🌐 API URL:', url);
+      
+      const response = await fetch(url);
+      
+      console.log('📡 Response status:', response.status);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch places');
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('📊 API Response:', data);
       
       if (data.status === 'OK' && data.results) {
         const places = data.results.map(place => ({
@@ -58,14 +65,20 @@ const LocationPicker = ({
             longitude: place.geometry.location.lng
           }
         }));
+        console.log('✅ Found places:', places.length);
         setSearchResults(places);
-      } else {
+      } else if (data.status === 'ZERO_RESULTS') {
+        console.log('❌ No results found');
         setSearchResults([]);
+      } else {
+        console.log('❌ API Error:', data.status, data.error_message);
+        setSearchResults([]);
+        Alert.alert('Search Error', `API Error: ${data.status} - ${data.error_message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error searching places:', error);
+      console.error('💥 Error searching places:', error);
       setSearchResults([]);
-      Alert.alert('Error', 'Failed to search locations. Please try again.');
+      Alert.alert('Network Error', `Failed to search locations: ${error.message}`);
     } finally {
       setIsSearching(false);
     }
@@ -74,8 +87,34 @@ const LocationPicker = ({
   // Handle search input change
   const handleSearchChange = (text) => {
     setSearchQuery(text);
-    searchPlaces(text);
+    if (text.length >= 3) {
+      searchPlaces(text);
+    } else {
+      setSearchResults([]);
+    }
   };
+
+  // Fallback sample locations for Ghana
+  const sampleLocations = [
+    {
+      id: 'sample-1',
+      name: 'Tamale Cultural Centre',
+      address: 'Sports Stadium Road, Tamale, Ghana',
+      coordinates: { latitude: 9.4008, longitude: -0.8393 }
+    },
+    {
+      id: 'sample-2', 
+      name: 'Accra International Conference Centre',
+      address: 'Independence Avenue, Accra, Ghana',
+      coordinates: { latitude: 5.6037, longitude: -0.1870 }
+    },
+    {
+      id: 'sample-3',
+      name: 'Kumasi Cultural Centre',
+      address: 'Prempeh II Street, Kumasi, Ghana', 
+      coordinates: { latitude: 6.6885, longitude: -1.6244 }
+    }
+  ];
 
   // Handle place selection
   const handlePlaceSelect = (place) => {
@@ -192,6 +231,14 @@ const LocationPicker = ({
                 <View style={styles.noResultsContainer}>
                   <Feather name="search" size={48} color={Colors.text.tertiary} />
                   <Text style={styles.noResultsText}>No locations found</Text>
+                  <Text style={styles.sampleLocationsText}>Try these popular venues:</Text>
+                  <FlatList
+                    data={sampleLocations}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderSearchResult}
+                    style={styles.sampleResultsList}
+                    showsVerticalScrollIndicator={false}
+                  />
                   <TouchableOpacity
                     style={styles.manualEntryButton}
                     onPress={() => setShowManualEntry(true)}
@@ -199,11 +246,26 @@ const LocationPicker = ({
                     <Text style={styles.manualEntryButtonText}>Add manually</Text>
                   </TouchableOpacity>
                 </View>
-              ) : (
+              ) : searchQuery.length === 0 ? (
                 <View style={styles.placeholderContainer}>
                   <Feather name="map-pin" size={48} color={Colors.text.tertiary} />
                   <Text style={styles.placeholderText}>
                     Start typing to search for locations
+                  </Text>
+                  <Text style={styles.sampleLocationsText}>Or try these popular venues:</Text>
+                  <FlatList
+                    data={sampleLocations}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderSearchResult}
+                    style={styles.sampleResultsList}
+                    showsVerticalScrollIndicator={false}
+                  />
+                </View>
+              ) : (
+                <View style={styles.placeholderContainer}>
+                  <ActivityIndicator size="small" color={Colors.primary[500]} />
+                  <Text style={styles.placeholderText}>
+                    Searching...
                   </Text>
                 </View>
               )}
@@ -377,6 +439,16 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.secondary,
     marginTop: Spacing[3],
+    marginBottom: Spacing[2],
+  },
+  sampleLocationsText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
+    marginBottom: Spacing[3],
+    textAlign: 'center',
+  },
+  sampleResultsList: {
+    maxHeight: 200,
     marginBottom: Spacing[4],
   },
   manualEntryButton: {
