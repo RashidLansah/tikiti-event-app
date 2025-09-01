@@ -192,7 +192,13 @@ const CreateEventScreen = ({ navigation }) => {
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        scrollEventThrottle={16}
+      >
         {/* Event Image Upload */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -253,6 +259,9 @@ const CreateEventScreen = ({ navigation }) => {
                 onBlur={() => setFocusedField(null)}
                 autoCorrect={false}
                 autoCapitalize="words"
+                returnKeyType="next"
+                blurOnSubmit={false}
+                selectTextOnFocus={false}
               />
             </View>
           </View>
@@ -287,6 +296,9 @@ const CreateEventScreen = ({ navigation }) => {
                 autoCorrect={true}
                 autoCapitalize="sentences"
                 textAlignVertical="top"
+                returnKeyType="default"
+                blurOnSubmit={false}
+                selectTextOnFocus={false}
               />
             </View>
           </View>
@@ -413,6 +425,9 @@ const CreateEventScreen = ({ navigation }) => {
                     onFocus={() => setFocusedField('ticketPrice')}
                     onBlur={() => setFocusedField(null)}
                     autoCorrect={false}
+                    returnKeyType="done"
+                    blurOnSubmit={true}
+                    selectTextOnFocus={false}
                   />
                 </View>
               </View>
@@ -438,6 +453,9 @@ const CreateEventScreen = ({ navigation }) => {
                   onFocus={() => setFocusedField('totalTickets')}
                   onBlur={() => setFocusedField(null)}
                   autoCorrect={false}
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                  selectTextOnFocus={false}
                 />
               </View>
             </View>
@@ -603,6 +621,7 @@ const styles = StyleSheet.create({
     ...Components.input.primary,
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 48,
   },
   inputContainerFocused: {
     borderWidth: 2,
@@ -617,6 +636,8 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
     padding: 0,
+    minHeight: 20,
+    textAlignVertical: 'center',
   },
   textArea: {
     height: 80,
