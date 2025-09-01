@@ -42,7 +42,7 @@ const EventDetailScreen = ({ navigation, route }) => {
     // Ensure we have all required fields with proper fallbacks
     name: event.name || 'Untitled Event',
     date: event.date || 'Date not set',
-    startTime: event.startTime || 'Time not set',
+    startTime: event.startTime || event.time || 'Time not set',
     endTime: event.endTime || '',
     location: event.location || event.address || 'Location not set',
     price: event.price || 0,
@@ -59,13 +59,31 @@ const EventDetailScreen = ({ navigation, route }) => {
     imageBase64: event.imageBase64 || null,
   };
 
-  const handleToggleEventStatus = () => {
-    const newStatus = isActive ? 'inactive' : 'active';
-    setIsActive(!isActive);
-    Alert.alert(
-      'Event Status Updated',
-      `Event has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`
-    );
+  const handleToggleEventStatus = async () => {
+    try {
+      const newStatus = isActive ? 'inactive' : 'active';
+      const newIsActive = !isActive;
+      
+      // Update the event in Firestore
+      await eventService.update(event.id, {
+        status: newStatus,
+        isActive: newIsActive,
+      });
+      
+      // Update local state
+      setIsActive(newIsActive);
+      
+      Alert.alert(
+        'Event Status Updated',
+        `Event has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`
+      );
+    } catch (error) {
+      console.error('Error updating event status:', error);
+      Alert.alert(
+        'Error',
+        'Failed to update event status. Please try again.'
+      );
+    }
   };
 
   const handleEditEvent = () => {
@@ -316,13 +334,17 @@ const EventDetailScreen = ({ navigation, route }) => {
 
         {/* Sales Statistics */}
         <View style={styles.statsContainer}>
-          <Text style={styles.sectionTitle}>Sales Overview</Text>
+          <Text style={styles.sectionTitle}>
+            {eventData.type === 'paid' ? 'Sales Overview' : 'Attendance Overview'}
+          </Text>
           
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <Feather name="users" size={24} color={Colors.primary[500]} />
               <Text style={styles.statNumber}>{eventData.soldTickets || 0}</Text>
-              <Text style={styles.statLabel}>Sold</Text>
+              <Text style={styles.statLabel}>
+                {eventData.type === 'paid' ? 'Sold' : 'Attendees'}
+              </Text>
             </View>
             
             <View style={styles.statCard}>
@@ -331,19 +353,29 @@ const EventDetailScreen = ({ navigation, route }) => {
               <Text style={styles.statLabel}>Available</Text>
             </View>
             
-            <View style={styles.statCard}>
-              <Feather name="dollar-sign" size={24} color={Colors.warning[500]} />
-              <Text style={styles.statNumber}>
-                ₵{((eventData.soldTickets || 0) * (eventData.price || 0)).toFixed(2)}
-              </Text>
-              <Text style={styles.statLabel}>Revenue</Text>
-            </View>
+            {eventData.type === 'paid' && eventData.price > 0 ? (
+              <View style={styles.statCard}>
+                <Feather name="dollar-sign" size={24} color={Colors.warning[500]} />
+                <Text style={styles.statNumber}>
+                  ₵{((eventData.soldTickets || 0) * (eventData.price || 0)).toFixed(2)}
+                </Text>
+                <Text style={styles.statLabel}>Revenue</Text>
+              </View>
+            ) : (
+              <View style={styles.statCard}>
+                <Feather name="heart" size={24} color={Colors.success[500]} />
+                <Text style={styles.statNumber}>Free</Text>
+                <Text style={styles.statLabel}>Event</Text>
+              </View>
+            )}
           </View>
 
-          {/* Sales Progress */}
+          {/* Progress */}
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Sales Progress</Text>
+              <Text style={styles.progressLabel}>
+                {eventData.type === 'paid' ? 'Sales Progress' : 'Attendance Progress'}
+              </Text>
               <Text style={styles.progressPercentage}>{salesPercentage}%</Text>
             </View>
             <View style={styles.progressBar}>
@@ -360,39 +392,7 @@ const EventDetailScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Pricing Information */}
-        <View style={styles.pricingContainer}>
-          <Text style={styles.sectionTitle}>Pricing Details</Text>
-          
-          <View style={styles.pricingCard}>
-            <View style={styles.pricingHeader}>
-              <View style={styles.pricingInfo}>
-                <Text style={styles.pricingType}>
-                  {eventData.type === 'free' ? 'Free Event' : 'General Admission'}
-                </Text>
-                <Text style={styles.pricingPrice}>
-                  {eventData.type === 'free' ? 'FREE' : `₵${eventData.price}`}
-                </Text>
-              </View>
-              <View style={styles.pricingStats}>
-                <Text style={styles.pricingSold}>
-                  {eventData.soldTickets || 0}/{eventData.totalTickets || 0}
-                </Text>
-                <Text style={styles.pricingLabel}>
-                  {eventData.type === 'free' ? 'RSVPs' : 'Sold'}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.pricingProgress}>
-              <View 
-                style={[
-                  styles.pricingProgressFill,
-                  { width: `${salesPercentage}%` }
-                ]} 
-              />
-            </View>
-          </View>
-        </View>
+
 
 
 
@@ -903,70 +903,7 @@ const styles = StyleSheet.create({
     color: Colors.text.tertiary,
     flex: 2,
   },
-  pricingContainer: {
-    backgroundColor: '#FFFFFF',
-    margin: 20,
-    marginTop: 0,
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  pricingCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  pricingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  pricingInfo: {
-    flex: 1,
-  },
-  pricingType: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  pricingPrice: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.primary[500],
-  },
-  pricingStats: {
-    alignItems: 'flex-end',
-  },
-  pricingSold: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.success[500],
-  },
-  pricingLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  pricingProgress: {
-    height: 6,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 3,
-  },
-  pricingProgressFill: {
-    height: '100%',
-    backgroundColor: Colors.success[500],
-    borderRadius: 3,
-  },
+
   amenitiesContainer: {
     backgroundColor: '#FFFFFF',
     margin: 20,

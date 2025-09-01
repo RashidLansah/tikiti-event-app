@@ -103,16 +103,7 @@ const AppNavigator = () => {
           headerShown: false,
         }}
       >
-        {/* Web Event View - Available for ALL users (public sharing) */}
-        <Stack.Screen
-          name="EventWeb"
-          component={require('../screens/Web/EventWebScreen').default}
-          options={{
-            title: 'Event Details',
-            headerShown: false, // Hide header for web view
-          }}
-          initialParams={initialRoute?.name === 'EventWeb' ? initialRoute.params : undefined}
-        />
+
 
         {/* Auth Flow - Only shown when not authenticated */}
         {!user && (

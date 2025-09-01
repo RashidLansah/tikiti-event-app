@@ -390,7 +390,7 @@ const EventDetailScreen = ({ navigation, route }) => {
         <View style={styles.infoContent}>
           <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Date & Time</Text>
           <Text style={[styles.infoValue, { color: colors.text.primary }]}>{event.date}</Text>
-          <Text style={[styles.infoSubValue, { color: colors.text.tertiary }]}>{event.startTime} - {event.endTime}</Text>
+          <Text style={[styles.infoSubValue, { color: colors.text.tertiary }]}>{event.startTime || event.time} - {event.endTime}</Text>
         </View>
       </View>
 

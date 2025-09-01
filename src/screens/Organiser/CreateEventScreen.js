@@ -164,7 +164,10 @@ const CreateEventScreen = ({ navigation, route }) => {
         description: eventDescription.trim(),
         location: selectedLocation.name,
         address: selectedLocation.address,
-        coordinates: selectedLocation.coordinates,
+        // Only include coordinates if they exist and are valid
+        ...(selectedLocation.coordinates && {
+          coordinates: selectedLocation.coordinates,
+        }),
         date: eventDate ? eventDate.toISOString().split('T')[0] : '', // Convert Date to YYYY-MM-DD
         time: eventTime,
         type: eventType,

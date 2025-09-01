@@ -20,6 +20,7 @@ const TimePicker = ({
   placeholder = "Select time" 
 }) => {
   const [showModal, setShowModal] = useState(false);
+  const [tempTime, setTempTime] = useState(null);
 
   // Format time for display
   const formatTime = (time) => {
@@ -51,23 +52,29 @@ const TimePicker = ({
     return `${hour12}:${minutesStr} ${period}`;
   };
 
-  const handleTimeChange = (event, selectedTime) => {
-    if (selectedTime) {
-      const timeString = dateToTimeString(selectedTime);
-      onSelectTime(timeString);
-    }
-  };
-
   const showTimePicker = () => {
+    // Set initial temp time
+    setTempTime(selectedTime ? timeStringToDate(selectedTime) : new Date());
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
+    setTempTime(null);
+  };
+
+  const handleTimeChange = (event, selectedTime) => {
+    if (selectedTime) {
+      setTempTime(selectedTime);
+    }
   };
 
   const handleDone = () => {
-    setShowModal(false);
+    if (tempTime) {
+      const timeString = dateToTimeString(tempTime);
+      onSelectTime(timeString);
+    }
+    closeModal();
   };
 
   return (
@@ -114,20 +121,16 @@ const TimePicker = ({
 
             {/* Time Picker */}
             <View style={styles.pickerContainer}>
-              <View style={styles.pickerWrapper}>
-                <DateTimePicker
-                  value={selectedTime ? timeStringToDate(selectedTime) : new Date()}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  is24Hour={false}
-                  onChange={handleTimeChange}
-                  style={styles.picker}
-                  textColor={Colors.text.primary}
-                  themeVariant="light"
-                  // Ensure only scrolling is allowed, no number tabs
-                  pointerEvents="auto"
-                />
-              </View>
+              <DateTimePicker
+                value={tempTime || new Date()}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                is24Hour={false}
+                onChange={handleTimeChange}
+                style={styles.picker}
+                textColor={Colors.text.primary}
+                themeVariant="light"
+              />
             </View>
           </View>
         </View>
@@ -223,13 +226,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[4],
     alignItems: 'center',
   },
-  pickerWrapper: {
-    width: '100%',
-    overflow: 'hidden',
-  },
   picker: {
     backgroundColor: Colors.background.primary,
     width: '100%',
+    height: Platform.OS === 'ios' ? 200 : 'auto',
   },
 });
 
