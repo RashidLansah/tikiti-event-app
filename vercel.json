@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/events/(.*)",
-      "destination": "/api/og?eventId=$1"
+      "destination": "/event.html"
     },
     {
       "source": "/ticket-pdf",
