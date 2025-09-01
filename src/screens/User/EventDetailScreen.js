@@ -11,6 +11,8 @@ import {
   StatusBar,
   ActivityIndicator,
   Image,
+  Linking,
+  Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import ShareButton from '../../components/ShareButton';
@@ -36,6 +38,64 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [checkingBooking, setCheckingBooking] = useState(false);
   
   // Note: RSVP form removed - app users use their existing profile data
+
+  // Handle opening directions in Google Maps
+  const handleGetDirections = () => {
+    if (!event.location) {
+      Alert.alert('Error', 'Location information is not available for this event.');
+      return;
+    }
+
+    let locationString = '';
+    let coordinates = null;
+
+    // Handle different location formats
+    if (typeof event.location === 'object') {
+      locationString = event.location.address || event.location.name || '';
+      coordinates = event.location.coordinates;
+    } else {
+      locationString = event.location;
+    }
+
+    if (!locationString && !coordinates) {
+      Alert.alert('Error', 'Location information is not available for this event.');
+      return;
+    }
+
+    // Create Google Maps URL
+    let mapsUrl = '';
+    
+    if (coordinates && coordinates.latitude && coordinates.longitude) {
+      // Use coordinates if available (more accurate)
+      mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${coordinates.latitude},${coordinates.longitude}`;
+    } else {
+      // Use address string
+      mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(locationString)}`;
+    }
+
+    // Try to open in Google Maps app first, then fallback to web
+    const googleMapsUrl = Platform.OS === 'ios' 
+      ? `comgooglemaps://?daddr=${coordinates ? `${coordinates.latitude},${coordinates.longitude}` : encodeURIComponent(locationString)}&directionsmode=driving`
+      : `google.navigation:q=${coordinates ? `${coordinates.latitude},${coordinates.longitude}` : encodeURIComponent(locationString)}`;
+
+    Linking.canOpenURL(googleMapsUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(googleMapsUrl);
+        } else {
+          // Fallback to web version
+          return Linking.openURL(mapsUrl);
+        }
+      })
+      .catch((err) => {
+        console.error('Error opening maps:', err);
+        // Final fallback to web version
+        Linking.openURL(mapsUrl).catch((webErr) => {
+          console.error('Error opening web maps:', webErr);
+          Alert.alert('Error', 'Unable to open maps. Please try again.');
+        });
+      });
+  };
 
   // Load real-time event data
   useEffect(() => {
@@ -328,8 +388,11 @@ const EventDetailScreen = ({ navigation, route }) => {
           <Text style={[styles.infoValue, { color: colors.text.primary }]}>
             {typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA')}
           </Text>
-          <TouchableOpacity>
-            <Text style={[styles.mapLink, { color: colors.primary[500] }]}>View on map</Text>
+          <TouchableOpacity onPress={handleGetDirections}>
+            <View style={styles.directionsButton}>
+              <Feather name="navigation" size={16} color={colors.primary[500]} />
+              <Text style={[styles.mapLink, { color: colors.primary[500] }]}>Get Directions</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -754,6 +817,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6366F1',
     fontWeight: '600',
+    marginLeft: 4,
+  },
+  directionsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 4,
   },
   descriptionSection: {
