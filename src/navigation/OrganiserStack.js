@@ -3,7 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 // Import Organiser screens
 import DashboardScreen from '../screens/Organiser/DashboardScreen';
-import CreateEventScreen from '../screens/Organiser/CreateEventScreen';
+import CreateEventFlow from '../screens/Organiser/CreateEventFlow';
 import ScanTicketScreen from '../screens/Organiser/ScanTicketScreen';
 import EventAttendeesScreen from '../screens/Organiser/EventAttendeesScreen';
 import EventDetailScreen from '../screens/Organiser/EventDetailScreen';
@@ -41,7 +41,7 @@ const OrganiserStack = () => {
       
       <Stack.Screen
         name="CreateEvent"
-        component={CreateEventScreen}
+        component={CreateEventFlow}
         options={{
           title: 'Create New Event',
           headerStyle: {

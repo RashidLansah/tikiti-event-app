@@ -170,8 +170,8 @@ const CreateEventScreen = ({ navigation, route }) => {
         }),
         date: eventDate ? eventDate.toISOString().split('T')[0] : '', // Convert Date to YYYY-MM-DD
         time: eventTime,
-        type: eventType,
-        price: eventType === 'paid' ? parseFloat(ticketPrice) : 0,
+        type: 'free',
+        price: 0,
         totalTickets: totalTickets ? parseInt(totalTickets) : 100,
         category: category,
         imageBase64: base64Image, // Store base64 image in Firestore
@@ -202,7 +202,7 @@ const CreateEventScreen = ({ navigation, route }) => {
         
         Alert.alert(
           'Success',
-          `${eventType === 'paid' ? 'Paid' : 'Free'} event "${eventName}" created successfully!`,
+          `Free event "${eventName}" created successfully!`,
           [
             {
               text: 'OK',
@@ -261,12 +261,12 @@ const CreateEventScreen = ({ navigation, route }) => {
                 style={styles.changeImageButton}
                 onPress={pickImage}
               >
-                <Feather name="edit-2" size={16} color="#FFFFFF" />
+                <Feather name="edit-2" size={16} color={Colors.white} />
                                  <Text style={styles.changeImageText}>Change</Text>
               </TouchableOpacity>
               {uploadingImage && (
                 <View style={styles.uploadingOverlay}>
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={Colors.white} />
                   <Text style={styles.uploadingText}>Converting...</Text>
                 </View>
               )}
@@ -276,7 +276,7 @@ const CreateEventScreen = ({ navigation, route }) => {
               style={styles.imageUploadButton}
               onPress={pickImage}
             >
-              <Feather name="camera" size={32} color="#9CA3AF" />
+              <Feather name="camera" size={32} color={Colors.text.tertiary} />
               <Text style={styles.imageUploadText}>Upload Event Poster</Text>
               <Text style={styles.imageUploadSubtext}>Recommended: 1200x600px</Text>
             </TouchableOpacity>
@@ -401,7 +401,7 @@ const CreateEventScreen = ({ navigation, route }) => {
                 <Feather 
                   name="heart" 
                   size={24} 
-                  color={eventType === 'free' ? '#FFFFFF' : '#10B981'} 
+                  color={eventType === 'free' ? Colors.white : Colors.primary[500]} 
                 />
               </View>
               <Text style={[
@@ -429,7 +429,7 @@ const CreateEventScreen = ({ navigation, route }) => {
                 <Feather 
                   name="credit-card" 
                   size={24} 
-                  color="#9CA3AF" 
+                  color={Colors.text.tertiary} 
                 />
               </View>
               <Text style={styles.eventTypeTitleDisabled}>
@@ -464,7 +464,7 @@ const CreateEventScreen = ({ navigation, route }) => {
                     value={ticketPrice}
                     onChangeText={setTicketPrice}
                     placeholder="0.00"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={Colors.text.tertiary}
                     keyboardType="decimal-pad"
                     onFocus={() => setFocusedField('ticketPrice')}
                     onBlur={() => setFocusedField(null)}
@@ -490,7 +490,7 @@ const CreateEventScreen = ({ navigation, route }) => {
                 value={totalTickets}
                 onChangeText={setTotalTickets}
                 placeholder="100"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={Colors.text.tertiary}
                 keyboardType="number-pad"
                 onFocus={() => setFocusedField('totalTickets')}
                 onBlur={() => setFocusedField(null)}
@@ -509,7 +509,7 @@ const CreateEventScreen = ({ navigation, route }) => {
             style={styles.cancelButton}
             onPress={() => navigation.goBack()}
           >
-            <Feather name="x" size={18} color="#6B7280" style={{ marginRight: 8 }} />
+            <Feather name="x" size={18} color={Colors.text.secondary} style={{ marginRight: 8 }} />
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
 
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: Spacing[2],
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.background.secondary,
   },
   title: {
     fontSize: Typography.fontSize.xl,
@@ -751,18 +751,18 @@ const styles = StyleSheet.create({
   },
   eventTypeDisabled: {
     opacity: 0.5,
-    backgroundColor: '#F9FAFB',
-    borderColor: '#E5E7EB',
+    backgroundColor: Colors.background.secondary,
+    borderColor: Colors.border.light,
   },
   eventTypeTitleDisabled: {
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semibold,
-    color: '#9CA3AF',
+    color: Colors.text.tertiary,
     textAlign: 'center',
   },
   eventTypeSubtitleDisabled: {
     fontSize: Typography.fontSize.sm,
-    color: '#9CA3AF',
+    color: Colors.text.tertiary,
     textAlign: 'center',
   },
   buttonContainer: {

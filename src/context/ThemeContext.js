@@ -16,16 +16,16 @@ export const useTheme = () => {
 const DarkColors = {
   // Primary Brand Colors (enhanced for dark theme)
   primary: {
-    50: '#1E3A8A',
-    100: '#1E40AF',
-    200: '#2563EB',
-    300: '#3B82F6',
-    400: '#60A5FA',
-    500: '#3B82F6', // Main brand blue
-    600: '#2563EB',
-    700: '#1D4ED8',
-    800: '#1E40AF',
-    900: '#1E3A8A',
+    50: '#7C2D12',
+    100: '#9A3412',
+    200: '#C2410C',
+    300: '#EA580C',
+    400: '#FB923C',
+    500: '#FF6B35', // Main brand orange
+    600: '#FB923C',
+    700: '#EA580C',
+    800: '#C2410C',
+    900: '#9A3412',
   },
   
   // Secondary Colors (refined for dark theme)

@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
-import authService from '../services/authService';
+import { authService } from '../services/authService';
 
 const AuthContext = createContext({});
 
@@ -110,6 +110,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+
+
   const loginUser = async (email, password) => {
     try {
       setLoading(true);
@@ -127,12 +129,12 @@ export const AuthProvider = ({ children }) => {
   const registerUser = async (email, password, displayName, profileData) => {
     try {
       setLoading(true);
-      const userCredential = await authService.register(email, password, displayName);
+      const user = await authService.register(email, password, displayName);
       
       // Create user profile in Firestore
-      await createUserProfile(userCredential.uid, profileData);
+      await createUserProfile(user.uid, profileData);
       
-      return userCredential;
+      return user;
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
@@ -161,7 +163,7 @@ export const AuthProvider = ({ children }) => {
     createUserProfile,
     updateUserProfile,
     isAuthenticated: !!user,
-    isOrganizer: userProfile?.accountType === 'organizer',
+    isOrganizer: userProfile?.accountType === 'organiser',
     isUser: userProfile?.accountType === 'user' || !userProfile?.accountType,
   };
 

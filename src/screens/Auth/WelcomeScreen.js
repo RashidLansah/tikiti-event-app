@@ -1,137 +1,174 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   Image,
+  Dimensions,
+  Animated,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
+import { useTheme } from '../../context/ThemeContext';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
 const { width, height } = Dimensions.get('window');
 
 const WelcomeScreen = ({ navigation }) => {
-  const handleUserSelection = (accountType) => {
-    navigation.navigate('Register', { accountType });
-  };
+  const { colors } = useTheme();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const slideUpAnim = useRef(new Animated.Value(50)).current;
+  const buttonFadeAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowPulseAnim = useRef(new Animated.Value(1)).current;
 
-  const handleSignIn = () => {
-    navigation.navigate('Login');
-  };
+  useEffect(() => {
+    // Logo entrance animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideUpAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Text animation with delay
+    setTimeout(() => {
+      Animated.timing(slideUpAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+    }, 300);
+
+    // Buttons animation with delay
+    setTimeout(() => {
+      Animated.timing(buttonFadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }, 800);
+
+    // Subtle pulse animation for logo
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // Glow pulse animation
+    const glowPulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowPulseAnim, {
+          toValue: 1.2,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowPulseAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    
+    setTimeout(() => {
+      pulseAnimation.start();
+      glowPulseAnimation.start();
+    }, 1500);
+  }, []);
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Image 
-          source={require('../../../assets/icon.png')} 
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
-        <Text style={styles.tagline}>Your Gateway to Amazing Events</Text>
-      </View>
-
-      {/* Main Content */}
-      <View style={styles.content}>
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Welcome to Tikiti!</Text>
-          <Text style={styles.welcomeSubtitle}>
-            Choose how you'd like to use Tikiti
-          </Text>
-        </View>
-
-        {/* Account Type Selection */}
-        <View style={styles.optionsContainer}>
-          {/* User Option */}
-          <TouchableOpacity
-            style={styles.optionCard}
-            onPress={() => handleUserSelection('user')}
-          >
-            <View style={styles.optionIconContainer}>
-              <View style={[styles.optionIcon, { backgroundColor: Colors.primary[500] }]}>
-                <Feather name="user" size={32} color={Colors.white} />
-              </View>
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionTitle}>I'm an Attendee</Text>
-              <Text style={styles.optionDescription}>
-                Discover and book tickets for amazing events in your area
-              </Text>
-              <View style={styles.optionFeatures}>
-                <View style={styles.featureItem}>
-                  <Feather name="check" size={16} color="Colors.success[500]" />
-                  <Text style={styles.featureText}>Browse events</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Feather name="check" size={16} color="Colors.success[500]" />
-                  <Text style={styles.featureText}>Buy tickets</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Feather name="check" size={16} color="Colors.success[500]" />
-                  <Text style={styles.featureText}>Digital wallet</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.optionArrow}>
-              <Feather name="arrow-right" size={20} color="Colors.primary[500]" />
-            </View>
-          </TouchableOpacity>
-
-          {/* Organiser Option */}
-          <TouchableOpacity
-            style={styles.optionCard}
-            onPress={() => handleUserSelection('organizer')}
-          >
-            <View style={styles.optionIconContainer}>
-              <View style={[styles.optionIcon, { backgroundColor: 'Colors.success[500]' }]}>
-                <Feather name="users" size={32} color="Colors.white" />
-              </View>
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionTitle}>I'm an Organiser</Text>
-              <Text style={styles.optionDescription}>
-                Create and manage events, sell tickets and grow your audience
-              </Text>
-              <View style={styles.optionFeatures}>
-                <View style={styles.featureItem}>
-                  <Feather name="check" size={16} color="Colors.success[500]" />
-                  <Text style={styles.featureText}>Create events</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Feather name="check" size={16} color="Colors.success[500]" />
-                  <Text style={styles.featureText}>Sell tickets</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Feather name="check" size={16} color="Colors.success[500]" />
-                  <Text style={styles.featureText}>Analytics dashboard</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.optionArrow}>
-              <Feather name="arrow-right" size={20} color="Colors.success[500]" />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity 
-          style={styles.signInButton}
-          onPress={handleSignIn}
+    <View style={[styles.container, { backgroundColor: '#000000' }]}>
+      {/* Logo and Branding */}
+      <View style={styles.logoContainer}>
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [
+              { scale: Animated.multiply(scaleAnim, pulseAnim) },
+              { translateY: slideUpAnim }
+            ],
+          }}
         >
-          <Text style={styles.signInButtonText}>Already have an account? Sign In</Text>
-        </TouchableOpacity>
-        
-        <Text style={styles.footerText}>
-          By continuing, you agree to our{' '}
-          <Text style={styles.footerLink}>Terms of Service</Text>
-          {' '}and{' '}
-          <Text style={styles.footerLink}>Privacy Policy</Text>
-        </Text>
+          {/* Subtle white glow background */}
+          <Animated.View 
+            style={[
+              styles.logoGlow,
+              {
+                transform: [{ scale: glowPulseAnim }],
+              }
+            ]} 
+          />
+          <Image 
+            source={require('../../../tikiti-logo.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+            tintColor={undefined}
+          />
+        </Animated.View>
+        <Animated.Text 
+          style={[
+            styles.tagline, 
+            { 
+              opacity: fadeAnim,
+              transform: [{ translateY: slideUpAnim }],
+            }
+          ]}
+        >
+          WHERE AMAZING EVENTS HAPPEN
+        </Animated.Text>
       </View>
+
+      {/* Action Buttons */}
+      <Animated.View 
+        style={[
+          styles.buttonContainer,
+          {
+            opacity: buttonFadeAnim,
+            transform: [{ translateY: slideUpAnim }],
+          }
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate('CreateAccount')}
+        >
+          <Text style={styles.primaryButtonText}>
+            Create Account
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('SignIn')}
+        >
+          <Text style={styles.secondaryButtonText}>
+            Sign In
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 };
@@ -139,130 +176,67 @@ const WelcomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing[6],
   },
-  header: {
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: Spacing[10],
-    paddingHorizontal: Spacing[5],
-  },
-  logo: {
-    fontSize: Typography.fontSize['4xl'],
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary[600],
-    marginBottom: Spacing[2],
-    letterSpacing: Typography.letterSpacing.tight,
-  },
-  logoImage: {
-    height: 80,
-    width: 80,
-    marginBottom: Spacing[2],
-    borderRadius: BorderRadius['2xl'],
-    ...Shadows.lg,
-  },
-  tagline: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.secondary,
-    fontWeight: Typography.fontWeight.medium,
-  },
-  content: {
+  logoContainer: {
     flex: 1,
-    paddingHorizontal: Spacing[5],
-  },
-  welcomeSection: {
-    alignItems: 'center',
-    marginBottom: Spacing[10],
-  },
-  welcomeTitle: {
-    fontSize: Typography.fontSize['2xl'],
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing[2],
-    textAlign: 'center',
-  },
-  welcomeSubtitle: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.base,
-  },
-  optionsContainer: {
-    gap: Spacing[5],
-  },
-  optionCard: {
-    ...Components.card.elevated,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing[6],
-  },
-  optionIconContainer: {
-    marginRight: Spacing[4],
-  },
-  optionIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: Spacing[20],
   },
-  optionContent: {
-    flex: 1,
+  logoGlow: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  optionTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text.primary,
-    marginBottom: Spacing[1],
+  logoImage: {
+    width: 250,
+    height: 250,
+    marginBottom: Spacing[6],
   },
-  optionDescription: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
-    marginBottom: Spacing[3],
-    lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
-  },
-  optionFeatures: {
-    gap: Spacing[2],
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[2],
-  },
-  featureText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.text.secondary,
-    fontWeight: Typography.fontWeight.medium,
-  },
-  optionArrow: {
-    marginLeft: Spacing[4],
-    padding: Spacing[2],
-  },
-  footer: {
-    paddingHorizontal: Spacing[5],
-    paddingBottom: Spacing[10],
-    paddingTop: Spacing[5],
-  },
-  footerText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.text.tertiary,
+  tagline: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#FFFFFF',
     textAlign: 'center',
-    lineHeight: Typography.lineHeight.normal * Typography.fontSize.xs,
-  },
-  footerLink: {
-    color: Colors.primary[600],
-    fontWeight: Typography.fontWeight.medium,
-  },
-  signInButton: {
-    paddingVertical: Spacing[3],
     paddingHorizontal: Spacing[4],
-    marginBottom: Spacing[4],
+    letterSpacing: 2,
+    backgroundColor: 'rgba(255, 0, 0, 0.1)', // Temporary red background for debugging
   },
-  signInButtonText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.primary[500],
-    fontWeight: Typography.fontWeight.semibold,
-    textAlign: 'center',
+  buttonContainer: {
+    paddingBottom: Spacing[12],
+    gap: Spacing[4],
+  },
+  primaryButton: {
+    backgroundColor: Colors.primary[500], // Orange brand color
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[6],
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    ...Shadows.medium,
+  },
+  primaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    backgroundColor: 'rgba(0, 255, 0, 0.1)', // Temporary green background for debugging
+  },
+  secondaryButton: {
+    borderWidth: 2,
+    borderColor: Colors.primary[500], // Orange brand color
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[6],
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF6B35', // Orange brand color
+    backgroundColor: 'rgba(0, 0, 255, 0.1)', // Temporary blue background for debugging
   },
 });
 

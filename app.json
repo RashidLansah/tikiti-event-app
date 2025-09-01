@@ -10,9 +10,9 @@
     "scheme": "tikiti",
     "description": "Discover, create, and manage events with Tikiti - the modern event platform for organizers and attendees.",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/Tikiti.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0EA5E9"
+      "backgroundColor": "#000000"
     },
     "assetBundlePatterns": [
       "**/*"

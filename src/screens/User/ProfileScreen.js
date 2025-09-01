@@ -8,7 +8,10 @@ import {
   Alert,
   Switch,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from 'react-native';
+
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -17,11 +20,9 @@ import { bookingService, userService } from '../../services/firestoreService';
 
 
 const ProfileScreen = ({ navigation }) => {
-  const { user, userProfile, logout, updateUserProfile } = useAuth();
+  const { user, userProfile, logout, updateUserProfile, isOrganizer } = useAuth();
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [locationEnabled, setLocationEnabled] = useState(true);
-  const [marketingEnabled, setMarketingEnabled] = useState(false);
   const [ticketStats, setTicketStats] = useState({ total: 0, upcoming: 0 });
   const [isSwitching, setIsSwitching] = useState(false);
 
@@ -29,6 +30,8 @@ const ProfileScreen = ({ navigation }) => {
     // Load user ticket statistics when user changes
     loadTicketStats();
   }, [user]);
+
+
 
   const loadTicketStats = async () => {
     if (!user) return;
@@ -123,35 +126,42 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleSwitchToOrganiser = () => {
-    Alert.alert(
-      'Switch to Organiser Account',
-      'Do you want to switch to organiser mode? This will allow you to create and manage events.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Switch', 
-          onPress: async () => {
-            try {
-              setIsSwitching(true);
-              await updateUserProfile({ accountType: 'organizer' });
-              
-              // Small delay to show the loading state
-              setTimeout(() => {
-                // Force navigation to organiser flow
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'OrganiserFlow' }],
-                });
-              }, 1000);
-            } catch (error) {
-              console.error('Error switching to organiser:', error);
-              setIsSwitching(false);
-              Alert.alert('Error', 'Failed to switch account type. Please try again.');
-            }
-          }
-        }
-      ]
-    );
+    if (isOrganizer) {
+      // User is already an organiser, switch to organiser flow
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'OrganiserFlow' }],
+      });
+    } else {
+      // User is not an organiser, start upgrade flow
+      navigation.navigate('OrganiserUpgrade');
+    }
+  };
+
+  const handleHelpSupport = () => {
+    const email = 'gettikiti@gmail.com';
+    const subject = 'Tikiti App Support Request';
+    const body = `Hi Tikiti Support Team,
+
+I need help with:
+
+[Please describe your issue here]
+
+Device: ${Platform.OS}
+App Version: 1.0.0
+User ID: ${user?.uid || 'Not logged in'}
+
+Thank you!`;
+
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    Linking.openURL(mailtoUrl).catch(() => {
+      Alert.alert(
+        'Email Not Available',
+        'Please email us directly at gettikiti@gmail.com',
+        [{ text: 'OK' }]
+      );
+    });
   };
 
 
@@ -184,45 +194,47 @@ const ProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        {/* Account Type Badge */}
+        <View style={styles.accountTypeContainer}>
+          <View style={[styles.accountTypeBadge, { backgroundColor: colors.primary[100], borderColor: colors.primary[200] }]}>
+            <Feather name={isOrganizer ? "users" : "user"} size={16} color={colors.primary[600]} />
+            <Text style={[styles.accountTypeText, { color: colors.primary[700] }]}>
+              {isOrganizer ? "Organiser Account" : "Attendee Account"}
+            </Text>
+          </View>
+        </View>
+
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={[styles.statCard, { backgroundColor: colors.background.secondary }]}>
+            <View style={styles.statIconContainer}>
+              <Feather name="credit-card" size={24} color={getSubtleIconColor(colors.primary[500])} />
+            </View>
             <Text style={[styles.statNumber, { color: colors.text.primary }]}>{ticketStats.total}</Text>
             <Text style={[styles.statLabel, { color: colors.text.tertiary }]}>Total Tickets</Text>
-            <Feather name="credit-card" size={20} color={getSubtleIconColor(colors.primary[500])} />
           </View>
           
           <View style={[styles.statCard, { backgroundColor: colors.background.secondary }]}>
+            <View style={styles.statIconContainer}>
+              <Feather name="calendar" size={24} color={getSubtleIconColor(colors.success[500])} />
+            </View>
             <Text style={[styles.statNumber, { color: colors.text.primary }]}>{ticketStats.upcoming}</Text>
             <Text style={[styles.statLabel, { color: colors.text.tertiary }]}>Upcoming Events</Text>
-            <Feather name="calendar" size={20} color={getSubtleIconColor(colors.success[500])} />
-          </View>
-          
-          <View style={[styles.statCard, { backgroundColor: colors.background.secondary }]}>
-            <Text style={[styles.statNumber, { color: colors.text.primary }]}>{userProfile?.accountType === 'organizer' ? 'Organizer' : 'Attendee'}</Text>
-            <Text style={[styles.statLabel, { color: colors.text.tertiary }]}>Account Type</Text>
-            <Feather name="user" size={20} color={getSubtleIconColor(colors.text.secondary)} />
           </View>
         </View>
+
+
 
         {/* Quick Actions */}
         <View style={[styles.section, { backgroundColor: colors.background.secondary }]}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Quick Actions</Text>
           
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}>
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}
+            onPress={() => navigation.navigate('BrowseEvents')}
+          >
             <View style={styles.menuIcon}>
-              <Feather name="credit-card" size={20} color={getSubtleIconColor(colors.primary[500])} />
-            </View>
-            <View style={styles.menuContent}>
-              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>My Tickets</Text>
-              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>View your purchased tickets</Text>
-            </View>
-            <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}>
-            <View style={styles.menuIcon}>
-              <Feather name="calendar" size={20} color={getSubtleIconColor(colors.success[500])} />
+              <Feather name="search" size={20} color={getSubtleIconColor(colors.primary[400])} />
             </View>
             <View style={styles.menuContent}>
               <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Browse Events</Text>
@@ -231,7 +243,21 @@ const ProfileScreen = ({ navigation }) => {
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
 
-          {/* Switch to Organiser */}
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}
+            onPress={() => navigation.navigate('MyTickets')}
+          >
+            <View style={styles.menuIcon}>
+              <Feather name="ticket" size={20} color={getSubtleIconColor(colors.success[500])} />
+            </View>
+            <View style={styles.menuContent}>
+              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>My Tickets</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>View your event tickets</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
+          </TouchableOpacity>
+
+          {/* Switch to Organiser - Always show */}
           <TouchableOpacity 
             style={[styles.menuItem, { borderBottomColor: 'transparent' }]}
             onPress={handleSwitchToOrganiser}
@@ -240,8 +266,12 @@ const ProfileScreen = ({ navigation }) => {
               <Feather name="users" size={20} color={getSubtleIconColor(colors.warning[500])} />
             </View>
             <View style={styles.menuContent}>
-              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Switch to Organiser</Text>
-              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>Create and manage events</Text>
+              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>
+                {isOrganizer ? 'Switch to Organiser' : 'Become an Organiser'}
+              </Text>
+              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>
+                {isOrganizer ? 'Manage your events' : 'Create and manage events'}
+              </Text>
             </View>
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
@@ -284,55 +314,31 @@ const ProfileScreen = ({ navigation }) => {
             />
           </View>
 
-          <View style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}>
-            <View style={styles.menuIcon}>
-              <Feather name="map-pin" size={20} color={getSubtleIconColor(colors.text.secondary)} />
-            </View>
-            <View style={styles.menuContent}>
-              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Location Services</Text>
-              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>Find events near you</Text>
-            </View>
-            <Switch
-              value={locationEnabled}
-              onValueChange={setLocationEnabled}
-              trackColor={{ false: colors.gray[300], true: colors.primary[200] }}
-              thumbColor={locationEnabled ? colors.primary[500] : colors.gray[400]}
-            />
-          </View>
 
-          <View style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}>
-            <View style={styles.menuIcon}>
-              <Feather name="mail" size={20} color={getSubtleIconColor(colors.primary[400])} />
-            </View>
-            <View style={styles.menuContent}>
-              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Marketing Emails</Text>
-              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>Event recommendations</Text>
-            </View>
-            <Switch
-              value={marketingEnabled}
-              onValueChange={setMarketingEnabled}
-              trackColor={{ false: colors.gray[300], true: colors.primary[200] }}
-              thumbColor={marketingEnabled ? colors.primary[500] : colors.gray[400]}
-            />
-          </View>
         </View>
 
         {/* Support & About */}
         <View style={[styles.section, { backgroundColor: colors.background.secondary }]}>
           <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Support & About</Text>
           
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}>
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}
+            onPress={handleHelpSupport}
+          >
             <View style={styles.menuIcon}>
               <Feather name="help-circle" size={20} color={getSubtleIconColor(colors.primary[400])} />
             </View>
             <View style={styles.menuContent}>
               <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Help & Support</Text>
-              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>Get help with your account</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>Contact us for assistance</Text>
             </View>
-            <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
+            <Feather name="mail" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}>
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+          >
             <View style={styles.menuIcon}>
               <Feather name="shield" size={20} color={getSubtleIconColor(colors.success[500])} />
             </View>
@@ -343,7 +349,10 @@ const ProfileScreen = ({ navigation }) => {
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: 'transparent' }]}>
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: 'transparent' }]}
+            onPress={() => navigation.navigate('TermsOfService')}
+          >
             <View style={styles.menuIcon}>
               <Feather name="file-text" size={20} color={getSubtleIconColor(colors.warning[500])} />
             </View>
@@ -402,6 +411,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
   },
+
   content: {
     flex: 1,
   },
@@ -463,35 +473,69 @@ const styles = StyleSheet.create({
     color: Colors.white,
     marginLeft: Spacing[2],
   },
+  accountTypeContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  accountTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    backgroundColor: Colors.primary[100],
+    borderColor: Colors.primary[200],
+  },
+  accountTypeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary[700],
+    marginLeft: 6,
+  },
   statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    gap: 12,
   },
   statCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    marginHorizontal: 8,
-    borderRadius: 8,
+    padding: 20,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   statNumber: {
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: '700',
     color: '#000000',
     marginBottom: 4,
+    textAlign: 'center',
   },
   statLabel: {
-    fontSize: 12,
-    color: '#999999',
+    fontSize: 13,
+    color: '#666666',
     textAlign: 'center',
-    marginBottom: 8,
+    fontWeight: '500',
+    lineHeight: 16,
   },
   section: {
     backgroundColor: '#FFFFFF',
@@ -585,6 +629,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing[4],
     textAlign: 'center',
   },
+
 });
 
 export default ProfileScreen; 

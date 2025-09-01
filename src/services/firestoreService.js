@@ -223,6 +223,81 @@ export const eventService = {
     }
   },
 
+  // Get events by location/country
+  getByLocation: async (country, limitCount = 20) => {
+    try {
+      // First get all active events
+      const q = query(
+        collection(db, COLLECTIONS.EVENTS),
+        where('isActive', '==', true),
+        limit(limitCount * 2) // Get more to filter by location
+      );
+
+      const querySnapshot = await getDocs(q);
+      const events = [];
+      
+      querySnapshot.forEach((doc) => {
+        const eventData = doc.data();
+        const eventLocation = eventData.location;
+        
+        // Check if event location matches user's country
+        let locationMatches = false;
+        
+        if (typeof eventLocation === 'string') {
+          // Simple string location - check if it contains the country
+          locationMatches = eventLocation.toLowerCase().includes(country.toLowerCase());
+        } else if (typeof eventLocation === 'object' && eventLocation) {
+          // Object location - check name, address, or country fields
+          const locationText = `${eventLocation.name || ''} ${eventLocation.address || ''} ${eventLocation.country || ''}`.toLowerCase();
+          locationMatches = locationText.includes(country.toLowerCase());
+        }
+        
+        if (locationMatches) {
+          events.push({ id: doc.id, ...eventData });
+        }
+      });
+
+      // Limit results and sort by creation date
+      return events
+        .sort((a, b) => new Date(b.createdAt?.toDate?.() || b.createdAt) - new Date(a.createdAt?.toDate?.() || a.createdAt))
+        .slice(0, limitCount);
+    } catch (error) {
+      console.error('Error getting events by location:', error);
+      throw error;
+    }
+  },
+
+  // Get events near user (with fallback to all events if no location matches)
+  getNearUser: async (userCountry, limitCount = 20) => {
+    try {
+      // First try to get events in user's country
+      const localEvents = await eventService.getByLocation(userCountry, limitCount);
+      
+      // If we have enough local events, return them
+      if (localEvents.length >= limitCount * 0.5) {
+        return localEvents;
+      }
+      
+      // Otherwise, get additional events from nearby countries or all events
+      const allEvents = await eventService.getAll(limitCount);
+      const combinedEvents = [...localEvents];
+      
+      // Add events from other countries to fill the gap
+      allEvents.events.forEach(event => {
+        if (!localEvents.find(localEvent => localEvent.id === event.id)) {
+          combinedEvents.push(event);
+        }
+      });
+      
+      return combinedEvents.slice(0, limitCount);
+    } catch (error) {
+      console.error('Error getting events near user:', error);
+      // Fallback to getting all events
+      const result = await eventService.getAll(limitCount);
+      return result.events;
+    }
+  },
+
   // Listen to real-time updates for organizer events
   listenToOrganizerEvents: (organizerId, callback) => {
     try {

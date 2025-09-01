@@ -11,11 +11,10 @@ export const linkingConfig = {
   ],
   config: {
     screens: {
-      // Onboarding & Auth
-      Onboarding: 'onboarding',
+      // Auth
       Welcome: 'welcome',
-      Login: 'login',
-      Register: 'register',
+      SignIn: 'signin',
+      CreateAccount: 'create-account',
       
       // Web Event View
       EventWeb: {
@@ -205,7 +204,7 @@ export const getInitialRoute = () => {
     }
   }
   
-  // Default to onboarding
-  console.log('🔍 Using default route: Onboarding');
-  return { name: 'Onboarding' };
+  // Default to welcome
+  console.log('🔍 Using default route: Welcome');
+  return { name: 'Welcome' };
 };

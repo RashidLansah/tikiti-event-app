@@ -6,7 +6,7 @@ import { Colors, Typography, Spacing, Shadows } from '../styles/designSystem';
 
 // Import Organiser screens
 import DashboardScreen from '../screens/Organiser/DashboardScreen';
-import CreateEventScreen from '../screens/Organiser/CreateEventScreen';
+import CreateEventFlow from '../screens/Organiser/CreateEventFlow';
 import ScanTicketScreen from '../screens/Organiser/ScanTicketScreen';
 import EventDetailScreen from '../screens/Organiser/EventDetailScreen';
 import EventAttendeesScreen from '../screens/Organiser/EventAttendeesScreen';
@@ -23,7 +23,7 @@ const DashboardStack = () => (
     }}
   >
     <Stack.Screen name="Dashboard" component={DashboardScreen} />
-    <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
+    <Stack.Screen name="CreateEvent" component={CreateEventFlow} />
     <Stack.Screen name="EventDetail" component={EventDetailScreen} />
     <Stack.Screen name="EventAttendees" component={EventAttendeesScreen} />
     <Stack.Screen name="ScanTicket" component={ScanTicketScreen} />

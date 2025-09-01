@@ -12,9 +12,12 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { eventService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,7 +76,7 @@ const DashboardScreen = ({ navigation }) => {
 
   const EventCard = ({ event }) => (
     <TouchableOpacity 
-      style={styles.eventCard}
+      style={[styles.eventCard, { backgroundColor: colors.background.secondary, borderColor: colors.border.light }]}
       onPress={() => handleEventPress(event)}
     >
       {event.imageBase64 && (
@@ -88,8 +91,8 @@ const DashboardScreen = ({ navigation }) => {
       )}
       <View style={styles.eventContent}>
         <View style={styles.eventHeader}>
-          <Text style={styles.eventName}>{event.name}</Text>
-          <Text style={styles.eventDate}>
+          <Text style={[styles.eventName, { color: colors.text.primary }]}>{event.name}</Text>
+          <Text style={[styles.eventDate, { color: colors.text.secondary }]}>
            {event.date ? new Date(event.date).toLocaleDateString('en-US', {
              month: 'short',
              day: 'numeric',
@@ -97,30 +100,30 @@ const DashboardScreen = ({ navigation }) => {
            }) : 'Date TBD'}
          </Text>
         </View>
-                 <Text style={styles.eventLocation}>
-                   {event.address || (typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA'))}
-                 </Text>
-        <View style={styles.eventStats}>
+        <Text style={[styles.eventLocation, { color: colors.text.secondary }]}>
+          {event.address || (typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA'))}
+        </Text>
+        <View style={[styles.eventStats, { backgroundColor: colors.background.primary, borderColor: colors.border.light }]}>
           {event.type === 'paid' && event.price > 0 ? (
             <>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
-                <Text style={styles.statLabel}>Tickets Sold</Text>
+                <Text style={[styles.statValue, { color: colors.primary[500] }]}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
+                <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Tickets Sold</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>₵{(event.soldTickets || 0) * (event.price || 0)}</Text>
-                <Text style={styles.statLabel}>Revenue</Text>
+                <Text style={[styles.statValue, { color: colors.primary[500] }]}>₵{(event.soldTickets || 0) * (event.price || 0)}</Text>
+                <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Revenue</Text>
               </View>
             </>
           ) : (
             <>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
-                <Text style={styles.statLabel}>Attendees</Text>
+                <Text style={[styles.statValue, { color: colors.primary[500] }]}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
+                <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Attendees</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>Free</Text>
-                <Text style={styles.statLabel}>Event</Text>
+                <Text style={[styles.statValue, { color: colors.primary[500] }]}>Free</Text>
+                <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Event</Text>
               </View>
             </>
           )}
@@ -130,14 +133,14 @@ const DashboardScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Events</Text>
+    <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+      <View style={[styles.header, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
+        <Text style={[styles.title, { color: colors.text.primary }]}>My Events</Text>
         <TouchableOpacity
-          style={styles.createButton}
+          style={[styles.createButton, { backgroundColor: colors.primary[500] }]}
           onPress={() => navigation.navigate('CreateEvent')}
         >
-          <Text style={styles.createButtonText}>+ Create Event</Text>
+          <Text style={[styles.createButtonText, { color: colors.white }]}>+ Create Event</Text>
         </TouchableOpacity>
       </View>
 
@@ -150,8 +153,8 @@ const DashboardScreen = ({ navigation }) => {
       >
         {loading ? (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color="#10B981" />
-            <Text style={styles.loadingText}>Loading events...</Text>
+            <ActivityIndicator size="large" color={colors.primary[500]} />
+            <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Loading events...</Text>
           </View>
         ) : events.length > 0 ? (
           events.map((event) => (
@@ -159,23 +162,65 @@ const DashboardScreen = ({ navigation }) => {
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>No Events Yet</Text>
-            <Text style={styles.emptyStateSubtitle}>
-              Create your first event to get started!
+            <View style={[styles.emptyIcon, { backgroundColor: colors.primary[50] }]}>
+              <Feather name="calendar-plus" size={48} color={colors.primary[500]} />
+            </View>
+            
+            <Text style={[styles.emptyStateTitle, { color: colors.text.primary }]}>
+              Welcome to Organiser Mode! 🎉
             </Text>
+            
+            <Text style={[styles.emptyStateSubtitle, { color: colors.text.secondary }]}>
+              You're now an organiser! Start creating amazing events and managing your attendees.
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.createFirstEventButton, { backgroundColor: colors.primary[500] }]}
+              onPress={() => navigation.navigate('CreateEvent')}
+            >
+              <Feather name="plus" size={20} color={colors.white} />
+              <Text style={[styles.createFirstEventButtonText, { color: colors.white }]}>
+                Create Your First Event
+              </Text>
+            </TouchableOpacity>
+
+            {/* Quick Tips */}
+            <View style={[styles.tipsCard, { backgroundColor: colors.background.secondary }]}>
+              <Text style={[styles.tipsTitle, { color: colors.text.primary }]}>Quick Tips for Success</Text>
+              
+              <View style={styles.tipItem}>
+                <Feather name="check-circle" size={16} color={colors.success[500]} />
+                <Text style={[styles.tipText, { color: colors.text.secondary }]}>
+                  Create detailed event descriptions to attract more attendees
+                </Text>
+              </View>
+              
+              <View style={styles.tipItem}>
+                <Feather name="check-circle" size={16} color={colors.success[500]} />
+                <Text style={[styles.tipText, { color: colors.text.secondary }]}>
+                  Set clear pricing and ticket limits for better management
+                </Text>
+              </View>
+              
+              <View style={styles.tipItem}>
+                <Feather name="check-circle" size={16} color={colors.success[500]} />
+                <Text style={[styles.tipText, { color: colors.text.secondary }]}>
+                  Use high-quality images to make your events stand out
+                </Text>
+              </View>
+              
+              <View style={styles.tipItem}>
+                <Feather name="check-circle" size={16} color={colors.success[500]} />
+                <Text style={[styles.tipText, { color: colors.text.secondary }]}>
+                  Keep your event information up to date
+                </Text>
+              </View>
+            </View>
           </View>
         )}
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.scanButton}
-        onPress={() => navigation.navigate('ScanTicket')}
-      >
-        <View style={styles.scanButtonContent}>
-          <Feather name="camera" size={20} color="#FFFFFF" style={styles.scanButtonIcon} />
-          <Text style={styles.scanButtonText}>Scan Tickets</Text>
-        </View>
-      </TouchableOpacity>
+
     </View>
   );
 };
@@ -183,58 +228,47 @@ const DashboardScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
-    padding: 24,
+    backgroundColor: Colors.white,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 50,
+    paddingTop: Spacing[12],
+    paddingHorizontal: Spacing[6],
+    paddingBottom: Spacing[6],
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1F2937',
-    letterSpacing: -0.5,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
   },
   createButton: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    shadowColor: '#10B981',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: Colors.primary[500],
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[3],
+    borderRadius: BorderRadius.lg,
+    ...Shadows.sm,
   },
   createButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
+    color: Colors.white,
+    fontWeight: Typography.fontWeight.semibold,
+    fontSize: Typography.fontSize.base,
   },
   eventsList: {
     flex: 1,
+    paddingHorizontal: Spacing[6],
   },
   eventCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginBottom: 20,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    marginBottom: Spacing[5],
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 8,
+    borderColor: Colors.border.light,
+    ...Shadows.medium,
     overflow: 'hidden',
   },
   eventImage: {
@@ -294,45 +328,27 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  scanButton: {
-    backgroundColor: '#6366F1',
-    padding: 18,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginTop: 24,
-    shadowColor: '#6366F1',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  scanButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scanButtonIcon: {
-    marginRight: 8,
-  },
-  scanButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
   },
+  emptyIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#FFF7ED',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   emptyStateTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
   },
   emptyStateSubtitle: {
@@ -340,6 +356,56 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
+    marginBottom: 32,
+    paddingHorizontal: 16,
+  },
+  createFirstEventButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF6B35',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginBottom: 32,
+    shadowColor: '#FF6B35',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  createFirstEventButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+  },
+  tipsCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 24,
+    width: '100%',
+    marginTop: 16,
+  },
+  tipsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#374151',
+    marginBottom: 16,
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 12,
+    flex: 1,
+    lineHeight: 20,
   },
   loadingState: {
     flex: 1,

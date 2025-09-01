@@ -2,18 +2,18 @@
 // Inspired by GoFundMe and Eventbrite's modern, elegant design
 
 export const Colors = {
-  // Primary Brand Colors
+  // Primary Brand Colors - Tikiti Orange
   primary: {
-    50: '#F0F9FF',
-    100: '#E0F2FE', 
-    200: '#BAE6FD',
-    300: '#7DD3FC',
-    400: '#38BDF8',
-    500: '#0EA5E9', // Main brand color
-    600: '#0284C7',
-    700: '#0369A1',
-    800: '#075985',
-    900: '#0C4A6E',
+    50: '#FFF7ED',
+    100: '#FFEDD5', 
+    200: '#FED7AA',
+    300: '#FDBA74',
+    400: '#FB923C',
+    500: '#FF6B35', // Main brand color - Tikiti Orange
+    600: '#EA580C',
+    700: '#C2410C',
+    800: '#9A3412',
+    900: '#7C2D12',
   },
   
   // Secondary Colors
@@ -115,13 +115,14 @@ export const Colors = {
 };
 
 export const Typography = {
-  // Font Families
+  // Font Families - System Fonts
   fontFamily: {
-    primary: 'System', // Will use system font
-    mono: 'Courier New',
+    primary: 'System', // System font for headings
+    text: 'System', // System font for body text
+    mono: 'Courier New', // Monospace font
   },
   
-  // Font Sizes
+  // Font Sizes - SF Pro Scale
   fontSize: {
     xs: 12,
     sm: 14,
@@ -133,16 +134,19 @@ export const Typography = {
     '4xl': 36,
     '5xl': 48,
     '6xl': 60,
+    '7xl': 72,
+    '8xl': 96,
   },
   
-  // Font Weights
+  // Font Weights - SF Pro Weights
   fontWeight: {
     light: '300',
     normal: '400',
     medium: '500',
     semibold: '600',
     bold: '700',
-    extrabold: '800',
+    heavy: '800',
+    black: '900',
   },
   
   // Line Heights
@@ -157,6 +161,101 @@ export const Typography = {
     tight: -0.5,
     normal: 0,
     wide: 0.5,
+  },
+
+  // Typography Hierarchy - SF Pro Styles
+  styles: {
+    // Display Styles
+    display: {
+      fontFamily: 'System',
+      fontSize: 72,
+      fontWeight: '900',
+      lineHeight: 1.1,
+      letterSpacing: -1,
+    },
+    
+    // Heading Styles
+    h1: {
+      fontFamily: 'System',
+      fontSize: 48,
+      fontWeight: '800',
+      lineHeight: 1.2,
+      letterSpacing: -0.5,
+    },
+    h2: {
+      fontFamily: 'System',
+      fontSize: 36,
+      fontWeight: '700',
+      lineHeight: 1.25,
+      letterSpacing: -0.25,
+    },
+    h3: {
+      fontFamily: 'System',
+      fontSize: 30,
+      fontWeight: '700',
+      lineHeight: 1.3,
+    },
+    h4: {
+      fontFamily: 'System',
+      fontSize: 24,
+      fontWeight: '600',
+      lineHeight: 1.35,
+    },
+    h5: {
+      fontFamily: 'System',
+      fontSize: 20,
+      fontWeight: '600',
+      lineHeight: 1.4,
+    },
+    h6: {
+      fontFamily: 'System',
+      fontSize: 18,
+      fontWeight: '600',
+      lineHeight: 1.45,
+    },
+    
+    // Body Text Styles
+    bodyLarge: {
+      fontFamily: 'System',
+      fontSize: 18,
+      fontWeight: '400',
+      lineHeight: 1.6,
+    },
+    body: {
+      fontFamily: 'System',
+      fontSize: 16,
+      fontWeight: '400',
+      lineHeight: 1.5,
+    },
+    bodySmall: {
+      fontFamily: 'System',
+      fontSize: 14,
+      fontWeight: '400',
+      lineHeight: 1.5,
+    },
+    
+    // UI Text Styles
+    button: {
+      fontFamily: 'System',
+      fontSize: 16,
+      fontWeight: '600',
+      lineHeight: 1.2,
+      letterSpacing: 0.25,
+    },
+    caption: {
+      fontFamily: 'System',
+      fontSize: 12,
+      fontWeight: '500',
+      lineHeight: 1.4,
+    },
+    overline: {
+      fontFamily: 'System',
+      fontSize: 10,
+      fontWeight: '600',
+      lineHeight: 1.2,
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    },
   },
 };
 

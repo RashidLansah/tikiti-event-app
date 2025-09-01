@@ -233,7 +233,7 @@ const EventDetailScreen = ({ navigation, route }) => {
             />
           ) : (
             <View style={styles.eventImagePlaceholder}>
-              <Feather name="image" size={48} color="#9CA3AF" />
+              <Feather name="image" size={48} color={Colors.text.tertiary} />
               <Text style={styles.imagePlaceholderText}>Event Poster</Text>
             </View>
           )}
@@ -241,12 +241,12 @@ const EventDetailScreen = ({ navigation, route }) => {
           {/* Status Badge */}
           <View style={[
             styles.statusBadge,
-            { backgroundColor: isActive ? 'Colors.success[500]' : '#6B7280' }
+            { backgroundColor: isActive ? Colors.success[500] : Colors.text.secondary }
           ]}>
             <Feather 
               name={isActive ? 'check-circle' : 'pause-circle'} 
               size={16} 
-              color="#FFFFFF" 
+              color={Colors.white} 
             />
             <Text style={styles.statusText}>
               {isActive ? 'Active' : 'Inactive'}
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
   progressSection: {
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: Colors.border.light,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
   },
 
   amenitiesContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     margin: 20,
     marginTop: 0,
     borderRadius: 16,
@@ -916,7 +916,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: Colors.border.light,
   },
   amenitiesGrid: {
     gap: 12,
@@ -929,13 +929,13 @@ const styles = StyleSheet.create({
   },
   amenityText: {
     fontSize: 14,
-    color: '#374151',
+    color: Colors.text.primary,
     fontWeight: '500',
   },
   additionalInfoSection: {
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: Colors.border.light,
     gap: 16,
   },
   additionalInfoItem: {
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
   additionalInfoLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: Colors.text.primary,
     flex: 1,
   },
   additionalInfoValue: {

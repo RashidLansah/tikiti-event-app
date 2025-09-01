@@ -23,6 +23,7 @@ const LocationPicker = ({
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [showMapView, setShowMapView] = useState(false);
   const [manualLocation, setManualLocation] = useState({ name: '', address: '' });
 
   // Google Places API configuration
@@ -228,60 +229,51 @@ const LocationPicker = ({
             </View>
           </View>
 
-          {!showManualEntry ? (
-            <View style={styles.resultsContainer}>
-              {searchResults.length > 0 ? (
-                <FlatList
-                  data={searchResults}
-                  keyExtractor={(item) => item.id}
-                  renderItem={renderSearchResult}
-                  style={styles.resultsList}
-                  showsVerticalScrollIndicator={false}
-                />
-              ) : searchQuery.length >= 3 && !isSearching ? (
-                <View style={styles.noResultsContainer}>
-                  <Feather name="search" size={48} color={Colors.text.tertiary} />
-                  <Text style={styles.noResultsText}>No locations found</Text>
-                  <Text style={styles.sampleLocationsText}>Try these popular venues:</Text>
-                  <FlatList
-                    data={sampleLocations}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderSearchResult}
-                    style={styles.sampleResultsList}
-                    showsVerticalScrollIndicator={false}
-                  />
-                  <TouchableOpacity
-                    style={styles.manualEntryButton}
-                    onPress={() => setShowManualEntry(true)}
-                  >
-                    <Text style={styles.manualEntryButtonText}>Add manually</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : searchQuery.length === 0 ? (
-                <View style={styles.placeholderContainer}>
-                  <Feather name="map-pin" size={48} color={Colors.text.tertiary} />
-                  <Text style={styles.placeholderText}>
-                    Start typing to search for locations
-                  </Text>
-                  <Text style={styles.sampleLocationsText}>Or try these popular venues:</Text>
-                  <FlatList
-                    data={sampleLocations}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderSearchResult}
-                    style={styles.sampleResultsList}
-                    showsVerticalScrollIndicator={false}
-                  />
-                </View>
-              ) : (
-                <View style={styles.placeholderContainer}>
-                  <ActivityIndicator size="small" color={Colors.primary[500]} />
-                  <Text style={styles.placeholderText}>
-                    Searching...
-                  </Text>
-                </View>
-              )}
+          {showMapView ? (
+            <View style={styles.mapContainer}>
+              <View style={styles.mapHeader}>
+                <Text style={styles.mapTitle}>Select Location on Map</Text>
+                <TouchableOpacity
+                  style={styles.backToSearchButton}
+                  onPress={() => setShowMapView(false)}
+                >
+                  <Feather name="arrow-left" size={18} color={Colors.primary[500]} />
+                  <Text style={styles.backToSearchText}>Back to Search</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.mapPlaceholder}>
+                <Feather name="map" size={64} color={Colors.text.tertiary} />
+                <Text style={styles.mapPlaceholderTitle}>Interactive Map</Text>
+                <Text style={styles.mapPlaceholderSubtext}>
+                  Tap anywhere on the map to select a location
+                </Text>
+                <TouchableOpacity
+                  style={styles.mapSelectButton}
+                  onPress={() => {
+                    // For now, we'll use a mock location
+                    // In the future, this would integrate with a real map
+                    const mockLocation = {
+                      name: 'Selected Location',
+                      address: 'Tap to set exact address',
+                      coordinates: { lat: 9.4008, lng: -0.8393 } // Tamale, Ghana coordinates
+                    };
+                    onSelectLocation(mockLocation);
+                    setIsOpen(false);
+                  }}
+                >
+                  <Feather name="map-pin" size={18} color={Colors.white} />
+                  <Text style={styles.mapSelectButtonText}>Select This Location</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.mapInfo}>
+                <Text style={styles.mapInfoText}>
+                  💡 Map integration coming soon! For now, use search or manual entry.
+                </Text>
+              </View>
             </View>
-          ) : (
+          ) : showManualEntry ? (
             <View style={styles.manualEntryContainer}>
               <Text style={styles.manualEntryTitle}>Add Location Manually</Text>
               
@@ -322,6 +314,69 @@ const LocationPicker = ({
                   <Text style={styles.confirmManualButtonText}>Add Location</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          ) : (
+            <View style={styles.resultsContainer}>
+              {searchResults.length > 0 ? (
+                <FlatList
+                  data={searchResults}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderSearchResult}
+                  style={styles.resultsList}
+                  showsVerticalScrollIndicator={false}
+                />
+              ) : searchQuery.length >= 3 && !isSearching ? (
+                <View style={styles.noResultsContainer}>
+                  <Feather name="search" size={48} color={Colors.text.tertiary} />
+                  <Text style={styles.noResultsText}>No locations found</Text>
+                  <Text style={styles.sampleLocationsText}>Try these popular venues:</Text>
+                  <FlatList
+                    data={sampleLocations}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderSearchResult}
+                    style={styles.sampleResultsList}
+                    showsVerticalScrollIndicator={false}
+                  />
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.mapButton}
+                      onPress={() => setShowMapView(true)}
+                    >
+                      <Feather name="map" size={18} color={Colors.primary[500]} />
+                      <Text style={styles.mapButtonText}>Select on Map</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.manualEntryButton}
+                      onPress={() => setShowManualEntry(true)}
+                    >
+                      <Feather name="edit-3" size={18} color={Colors.primary[500]} />
+                      <Text style={styles.manualEntryButtonText}>Add manually</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : searchQuery.length === 0 ? (
+                <View style={styles.placeholderContainer}>
+                  <Feather name="map-pin" size={48} color={Colors.text.tertiary} />
+                  <Text style={styles.placeholderText}>
+                    Start typing to search for locations
+                  </Text>
+                  <Text style={styles.sampleLocationsText}>Or try these popular venues:</Text>
+                  <FlatList
+                    data={sampleLocations}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderSearchResult}
+                    style={styles.sampleResultsList}
+                    showsVerticalScrollIndicator={false}
+                  />
+                </View>
+              ) : (
+                <View style={styles.placeholderContainer}>
+                  <ActivityIndicator size="small" color={Colors.primary[500]} />
+                  <Text style={styles.placeholderText}>
+                    Searching...
+                  </Text>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -545,6 +600,106 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: Spacing[3],
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
+  },
+  mapButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.primary[500],
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing[3],
+    gap: Spacing[2],
+  },
+  mapButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.primary[500],
+  },
+  mapContainer: {
+    flex: 1,
+  },
+  mapHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  mapTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.primary,
+  },
+  backToSearchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+  },
+  backToSearchText: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.primary[500],
+    fontWeight: Typography.fontWeight.medium,
+  },
+  mapPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing[8],
+    backgroundColor: Colors.background.secondary,
+    margin: Spacing[5],
+    borderRadius: BorderRadius.xl,
+  },
+  mapPlaceholderTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginTop: Spacing[4],
+    marginBottom: Spacing[2],
+  },
+  mapPlaceholderSubtext: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: Spacing[6],
+    lineHeight: 22,
+  },
+  mapSelectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary[500],
+    paddingHorizontal: Spacing[6],
+    paddingVertical: Spacing[4],
+    borderRadius: BorderRadius.lg,
+    gap: Spacing[2],
+  },
+  mapSelectButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.white,
+  },
+  mapInfo: {
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
+    backgroundColor: Colors.primary[50],
+    margin: Spacing[5],
+    borderRadius: BorderRadius.lg,
+  },
+  mapInfoText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

@@ -16,11 +16,13 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { eventService } from '../../services/firestoreService';
 import { cleanupSampleEvents } from '../../utils/cleanupSampleEvents';
 
 const EventListScreen = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
+  const { userProfile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState('All');
   const [events, setEvents] = useState([]);
@@ -30,10 +32,30 @@ const EventListScreen = ({ navigation }) => {
   // Load events and categories from Firestore
   const loadEvents = async () => {
     try {
-      const result = await eventService.getAll(20);
-      setEvents(result.events || []);
+      let eventsData = [];
+      
+      // If user has a country set, load events near them
+      if (userProfile?.country) {
+        console.log('📍 Loading events for user country:', userProfile.country);
+        eventsData = await eventService.getNearUser(userProfile.country, 20);
+      } else {
+        // Fallback to all events if no country set
+        console.log('📍 No user country set, loading all events');
+        const result = await eventService.getAll(20);
+        eventsData = result.events || [];
+      }
+      
+      setEvents(eventsData);
     } catch (error) {
       console.error('Error loading events:', error);
+      // Fallback to all events on error
+      try {
+        const result = await eventService.getAll(20);
+        setEvents(result.events || []);
+      } catch (fallbackError) {
+        console.error('Error loading fallback events:', fallbackError);
+        setEvents([]);
+      }
     }
   };
 
@@ -395,6 +417,14 @@ const EventListScreen = ({ navigation }) => {
           <View>
               <Text style={[styles.greeting, { color: colors.text.tertiary }]}>Discover</Text>
             <Text style={[styles.title, { color: colors.text.primary }]}>Events near you</Text>
+            {userProfile?.country && (
+              <View style={styles.locationIndicator}>
+                <Feather name="map-pin" size={12} color={colors.primary[500]} />
+                <Text style={[styles.locationText, { color: colors.primary[500] }]}>
+                  Showing events in {userProfile.country}
+                </Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity style={[styles.notificationButton, { backgroundColor: colors.background.tertiary }]}>
             <Feather name="bell" size={20} color={colors.text.secondary} />
@@ -598,6 +628,17 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     letterSpacing: Typography.letterSpacing.tight,
+  },
+  locationIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing[2],
+    gap: Spacing[1],
+  },
+  locationText: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.primary[500],
   },
   notificationButton: {
     width: 40,
