@@ -84,79 +84,152 @@ export default async function handler(req, res) {
           {
             type: 'text/html',
             value: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-                  <h1 style="color: white; margin: 0; font-size: 28px;">🎫 Your Event Ticket</h1>
-                </div>
-                
-                <div style="padding: 30px; background: white;">
-                  <div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin-bottom: 25px; border: 2px solid #e9ecef;">
-                    <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">${eventName}</h2>
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Your Event Ticket - Tikiti Events</title>
+              </head>
+              <body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                  
+                  <!-- Header -->
+                  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                    <div style="position: absolute; bottom: -30px; left: -30px; width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                    <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); position: relative; z-index: 1;">
+                      🎫 Your Event Ticket
+                    </h1>
+                    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; position: relative; z-index: 1;">
+                      Confirmation & Entry Details
+                    </p>
+                  </div>
+                  
+                  <!-- Main Content -->
+                  <div style="padding: 40px 30px;">
                     
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #e9ecef;">
-                      <span style="font-weight: bold; color: #666;">Date:</span>
-                      <span style="color: #333;">${eventDate || 'Date TBA'}</span>
+                    <!-- Event Details Card -->
+                    <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 16px; padding: 30px; margin-bottom: 30px; border: 1px solid #dee2e6; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                      <h2 style="color: #2c3e50; margin: 0 0 25px 0; font-size: 26px; font-weight: 600; text-align: center; border-bottom: 2px solid #667eea; padding-bottom: 15px;">
+                        ${eventName}
+                      </h2>
+                      
+                      <!-- Event Details Grid -->
+                      <div style="display: grid; gap: 20px;">
+                        
+                        <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                            <span style="color: white; font-size: 18px;">📅</span>
+                          </div>
+                          <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">DATE</div>
+                            <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${eventDate || 'Date TBA'}</div>
+                          </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                            <span style="color: white; font-size: 18px;">🕐</span>
+                          </div>
+                          <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">TIME</div>
+                            <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${eventTime || 'Time TBA'}</div>
+                          </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                            <span style="color: white; font-size: 18px;">📍</span>
+                          </div>
+                          <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">LOCATION</div>
+                            <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${locationText}</div>
+                          </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                            <span style="color: white; font-size: 18px;">👤</span>
+                          </div>
+                          <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">ATTENDEE</div>
+                            <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${userName}</div>
+                          </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                            <span style="color: white; font-size: 18px;">🎟️</span>
+                          </div>
+                          <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">TICKETS</div>
+                            <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${quantity || 1} ticket${(quantity || 1) > 1 ? 's' : ''}</div>
+                          </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                            <span style="color: white; font-size: 18px;">🔖</span>
+                          </div>
+                          <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">BOOKING REFERENCE</div>
+                            <div style="color: #2c3e50; font-size: 16px; font-weight: 500; font-family: 'Courier New', monospace; letter-spacing: 1px;">${bookingReference || 'N/A'}</div>
+                          </div>
+                        </div>
+                        
+                      </div>
                     </div>
                     
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #e9ecef;">
-                      <span style="font-weight: bold; color: #666;">Time:</span>
-                      <span style="color: #333;">${eventTime || 'Time TBA'}</span>
+                    <!-- QR Code Section -->
+                    <div style="text-align: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 16px; padding: 30px; border: 1px solid #dee2e6;">
+                      <h3 style="color: #2c3e50; margin: 0 0 20px 0; font-size: 20px; font-weight: 600;">
+                        📱 QR Code for Entry
+                      </h3>
+                      <div style="background: white; border-radius: 12px; padding: 25px; display: inline-block; border: 2px solid #dee2e6; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        ${qrCodeImage ? `
+                          <div style="margin: 15px 0;">
+                            <img src="${qrCodeImage}" alt="QR Code" style="max-width: 200px; height: auto; border-radius: 8px;" />
+                          </div>
+                        ` : `
+                          <div style="font-family: 'Courier New', monospace; font-size: 11px; color: #6c757d; word-break: break-all; line-height: 1.4; max-width: 300px;">
+                            ${qrData}
+                          </div>
+                        `}
+                      </div>
+                      <p style="color: #6c757d; font-size: 14px; margin: 15px 0 0 0; font-style: italic;">
+                        Show this QR code at the event entrance
+                      </p>
                     </div>
                     
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #e9ecef;">
-                      <span style="font-weight: bold; color: #666;">Location:</span>
-                      <span style="color: #333;">${locationText}</span>
+                  </div>
+                  
+                  <!-- Footer -->
+                  <div style="background: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #dee2e6;">
+                    <div style="margin-bottom: 20px;">
+                      <h4 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 18px; font-weight: 600;">
+                        Thank you for using Tikiti Events! 🎉
+                      </h4>
+                      <p style="color: #6c757d; margin: 0; font-size: 14px; line-height: 1.5;">
+                        We're excited to see you at the event. Have a great time!
+                      </p>
                     </div>
                     
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #e9ecef;">
-                      <span style="font-weight: bold; color: #666;">Attendee:</span>
-                      <span style="color: #333;">${userName}</span>
-                    </div>
-                    
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #e9ecef;">
-                      <span style="font-weight: bold; color: #666;">Email:</span>
-                      <span style="color: #333;">${userEmail}</span>
-                    </div>
-                    
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #e9ecef;">
-                      <span style="font-weight: bold; color: #666;">Tickets:</span>
-                      <span style="color: #333;">${quantity || 1}</span>
-                    </div>
-                    
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #e9ecef;">
-                      <span style="font-weight: bold; color: #666;">Booking Reference:</span>
-                      <span style="color: #333; font-family: monospace;">${bookingReference || 'N/A'}</span>
+                    <div style="border-top: 1px solid #dee2e6; padding-top: 20px;">
+                      <p style="color: #adb5bd; margin: 0 0 10px 0; font-size: 12px;">
+                        This is a transactional email for your event ticket.
+                      </p>
+                      <p style="color: #adb5bd; margin: 0; font-size: 12px;">
+                        <a href="mailto:gettikiti@gmail.com?subject=Unsubscribe&body=Please unsubscribe me from Tikiti Events emails" 
+                           style="color: #6c757d; text-decoration: underline;">Unsubscribe</a> | 
+                        <a href="mailto:gettikiti@gmail.com" style="color: #6c757d; text-decoration: underline;">Contact Support</a>
+                      </p>
                     </div>
                   </div>
                   
-                                     <div style="text-align: center; background: #f8f9fa; border-radius: 12px; padding: 25px;">
-                     <h3 style="color: #333; margin: 0 0 15px 0;">📱 QR Code for Entry</h3>
-                     <div style="background: white; border-radius: 8px; padding: 20px; display: inline-block; border: 2px solid #e9ecef;">
-                       <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all; margin-bottom: 15px;">
-                         Booking ID: ${bookingId || 'N/A'}
-                       </div>
-                       ${qrCodeImage ? `
-                         <div style="margin: 15px 0;">
-                           <img src="${qrCodeImage}" alt="QR Code" style="width: 200px; height: 200px; border: 1px solid #ddd; border-radius: 8px;" />
-                         </div>
-                       ` : `
-                         <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 10px; color: #333; word-break: break-all;">
-                           ${qrData}
-                         </div>
-                       `}
-                       <p style="color: #666; font-size: 12px; margin: 10px 0 0 0;">
-                         Show this QR code at the event entrance
-                       </p>
-                     </div>
-                   </div>
                 </div>
-                
-                <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
-                  <p style="color: #666; margin: 0; font-size: 14px;">
-                    Thank you for using Tikiti Events! 🎉
-                  </p>
-                </div>
-              </div>
+              </body>
+              </html>
             `
           }
         ]
