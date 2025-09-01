@@ -101,21 +101,28 @@ const DashboardScreen = ({ navigation }) => {
                    {event.address || (typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA'))}
                  </Text>
         <View style={styles.eventStats}>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
-            <Text style={styles.statLabel}>Tickets Sold</Text>
-          </View>
-          {event.type === 'paid' && event.price > 0 && (
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>₵{(event.soldTickets || 0) * (event.price || 0)}</Text>
-              <Text style={styles.statLabel}>Revenue</Text>
-            </View>
-          )}
-          {event.type === 'free' && (
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{event.soldTickets || 0}</Text>
-              <Text style={styles.statLabel}>Attendees</Text>
-            </View>
+          {event.type === 'paid' && event.price > 0 ? (
+            <>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
+                <Text style={styles.statLabel}>Tickets Sold</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>₵{(event.soldTickets || 0) * (event.price || 0)}</Text>
+                <Text style={styles.statLabel}>Revenue</Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
+                <Text style={styles.statLabel}>Attendees</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>Free</Text>
+                <Text style={styles.statLabel}>Event</Text>
+              </View>
+            </>
           )}
         </View>
       </View>
