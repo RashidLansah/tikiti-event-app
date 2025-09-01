@@ -16,16 +16,14 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { useTheme } from '../../context/ThemeContext';
-import { eventService, categoryService } from '../../services/firestoreService';
+import { eventService } from '../../services/firestoreService';
 import { cleanupSampleEvents } from '../../utils/cleanupSampleEvents';
 
 const EventListScreen = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState('All');
   const [events, setEvents] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -39,34 +37,7 @@ const EventListScreen = ({ navigation }) => {
     }
   };
 
-  const loadCategories = async () => {
-    try {
-      const firestoreCategories = await categoryService.getAll();
-      // Add "All" category at the beginning
-      const allCategories = [
-        { id: 'all', name: 'All', icon: 'grid' },
-        ...firestoreCategories.map(cat => ({
-          id: cat.id,
-          name: cat.name,
-          icon: cat.icon || 'tag'
-        }))
-      ];
-      setCategories(allCategories);
-    } catch (error) {
-      console.error('Error loading categories:', error);
-      // Fallback to default categories if Firestore fails
-      setCategories([
-        { id: 'all', name: 'All', icon: 'grid' },
-        { id: 'music', name: 'Music', icon: 'music' },
-        { id: 'technology', name: 'Technology', icon: 'monitor' },
-        { id: 'art', name: 'Art', icon: 'image' },
-        { id: 'food', name: 'Food', icon: 'coffee' },
-        { id: 'entertainment', name: 'Entertainment', icon: 'smile' },
-        { id: 'sports', name: 'Sports', icon: 'activity' },
-        { id: 'business', name: 'Business', icon: 'briefcase' },
-      ]);
-    }
-  };
+
 
   // Time filter options
   const timeFilterOptions = [
@@ -125,8 +96,8 @@ const EventListScreen = ({ navigation }) => {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      // Refresh events and categories
-      await Promise.all([loadEvents(), loadCategories()]);
+      // Refresh events
+      await loadEvents();
       console.log('📱 Events refreshed successfully');
     } catch (error) {
       console.error('Error refreshing events:', error);
@@ -148,7 +119,7 @@ const EventListScreen = ({ navigation }) => {
         console.log('Sample events cleanup completed or not needed');
       }
       
-      await Promise.all([loadEvents(), loadCategories()]);
+      await loadEvents();
       setLoading(false);
     };
     loadData();
@@ -216,7 +187,7 @@ const EventListScreen = ({ navigation }) => {
     return categorized;
   };
 
-  // Filter events based on search query, selected category, and time filter
+  // Filter events based on search query only
   const filteredEvents = events.filter(event => {
     const locationText = typeof event.location === 'object' ? 
       (event.location.name || event.location.address || '') : 
@@ -226,10 +197,7 @@ const EventListScreen = ({ navigation }) => {
       event.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
       locationText.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCategory = selectedCategory === 'All' || 
-      event.category.toLowerCase() === selectedCategory.toLowerCase();
-    
-    return matchesSearch && matchesCategory;
+    return matchesSearch;
   });
 
   // Apply time filter to the already filtered events
@@ -465,40 +433,7 @@ const EventListScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Floating Category Pills */}
-        <View style={[styles.categoriesSection, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
-          <FlatList
-            data={categories}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.categoriesContainer}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.categoryPill,
-                  { backgroundColor: colors.background.tertiary },
-                  selectedCategory === item.name && { backgroundColor: colors.primary[500] }
-                ]}
-                onPress={() => setSelectedCategory(item.name)}
-                activeOpacity={0.7}
-              >
-                <Feather 
-                  name={item.icon} 
-                  size={14} 
-                  color={selectedCategory === item.name ? colors.white : colors.text.secondary} 
-                />
-                <Text style={[
-                  styles.categoryPillText,
-                  { color: colors.text.secondary },
-                  selectedCategory === item.name && { color: colors.white, fontWeight: Typography.fontWeight.semibold }
-                ]}>
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
+
 
       <ScrollView
         style={[styles.eventsList, { backgroundColor: colors.background.primary }]}
@@ -671,11 +606,9 @@ const styles = StyleSheet.create({
   
   // Time Filter
   timeFilterSection: {
-    backgroundColor: Colors.white,
     paddingVertical: Spacing[3],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.medium,
-    ...Shadows.sm,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
   timeFilterContainer: {
     paddingHorizontal: Spacing[5],
@@ -688,47 +621,14 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[2],
     borderRadius: BorderRadius.full,
     gap: Spacing[2],
-    borderWidth: 1,
-    borderColor: Colors.border.light,
+    borderWidth: 0,
   },
   timeFilterPillText: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.medium,
   },
 
-  // Floating Categories
-  categoriesSection: {
-    backgroundColor: Colors.white,
-    paddingVertical: Spacing[3],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.medium,
-    ...Shadows.sm,
-  },
-  categoriesContainer: {
-    paddingHorizontal: Spacing[5],
-    gap: Spacing[2],
-  },
-  categoryPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.background.secondary,
-    gap: Spacing[2],
-  },
-  categoryPillActive: {
-    backgroundColor: Colors.primary[500],
-  },
-  categoryPillText: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.medium,
-    color: Colors.text.secondary,
-  },
-  categoryPillTextActive: {
-    color: Colors.white,
-    fontWeight: Typography.fontWeight.semibold,
-  },
+
   eventsList: {
     flex: 1,
     backgroundColor: Colors.gray[100],
