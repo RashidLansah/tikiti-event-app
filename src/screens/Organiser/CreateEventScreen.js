@@ -37,7 +37,6 @@ const CreateEventScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [imageUri, setImageUri] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [focusedInput, setFocusedInput] = useState(null);
   const [focusedField, setFocusedField] = useState(null);
 
   const pickImage = async () => {
@@ -252,6 +251,8 @@ const CreateEventScreen = ({ navigation }) => {
                 placeholderTextColor="#9CA3AF"
                 onFocus={() => setFocusedField('eventName')}
                 onBlur={() => setFocusedField(null)}
+                autoCorrect={false}
+                autoCapitalize="words"
               />
             </View>
           </View>
@@ -283,6 +284,9 @@ const CreateEventScreen = ({ navigation }) => {
                 numberOfLines={4}
                 onFocus={() => setFocusedField('eventDescription')}
                 onBlur={() => setFocusedField(null)}
+                autoCorrect={true}
+                autoCapitalize="sentences"
+                textAlignVertical="top"
               />
             </View>
           </View>
@@ -405,9 +409,10 @@ const CreateEventScreen = ({ navigation }) => {
                     onChangeText={setTicketPrice}
                     placeholder="0.00"
                     placeholderTextColor="#9CA3AF"
-                    keyboardType="numeric"
+                    keyboardType="decimal-pad"
                     onFocus={() => setFocusedField('ticketPrice')}
                     onBlur={() => setFocusedField(null)}
+                    autoCorrect={false}
                   />
                 </View>
               </View>
@@ -429,9 +434,10 @@ const CreateEventScreen = ({ navigation }) => {
                   onChangeText={setTotalTickets}
                   placeholder="100"
                   placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
+                  keyboardType="number-pad"
                   onFocus={() => setFocusedField('totalTickets')}
                   onBlur={() => setFocusedField(null)}
+                  autoCorrect={false}
                 />
               </View>
             </View>
