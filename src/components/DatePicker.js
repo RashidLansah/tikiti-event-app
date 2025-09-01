@@ -95,14 +95,20 @@ const DatePicker = ({
 
             {/* Date Picker */}
             <View style={styles.pickerContainer}>
-              <DateTimePicker
-                value={selectedDate || new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                minimumDate={minimumDate}
-                onChange={handleDateChange}
-                style={styles.picker}
-              />
+              <View style={styles.pickerWrapper}>
+                <DateTimePicker
+                  value={selectedDate || new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={minimumDate}
+                  onChange={handleDateChange}
+                  style={styles.picker}
+                  textColor={Colors.text.primary}
+                  themeVariant="light"
+                  // Ensure only scrolling is allowed, no number tabs
+                  pointerEvents="auto"
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -197,6 +203,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[4],
     alignItems: 'center',
+  },
+  pickerWrapper: {
+    width: '100%',
+    overflow: 'hidden',
   },
   picker: {
     backgroundColor: Colors.background.primary,

@@ -114,14 +114,20 @@ const TimePicker = ({
 
             {/* Time Picker */}
             <View style={styles.pickerContainer}>
-              <DateTimePicker
-                value={selectedTime ? timeStringToDate(selectedTime) : new Date()}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                is24Hour={false}
-                onChange={handleTimeChange}
-                style={styles.picker}
-              />
+              <View style={styles.pickerWrapper}>
+                <DateTimePicker
+                  value={selectedTime ? timeStringToDate(selectedTime) : new Date()}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  is24Hour={false}
+                  onChange={handleTimeChange}
+                  style={styles.picker}
+                  textColor={Colors.text.primary}
+                  themeVariant="light"
+                  // Ensure only scrolling is allowed, no number tabs
+                  pointerEvents="auto"
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -216,6 +222,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[4],
     alignItems: 'center',
+  },
+  pickerWrapper: {
+    width: '100%',
+    overflow: 'hidden',
   },
   picker: {
     backgroundColor: Colors.background.primary,
