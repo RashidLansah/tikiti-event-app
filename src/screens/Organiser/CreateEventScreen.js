@@ -244,26 +244,23 @@ const CreateEventScreen = ({ navigation }) => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Event Name *</Text>
-            <View style={[
-              styles.inputContainer,
-              focusedField === 'eventName' && styles.inputContainerFocused
-            ]}>
-              <Feather name="calendar" size={18} color="#9CA3AF" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={eventName}
-                onChangeText={setEventName}
-                placeholder="Enter event name"
-                placeholderTextColor="#9CA3AF"
-                onFocus={() => setFocusedField('eventName')}
-                onBlur={() => setFocusedField(null)}
-                autoCorrect={false}
-                autoCapitalize="words"
-                returnKeyType="next"
-                blurOnSubmit={false}
-                selectTextOnFocus={false}
-              />
-            </View>
+            <TextInput
+              style={[
+                styles.inputField,
+                focusedField === 'eventName' && styles.inputFieldFocused
+              ]}
+              value={eventName}
+              onChangeText={setEventName}
+              placeholder="Enter event name"
+              placeholderTextColor="#9CA3AF"
+              onFocus={() => setFocusedField('eventName')}
+              onBlur={() => setFocusedField(null)}
+              autoCorrect={false}
+              autoCapitalize="words"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              selectTextOnFocus={false}
+            />
           </View>
 
           <View style={styles.inputGroup}>
@@ -278,29 +275,27 @@ const CreateEventScreen = ({ navigation }) => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Description</Text>
-            <View style={[
-              styles.inputContainer,
-              focusedField === 'eventDescription' && styles.inputContainerFocused
-            ]}>
-              <Feather name="file-text" size={18} color="#9CA3AF" style={[styles.inputIcon, { alignSelf: 'flex-start', marginTop: 4 }]} />
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={eventDescription}
-                onChangeText={setEventDescription}
-                placeholder="Describe your event..."
-                placeholderTextColor="#9CA3AF"
-                multiline
-                numberOfLines={4}
-                onFocus={() => setFocusedField('eventDescription')}
-                onBlur={() => setFocusedField(null)}
-                autoCorrect={true}
-                autoCapitalize="sentences"
-                textAlignVertical="top"
-                returnKeyType="default"
-                blurOnSubmit={false}
-                selectTextOnFocus={false}
-              />
-            </View>
+            <TextInput
+              style={[
+                styles.inputField,
+                styles.textArea,
+                focusedField === 'eventDescription' && styles.inputFieldFocused
+              ]}
+              value={eventDescription}
+              onChangeText={setEventDescription}
+              placeholder="Describe your event..."
+              placeholderTextColor="#9CA3AF"
+              multiline
+              numberOfLines={4}
+              onFocus={() => setFocusedField('eventDescription')}
+              onBlur={() => setFocusedField(null)}
+              autoCorrect={true}
+              autoCapitalize="sentences"
+              textAlignVertical="top"
+              returnKeyType="default"
+              blurOnSubmit={false}
+              selectTextOnFocus={false}
+            />
           </View>
 
           <View style={styles.inputGroup}>
@@ -410,13 +405,14 @@ const CreateEventScreen = ({ navigation }) => {
             {eventType === 'paid' && (
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.label}>Ticket Price *</Text>
-                <View style={[
-                  styles.inputContainer,
-                  focusedField === 'ticketPrice' && styles.inputContainerFocused
-                ]}>
+                <View style={styles.priceInputContainer}>
                   <Text style={styles.currencySymbol}>₵</Text>
                   <TextInput
-                    style={[styles.input, styles.priceInput]}
+                    style={[
+                      styles.inputField,
+                      styles.priceInput,
+                      focusedField === 'ticketPrice' && styles.inputFieldFocused
+                    ]}
                     value={ticketPrice}
                     onChangeText={setTicketPrice}
                     placeholder="0.00"
@@ -438,26 +434,23 @@ const CreateEventScreen = ({ navigation }) => {
               eventType === 'paid' ? styles.halfWidth : { flex: 1 }
             ]}>
               <Text style={styles.label}>Total Tickets</Text>
-              <View style={[
-                styles.inputContainer,
-                focusedField === 'totalTickets' && styles.inputContainerFocused
-              ]}>
-                <Feather name="users" size={18} color="#9CA3AF" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={totalTickets}
-                  onChangeText={setTotalTickets}
-                  placeholder="100"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="number-pad"
-                  onFocus={() => setFocusedField('totalTickets')}
-                  onBlur={() => setFocusedField(null)}
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  blurOnSubmit={true}
-                  selectTextOnFocus={false}
-                />
-              </View>
+              <TextInput
+                style={[
+                  styles.inputField,
+                  focusedField === 'totalTickets' && styles.inputFieldFocused
+                ]}
+                value={totalTickets}
+                onChangeText={setTotalTickets}
+                placeholder="100"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="number-pad"
+                onFocus={() => setFocusedField('totalTickets')}
+                onBlur={() => setFocusedField(null)}
+                autoCorrect={false}
+                returnKeyType="done"
+                blurOnSubmit={true}
+                selectTextOnFocus={false}
+              />
             </View>
           </View>
         </View>
@@ -617,27 +610,27 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     marginBottom: Spacing[2],
   },
-  inputContainer: {
+  inputField: {
     ...Components.input.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
     minHeight: 48,
+    textAlignVertical: 'center',
   },
-  inputContainerFocused: {
+  inputFieldFocused: {
     borderWidth: 2,
     borderColor: Colors.primary[500],
     ...Shadows.md,
   },
-  inputIcon: {
-    marginRight: Spacing[3],
-  },
-  input: {
-    flex: 1,
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.primary,
-    padding: 0,
-    minHeight: 20,
-    textAlignVertical: 'center',
+  priceInputContainer: {
+    ...Components.input.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    minHeight: 48,
   },
   textArea: {
     height: 80,
@@ -646,6 +639,11 @@ const styles = StyleSheet.create({
   },
   priceInput: {
     marginLeft: Spacing[2],
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    padding: 0,
+    minHeight: 20,
+    textAlignVertical: 'center',
   },
   currencySymbol: {
     fontSize: Typography.fontSize.base,
