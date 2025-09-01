@@ -223,6 +223,50 @@ export const eventService = {
     }
   },
 
+  // Listen to real-time updates for organizer events
+  listenToOrganizerEvents: (organizerId, callback) => {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.EVENTS),
+        where('organizerId', '==', organizerId),
+        orderBy('createdAt', 'desc')
+      );
+
+      return onSnapshot(q, (querySnapshot) => {
+        const events = [];
+        querySnapshot.forEach((doc) => {
+          events.push({ id: doc.id, ...doc.data() });
+        });
+        callback(events);
+      });
+    } catch (error) {
+      console.error('Error setting up organizer events listener:', error);
+      return null;
+    }
+  },
+
+  // Listen to real-time updates for all events
+  listenToAllEvents: (callback) => {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.EVENTS),
+        where('isActive', '==', true),
+        orderBy('createdAt', 'desc')
+      );
+
+      return onSnapshot(q, (querySnapshot) => {
+        const events = [];
+        querySnapshot.forEach((doc) => {
+          events.push({ id: doc.id, ...doc.data() });
+        });
+        callback(events);
+      });
+    } catch (error) {
+      console.error('Error setting up all events listener:', error);
+      return null;
+    }
+  },
+
   // Update event
   update: async (eventId, updates) => {
     try {

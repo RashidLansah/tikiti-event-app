@@ -125,6 +125,19 @@ const EventListScreen = ({ navigation }) => {
     loadData();
   }, []);
 
+  // Set up real-time listener for all events
+  useEffect(() => {
+    const unsubscribe = eventService.listenToAllEvents((updatedEvents) => {
+      setEvents(updatedEvents);
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
   // No dummy events - only show real events created by organizers
 
   // Time-based event categorization
@@ -339,6 +352,24 @@ const EventListScreen = ({ navigation }) => {
                 {event.description}
               </Text>
             )}
+            
+            {/* Event stats */}
+            <View style={[styles.eventStats, { backgroundColor: colors.background.tertiary }]}>
+              <View style={styles.statItem}>
+                <Feather name="users" size={12} color={colors.text.tertiary} />
+                <Text style={[styles.statText, { color: colors.text.tertiary }]}>
+                  {event.soldTickets || 0} attending
+                </Text>
+              </View>
+              {event.type === 'paid' && event.price > 0 && (
+                <View style={styles.statItem}>
+                  <Feather name="dollar-sign" size={12} color={colors.text.tertiary} />
+                  <Text style={[styles.statText, { color: colors.text.tertiary }]}>
+                    ₵{event.price}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -734,6 +765,27 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.normal,
+    marginBottom: Spacing[2],
+  },
+  
+  // Event Stats
+  eventStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing[1],
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[1],
+  },
+  statText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.medium,
   },
   // Modern Empty State
   noEventsContainer: {

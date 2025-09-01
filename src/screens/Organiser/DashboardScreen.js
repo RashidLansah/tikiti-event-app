@@ -33,6 +33,21 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
+  // Set up real-time listener for events
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = eventService.listenToOrganizerEvents(user.uid, (updatedEvents) => {
+      setEvents(updatedEvents);
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [user]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchEvents();
@@ -90,10 +105,18 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.statValue}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
             <Text style={styles.statLabel}>Tickets Sold</Text>
           </View>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>₵{(event.soldTickets || 0) * (event.price || 0)}</Text>
-            <Text style={styles.statLabel}>Revenue</Text>
-          </View>
+          {event.type === 'paid' && event.price > 0 && (
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>₵{(event.soldTickets || 0) * (event.price || 0)}</Text>
+              <Text style={styles.statLabel}>Revenue</Text>
+            </View>
+          )}
+          {event.type === 'free' && (
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>{event.soldTickets || 0}</Text>
+              <Text style={styles.statLabel}>Attendees</Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
