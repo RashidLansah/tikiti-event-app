@@ -10,3 +10,13 @@
 [33med21fc4[m Fix web event sharing: resolve event ID parsing and improve HTML event display
 [33m3711083[m Implement web sharing with WhatsApp image support
 [33mef39794[m  Initial commit: Tikiti Event App with dark mode and time-based recommendations
+[33m5b6cdfa[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Remove 'View all X events' button and display all events directly in each time section
+[33m2b4ab84[m Remove category filter and improve time filter UI for dark mode - remove white stroke, make subtle
+[33md8bae5a[m Add time-based filtering to event list - All, Live Now, Today, Tomorrow, This Week, This Month
+[33m58d5cfe[m Improve profile switching UX - replace modal with loading spinner and switching message
+[33mb3f3a94[m Fix profile switching - add navigation reset to switch between UserFlow and OrganiserFlow after account type change
+[33m2eb8053[m Remove public email config file to fix security issue - use environment variables instead
+[33me237609[m Complete weekend updates: profile switching, email integration, copy link, onboarding improvements, and account type flow
+[33m8eea9a2[m Fix organiser switching functionality - correct updateUserProfile function calls
+[33m609ffd1[m Fix email functionality and QR code generation
+[33m9a3ce99[m Remove API key from public config file for security

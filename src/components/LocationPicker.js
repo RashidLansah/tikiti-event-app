@@ -8,6 +8,7 @@ import {
   FlatList,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
@@ -21,67 +22,102 @@ const LocationPicker = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [manualLocation, setManualLocation] = useState({ name: '', address: '' });
 
-  // Mock search results - in real implementation, this would use Google Places API
-  const mockSearchResults = [
-    {
-      id: '1',
-      name: 'Tamale Cultural Centre',
-      address: 'Sports Stadium Road, Tamale, Ghana',
-      coordinates: { latitude: 9.4035, longitude: -0.8433 }
-    },
-    {
-      id: '2',
-      name: 'University for Development Studies',
-      address: 'Main Campus, Tamale, Ghana',
-      coordinates: { latitude: 9.4035, longitude: -0.8433 }
-    },
-    {
-      id: '3',
-      name: 'Centre for National Culture',
-      address: 'Cultural Square, Tamale, Ghana',
-      coordinates: { latitude: 9.4035, longitude: -0.8433 }
-    },
-  ];
+  // Google Places API configuration
+  const GOOGLE_PLACES_API_KEY = 'AIzaSyCQkHC-01AhA_LsgrIU6g4NhA46dkINrZQ';
+  const GOOGLE_PLACES_BASE_URL = 'https://maps.googleapis.com/maps/api/place';
 
-  const handleSearch = async (query) => {
-    setSearchQuery(query);
-    if (query.length > 2) {
-      setIsSearching(true);
-      // Simulate API call delay
-      setTimeout(() => {
-        const filtered = mockSearchResults.filter(item =>
-          item.name.toLowerCase().includes(query.toLowerCase()) ||
-          item.address.toLowerCase().includes(query.toLowerCase())
-        );
-        setSearchResults(filtered);
-        setIsSearching(false);
-      }, 500);
-    } else {
+  // Search for places using Google Places API
+  const searchPlaces = async (query) => {
+    if (!query.trim() || query.length < 3) {
       setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `${GOOGLE_PLACES_BASE_URL}/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_PLACES_API_KEY}&region=gh`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch places');
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.results) {
+        const places = data.results.map(place => ({
+          id: place.place_id,
+          name: place.name,
+          address: place.formatted_address,
+          coordinates: {
+            latitude: place.geometry.location.lat,
+            longitude: place.geometry.location.lng
+          }
+        }));
+        setSearchResults(places);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Error searching places:', error);
+      setSearchResults([]);
+      Alert.alert('Error', 'Failed to search locations. Please try again.');
+    } finally {
+      setIsSearching(false);
     }
   };
 
-  const handleSelectLocation = (location) => {
-    onSelectLocation(location);
+  // Handle search input change
+  const handleSearchChange = (text) => {
+    setSearchQuery(text);
+    searchPlaces(text);
+  };
+
+  // Handle place selection
+  const handlePlaceSelect = (place) => {
+    onSelectLocation(place);
     setIsOpen(false);
     setSearchQuery('');
     setSearchResults([]);
   };
 
-  const handleOpenMap = () => {
-    // In a real implementation, this would open Google Maps
-    Alert.alert(
-      'Google Maps Integration',
-      'This would open Google Maps for location selection. For now, you can manually enter the location.',
-      [{ text: 'OK' }]
-    );
+  // Handle manual location entry
+  const handleManualEntry = () => {
+    if (!manualLocation.name.trim()) {
+      Alert.alert('Error', 'Please enter a location name');
+      return;
+    }
+
+    const location = {
+      id: `manual-${Date.now()}`,
+      name: manualLocation.name.trim(),
+      address: manualLocation.address.trim() || manualLocation.name.trim(),
+      coordinates: {
+        latitude: 0,
+        longitude: 0
+      }
+    };
+
+    onSelectLocation(location);
+    setIsOpen(false);
+    setManualLocation({ name: '', address: '' });
+    setShowManualEntry(false);
+  };
+
+  // Format selected location for display
+  const formatSelectedLocation = () => {
+    if (!selectedLocation) return '';
+    return `${selectedLocation.name}${selectedLocation.address ? `, ${selectedLocation.address}` : ''}`;
   };
 
   const renderSearchResult = ({ item }) => (
     <TouchableOpacity
       style={styles.searchResultItem}
-      onPress={() => handleSelectLocation(item)}
+      onPress={() => handlePlaceSelect(item)}
     >
       <View style={styles.searchResultIcon}>
         <Feather name="map-pin" size={16} color={Colors.primary[500]} />
@@ -90,7 +126,6 @@ const LocationPicker = ({
         <Text style={styles.searchResultName}>{item.name}</Text>
         <Text style={styles.searchResultAddress}>{item.address}</Text>
       </View>
-      <Feather name="chevron-right" size={16} color={Colors.text.tertiary} />
     </TouchableOpacity>
   );
 
@@ -103,7 +138,7 @@ const LocationPicker = ({
         <View style={styles.locationButtonContent}>
           <Feather name="map-pin" size={18} color={Colors.text.primary} />
           <Text style={styles.locationButtonText}>
-            {selectedLocation ? selectedLocation.name : placeholder}
+            {selectedLocation ? formatSelectedLocation() : placeholder}
           </Text>
         </View>
         <Feather name="chevron-right" size={20} color={Colors.text.tertiary} />
@@ -116,11 +151,14 @@ const LocationPicker = ({
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setIsOpen(false)}>
-              <Feather name="arrow-left" size={24} color={Colors.text.primary} />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setIsOpen(false)}
+            >
+              <Feather name="x" size={24} color={Colors.text.primary} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Select Location</Text>
-            <View style={{ width: 24 }} />
+            <View style={styles.headerSpacer} />
           </View>
 
           <View style={styles.searchContainer}>
@@ -128,45 +166,91 @@ const LocationPicker = ({
               <Feather name="search" size={18} color={Colors.text.tertiary} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search for a location..."
                 value={searchQuery}
-                onChangeText={handleSearch}
+                onChangeText={handleSearchChange}
+                placeholder="Search for a location..."
+                placeholderTextColor={Colors.text.tertiary}
                 autoFocus
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Feather name="x" size={18} color={Colors.text.tertiary} />
-                </TouchableOpacity>
+              {isSearching && (
+                <ActivityIndicator size="small" color={Colors.primary[500]} />
               )}
             </View>
-
-            <TouchableOpacity
-              style={styles.mapButton}
-              onPress={handleOpenMap}
-            >
-              <Feather name="map" size={18} color={Colors.white} />
-              <Text style={styles.mapButtonText}>Open Map</Text>
-            </TouchableOpacity>
           </View>
 
-          <FlatList
-            data={searchResults}
-            renderItem={renderSearchResult}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            style={styles.searchResults}
-            ListEmptyComponent={
-              searchQuery.length > 2 && !isSearching ? (
-                <View style={styles.emptyState}>
+          {!showManualEntry ? (
+            <View style={styles.resultsContainer}>
+              {searchResults.length > 0 ? (
+                <FlatList
+                  data={searchResults}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderSearchResult}
+                  style={styles.resultsList}
+                  showsVerticalScrollIndicator={false}
+                />
+              ) : searchQuery.length >= 3 && !isSearching ? (
+                <View style={styles.noResultsContainer}>
                   <Feather name="search" size={48} color={Colors.text.tertiary} />
-                  <Text style={styles.emptyStateText}>No locations found</Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    Try a different search term or use the map
+                  <Text style={styles.noResultsText}>No locations found</Text>
+                  <TouchableOpacity
+                    style={styles.manualEntryButton}
+                    onPress={() => setShowManualEntry(true)}
+                  >
+                    <Text style={styles.manualEntryButtonText}>Add manually</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.placeholderContainer}>
+                  <Feather name="map-pin" size={48} color={Colors.text.tertiary} />
+                  <Text style={styles.placeholderText}>
+                    Start typing to search for locations
                   </Text>
                 </View>
-              ) : null
-            }
-          />
+              )}
+            </View>
+          ) : (
+            <View style={styles.manualEntryContainer}>
+              <Text style={styles.manualEntryTitle}>Add Location Manually</Text>
+              
+              <View style={styles.manualInputGroup}>
+                <Text style={styles.manualLabel}>Location Name *</Text>
+                <TextInput
+                  style={styles.manualInput}
+                  value={manualLocation.name}
+                  onChangeText={(text) => setManualLocation(prev => ({ ...prev, name: text }))}
+                  placeholder="e.g., Tamale Cultural Centre"
+                  placeholderTextColor={Colors.text.tertiary}
+                />
+              </View>
+
+              <View style={styles.manualInputGroup}>
+                <Text style={styles.manualLabel}>Address (Optional)</Text>
+                <TextInput
+                  style={styles.manualInput}
+                  value={manualLocation.address}
+                  onChangeText={(text) => setManualLocation(prev => ({ ...prev, address: text }))}
+                  placeholder="e.g., Sports Stadium Road, Tamale, Ghana"
+                  placeholderTextColor={Colors.text.tertiary}
+                  multiline
+                />
+              </View>
+
+              <View style={styles.manualEntryButtons}>
+                <TouchableOpacity
+                  style={styles.cancelManualButton}
+                  onPress={() => setShowManualEntry(false)}
+                >
+                  <Text style={styles.cancelManualButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.confirmManualButton}
+                  onPress={handleManualEntry}
+                >
+                  <Text style={styles.confirmManualButtonText}>Add Location</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
       </Modal>
     </View>
@@ -175,18 +259,18 @@ const LocationPicker = ({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
+    width: '100%',
   },
   locationButton: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border.medium,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    backgroundColor: Colors.background.primary,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.md,
     ...Shadows.sm,
   },
   locationButtonContent: {
@@ -198,7 +282,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
     marginLeft: Spacing[3],
-    fontWeight: Typography.fontWeight.medium,
+    flex: 1,
   },
   modalContainer: {
     flex: 1,
@@ -211,29 +295,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[5],
     paddingTop: 50,
     paddingBottom: Spacing[4],
-    backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
+  },
+  closeButton: {
+    padding: Spacing[2],
   },
   modalTitle: {
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.primary,
   },
+  headerSpacer: {
+    width: 40,
+  },
   searchContainer: {
-    padding: Spacing[4],
-    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background.tertiary,
-    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing[4],
     paddingVertical: Spacing[3],
-    marginBottom: Spacing[3],
   },
   searchInput: {
     flex: 1,
@@ -241,21 +331,10 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     marginLeft: Spacing[3],
   },
-  mapButton: {
-    backgroundColor: Colors.primary[500],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing[3],
-    borderRadius: BorderRadius.lg,
+  resultsContainer: {
+    flex: 1,
   },
-  mapButtonText: {
-    color: Colors.white,
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    marginLeft: Spacing[2],
-  },
-  searchResults: {
+  resultsList: {
     flex: 1,
   },
   searchResultItem: {
@@ -269,10 +348,10 @@ const styles = StyleSheet.create({
   searchResultIcon: {
     width: 32,
     height: 32,
-    borderRadius: BorderRadius.full,
+    borderRadius: 16,
     backgroundColor: Colors.primary[50],
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: Spacing[3],
   },
   searchResultContent: {
@@ -280,33 +359,110 @@ const styles = StyleSheet.create({
   },
   searchResultName: {
     fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
+    fontWeight: Typography.fontWeight.medium,
     color: Colors.text.primary,
-    marginBottom: Spacing[1],
+    marginBottom: 2,
   },
   searchResultAddress: {
     fontSize: Typography.fontSize.sm,
     color: Colors.text.secondary,
   },
-  emptyState: {
+  noResultsContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: Spacing[20],
+    justifyContent: 'center',
+    paddingHorizontal: Spacing[5],
   },
-  emptyStateText: {
+  noResultsText: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+    marginTop: Spacing[3],
+    marginBottom: Spacing[4],
+  },
+  manualEntryButton: {
+    backgroundColor: Colors.primary[500],
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    borderRadius: BorderRadius.md,
+  },
+  manualEntryButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.white,
+  },
+  placeholderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing[5],
+  },
+  placeholderText: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+    marginTop: Spacing[3],
+    textAlign: 'center',
+  },
+  manualEntryContainer: {
+    flex: 1,
+    paddingHorizontal: Spacing[5],
+    paddingTop: Spacing[5],
+  },
+  manualEntryTitle: {
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text.secondary,
-    marginTop: Spacing[4],
+    color: Colors.text.primary,
+    marginBottom: Spacing[5],
   },
-  emptyStateSubtext: {
+  manualInputGroup: {
+    marginBottom: Spacing[4],
+  },
+  manualLabel: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.secondary,
+    marginBottom: Spacing[2],
+  },
+  manualInput: {
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
     fontSize: Typography.fontSize.base,
-    color: Colors.text.tertiary,
-    textAlign: 'center',
-    marginTop: Spacing[2],
-    paddingHorizontal: Spacing[5],
+    color: Colors.text.primary,
+  },
+  manualEntryButtons: {
+    flexDirection: 'row',
+    gap: Spacing[3],
+    marginTop: Spacing[6],
+  },
+  cancelManualButton: {
+    flex: 1,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing[3],
+    alignItems: 'center',
+  },
+  cancelManualButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text.secondary,
+  },
+  confirmManualButton: {
+    flex: 1,
+    backgroundColor: Colors.primary[500],
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing[3],
+    alignItems: 'center',
+  },
+  confirmManualButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.white,
   },
 });
 
-export default LocationPicker; 
+export default LocationPicker;

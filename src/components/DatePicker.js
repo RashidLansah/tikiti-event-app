@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
+  ScrollView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
@@ -21,7 +22,12 @@ const DatePicker = ({
   // Format date for display
   const formatDate = (date) => {
     if (!date) return '';
-    return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   // Get days in month
@@ -31,37 +37,40 @@ const DatePicker = ({
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
-    const startingDay = firstDay.getDay();
+    const startingDayOfWeek = firstDay.getDay();
     
-    return { daysInMonth, startingDay };
-  };
-
-  // Generate calendar days
-  const generateCalendarDays = () => {
-    const { daysInMonth, startingDay } = getDaysInMonth(currentMonth);
     const days = [];
     
-    // Add empty cells for days before month starts
-    for (let i = 0; i < startingDay; i++) {
-      days.push({ day: '', isEmpty: true });
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push({ isEmpty: true });
     }
     
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-      days.push({ 
-        day, 
+      const date = new Date(year, month, day);
+      const isToday = date.toDateString() === new Date().toDateString();
+      const isPast = date < new Date().setHours(0, 0, 0, 0);
+      const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+      
+      days.push({
+        day,
         date,
-        isToday: date.toDateString() === new Date().toDateString(),
-        isSelected: selectedDate && date.toDateString() === selectedDate.toDateString(),
-        isPast: date < new Date(new Date().setHours(0, 0, 0, 0))
+        isToday,
+        isPast,
+        isSelected,
+        isEmpty: false
       });
     }
     
     return days;
   };
 
-  // Navigate months
+  // Generate calendar days
+  const generateCalendarDays = () => {
+    return getDaysInMonth(currentMonth);
+  };
+
   const goToPreviousMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   };
@@ -114,54 +123,64 @@ const DatePicker = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Date</Text>
-              <TouchableOpacity onPress={() => setIsOpen(false)}>
-                <Feather name="x" size={24} color={Colors.text.secondary} />
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setIsOpen(false)}
+              >
+                <Feather name="x" size={24} color={Colors.text.primary} />
               </TouchableOpacity>
             </View>
 
-            {/* Month Navigation */}
-            <View style={styles.monthNavigation}>
-              <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
-                <Feather name="chevron-left" size={20} color={Colors.text.primary} />
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity
+                style={styles.monthButton}
+                onPress={goToPreviousMonth}
+              >
+                <Feather name="chevron-left" size={20} color={Colors.primary[500]} />
               </TouchableOpacity>
-              <Text style={styles.monthText}>{getMonthName(currentMonth)}</Text>
-              <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}>
-                <Feather name="chevron-right" size={20} color={Colors.text.primary} />
+              
+              <Text style={styles.monthTitle}>{getMonthName(currentMonth)}</Text>
+              
+              <TouchableOpacity
+                style={styles.monthButton}
+                onPress={goToNextMonth}
+              >
+                <Feather name="chevron-right" size={20} color={Colors.primary[500]} />
               </TouchableOpacity>
             </View>
 
-            {/* Week Days Header */}
-            <View style={styles.weekDaysHeader}>
-              {weekDays.map((day, index) => (
-                <Text key={index} style={styles.weekDayText}>{day}</Text>
+            <View style={styles.weekDaysContainer}>
+              {weekDays.map((day) => (
+                <Text key={day} style={styles.weekDayText}>{day}</Text>
               ))}
             </View>
 
-            {/* Calendar Grid */}
-            <View style={styles.calendarGrid}>
-              {calendarDays.map((dayData, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.calendarDay,
-                    dayData.isSelected && styles.selectedDay,
-                    dayData.isToday && !dayData.isSelected && styles.todayDay,
-                    dayData.isPast && styles.pastDay
-                  ]}
-                  onPress={() => handleDateSelect(dayData)}
-                  disabled={dayData.isEmpty || dayData.isPast}
-                >
-                  <Text style={[
-                    styles.dayText,
-                    dayData.isSelected && styles.selectedDayText,
-                    dayData.isToday && !dayData.isSelected && styles.todayDayText,
-                    dayData.isPast && styles.pastDayText
-                  ]}>
-                    {dayData.day}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView style={styles.calendarContainer}>
+              <View style={styles.calendarGrid}>
+                {calendarDays.map((dayData, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.dayButton,
+                      dayData.isSelected && styles.dayButtonSelected,
+                      dayData.isToday && styles.dayButtonToday,
+                      dayData.isPast && styles.dayButtonPast,
+                    ]}
+                    onPress={() => handleDateSelect(dayData)}
+                    disabled={dayData.isEmpty || dayData.isPast}
+                  >
+                    <Text style={[
+                      styles.dayText,
+                      dayData.isSelected && styles.dayTextSelected,
+                      dayData.isToday && styles.dayTextToday,
+                      dayData.isPast && styles.dayTextPast,
+                    ]}>
+                      {dayData.day}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -171,18 +190,18 @@ const DatePicker = ({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
+    width: '100%',
   },
   dateButton: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border.medium,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    backgroundColor: Colors.background.primary,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.md,
     ...Shadows.sm,
   },
   dateButtonContent: {
@@ -194,7 +213,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
     marginLeft: Spacing[3],
-    fontWeight: Typography.fontWeight.medium,
+    flex: 1,
   },
   modalOverlay: {
     flex: 1,
@@ -203,17 +222,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius.lg,
     width: '90%',
-    maxWidth: 350,
-    ...Shadows.lg,
+    maxHeight: '80%',
+    ...Shadows.xl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing[5],
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
@@ -222,24 +242,25 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.primary,
   },
-  monthNavigation: {
+  closeButton: {
+    padding: Spacing[2],
+  },
+  calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[4],
   },
-  navButton: {
+  monthButton: {
     padding: Spacing[2],
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.background.tertiary,
   },
-  monthText: {
+  monthTitle: {
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.primary,
   },
-  weekDaysHeader: {
+  weekDaysContainer: {
     flexDirection: 'row',
     paddingHorizontal: Spacing[5],
     paddingBottom: Spacing[3],
@@ -248,8 +269,11 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold,
+    fontWeight: Typography.fontWeight.medium,
     color: Colors.text.secondary,
+  },
+  calendarContainer: {
+    maxHeight: 300,
   },
   calendarGrid: {
     flexDirection: 'row',
@@ -257,40 +281,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[5],
     paddingBottom: Spacing[5],
   },
-  calendarDay: {
+  dayButton: {
     width: '14.28%',
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: Spacing[1],
+    marginBottom: Spacing[2],
   },
-  dayText: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.medium,
-    color: Colors.text.primary,
-  },
-  selectedDay: {
+  dayButtonSelected: {
     backgroundColor: Colors.primary[500],
     borderRadius: BorderRadius.full,
   },
-  selectedDayText: {
+  dayButtonToday: {
+    backgroundColor: Colors.primary[50],
+    borderRadius: BorderRadius.full,
+  },
+  dayButtonPast: {
+    opacity: 0.3,
+  },
+  dayText: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+  },
+  dayTextSelected: {
     color: Colors.white,
     fontWeight: Typography.fontWeight.semibold,
   },
-  todayDay: {
-    backgroundColor: Colors.primary[100],
-    borderRadius: BorderRadius.full,
-  },
-  todayDayText: {
-    color: Colors.primary[700],
+  dayTextToday: {
+    color: Colors.primary[500],
     fontWeight: Typography.fontWeight.semibold,
   },
-  pastDay: {
-    opacity: 0.3,
-  },
-  pastDayText: {
+  dayTextPast: {
     color: Colors.text.tertiary,
   },
 });
 
-export default DatePicker; 
+export default DatePicker;

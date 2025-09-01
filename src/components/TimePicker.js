@@ -4,8 +4,8 @@ import {
   Text,
   TouchableOpacity,
   Modal,
-  ScrollView,
   StyleSheet,
+  ScrollView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
@@ -28,42 +28,30 @@ const TimePicker = ({
 
   // Generate hours (1-12)
   const generateHours = () => {
-    return Array.from({ length: 12 }, (_, i) => i + 1);
+    const hours = [];
+    for (let i = 1; i <= 12; i++) {
+      hours.push(i);
+    }
+    return hours;
   };
 
-  // Generate minutes (0, 15, 30, 45)
+  // Generate minutes (0-59, in 5-minute intervals)
   const generateMinutes = () => {
-    return [0, 15, 30, 45];
+    const minutes = [];
+    for (let i = 0; i < 60; i += 5) {
+      minutes.push(i);
+    }
+    return minutes;
   };
 
   // Handle time selection
   const handleTimeSelect = () => {
-    const hour = selectedHour;
-    const minute = selectedMinute;
+    const hour12 = selectedHour;
+    const minuteStr = selectedMinute.toString().padStart(2, '0');
     const period = isAM ? 'AM' : 'PM';
-    
-    // Format time as HH:MM AM/PM
-    const formattedHour = hour.toString().padStart(2, '0');
-    const formattedMinute = minute.toString().padStart(2, '0');
-    const timeString = `${formattedHour}:${formattedMinute} ${period}`;
-    
+    const timeString = `${hour12}:${minuteStr} ${period}`;
     onSelectTime(timeString);
     setIsOpen(false);
-  };
-
-  // Handle hour selection
-  const handleHourSelect = (hour) => {
-    setSelectedHour(hour);
-  };
-
-  // Handle minute selection
-  const handleMinuteSelect = (minute) => {
-    setSelectedMinute(minute);
-  };
-
-  // Toggle AM/PM
-  const toggleAMPM = () => {
-    setIsAM(!isAM);
   };
 
   const hours = generateHours();
@@ -98,82 +86,97 @@ const TimePicker = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Time</Text>
-              <TouchableOpacity onPress={() => setIsOpen(false)}>
-                <Feather name="x" size={24} color={Colors.text.secondary} />
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setIsOpen(false)}
+              >
+                <Feather name="x" size={24} color={Colors.text.primary} />
               </TouchableOpacity>
             </View>
 
-            {/* Time Display */}
-            <View style={styles.timeDisplay}>
-              <Text style={styles.timeDisplayText}>
-                {selectedHour.toString().padStart(2, '0')}:{selectedMinute.toString().padStart(2, '0')}
-              </Text>
-              <View style={styles.ampmContainer}>
-                <TouchableOpacity
-                  style={[styles.ampmButton, isAM && styles.ampmButtonActive]}
-                  onPress={() => setIsAM(true)}
-                >
-                  <Text style={[styles.ampmText, isAM && styles.ampmTextActive]}>AM</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.ampmButton, !isAM && styles.ampmButtonActive]}
-                  onPress={() => setIsAM(false)}
-                >
-                  <Text style={[styles.ampmText, !isAM && styles.ampmTextActive]}>PM</Text>
-                </TouchableOpacity>
+            <View style={styles.timePickerContainer}>
+              <View style={styles.timeSection}>
+                <Text style={styles.timeLabel}>Hour</Text>
+                <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
+                  {hours.map((hour) => (
+                    <TouchableOpacity
+                      key={hour}
+                      style={[
+                        styles.timeOption,
+                        selectedHour === hour && styles.timeOptionSelected
+                      ]}
+                      onPress={() => setSelectedHour(hour)}
+                    >
+                      <Text style={[
+                        styles.timeOptionText,
+                        selectedHour === hour && styles.timeOptionTextSelected
+                      ]}>
+                        {hour}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.timeSection}>
+                <Text style={styles.timeLabel}>Minute</Text>
+                <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
+                  {minutes.map((minute) => (
+                    <TouchableOpacity
+                      key={minute}
+                      style={[
+                        styles.timeOption,
+                        selectedMinute === minute && styles.timeOptionSelected
+                      ]}
+                      onPress={() => setSelectedMinute(minute)}
+                    >
+                      <Text style={[
+                        styles.timeOptionText,
+                        selectedMinute === minute && styles.timeOptionTextSelected
+                      ]}>
+                        {minute.toString().padStart(2, '0')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.timeSection}>
+                <Text style={styles.timeLabel}>Period</Text>
+                <View style={styles.periodContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.periodOption,
+                      isAM && styles.periodOptionSelected
+                    ]}
+                    onPress={() => setIsAM(true)}
+                  >
+                    <Text style={[
+                      styles.periodOptionText,
+                      isAM && styles.periodOptionTextSelected
+                    ]}>
+                      AM
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.periodOption,
+                      !isAM && styles.periodOptionSelected
+                    ]}
+                    onPress={() => setIsAM(false)}
+                  >
+                    <Text style={[
+                      styles.periodOptionText,
+                      !isAM && styles.periodOptionTextSelected
+                    ]}>
+                      PM
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
-            {/* Hours Selection */}
-            <View style={styles.selectionSection}>
-              <Text style={styles.sectionTitle}>Hour</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hoursContainer}>
-                {hours.map((hour) => (
-                  <TouchableOpacity
-                    key={hour}
-                    style={[
-                      styles.timeOption,
-                      selectedHour === hour && styles.selectedTimeOption
-                    ]}
-                    onPress={() => handleHourSelect(hour)}
-                  >
-                    <Text style={[
-                      styles.timeOptionText,
-                      selectedHour === hour && styles.selectedTimeOptionText
-                    ]}>
-                      {hour}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-
-            {/* Minutes Selection */}
-            <View style={styles.selectionSection}>
-              <Text style={styles.sectionTitle}>Minute</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.minutesContainer}>
-                {minutes.map((minute) => (
-                  <TouchableOpacity
-                    key={minute}
-                    style={[
-                      styles.timeOption,
-                      selectedMinute === minute && styles.selectedTimeOption
-                    ]}
-                    onPress={() => handleMinuteSelect(minute)}
-                  >
-                    <Text style={[
-                      styles.timeOptionText,
-                      selectedMinute === minute && styles.selectedTimeOptionText
-                    ]}>
-                      {minute.toString().padStart(2, '0')}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
+            <View style={styles.timePickerFooter}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => setIsOpen(false)}
@@ -184,7 +187,7 @@ const TimePicker = ({
                 style={styles.confirmButton}
                 onPress={handleTimeSelect}
               >
-                <Text style={styles.confirmButtonText}>Confirm</Text>
+                <Text style={styles.confirmButtonText}>Select</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -196,18 +199,18 @@ const TimePicker = ({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
+    width: '100%',
   },
   timeButton: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.border.medium,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    backgroundColor: Colors.background.primary,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.md,
     ...Shadows.sm,
   },
   timeButtonContent: {
@@ -219,7 +222,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
     marginLeft: Spacing[3],
-    fontWeight: Typography.fontWeight.medium,
+    flex: 1,
   },
   modalOverlay: {
     flex: 1,
@@ -228,17 +231,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius.lg,
     width: '90%',
-    maxWidth: 400,
-    ...Shadows.lg,
+    maxHeight: '80%',
+    ...Shadows.xl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing[5],
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
@@ -247,90 +251,84 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.primary,
   },
-  timeDisplay: {
-    alignItems: 'center',
-    paddingVertical: Spacing[6],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.light,
+  closeButton: {
+    padding: Spacing[2],
   },
-  timeDisplayText: {
-    fontSize: Typography.fontSize['4xl'],
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: Spacing[4],
-  },
-  ampmContainer: {
+  timePickerContainer: {
     flexDirection: 'row',
-    backgroundColor: Colors.background.tertiary,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing[1],
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
   },
-  ampmButton: {
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.md,
+  timeSection: {
+    flex: 1,
+    alignItems: 'center',
   },
-  ampmButtonActive: {
-    backgroundColor: Colors.white,
-    ...Shadows.sm,
-  },
-  ampmText: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.medium,
-    color: Colors.text.secondary,
-  },
-  ampmTextActive: {
-    color: Colors.text.primary,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  selectionSection: {
-    padding: Spacing[5],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.light,
-  },
-  sectionTitle: {
-    fontSize: Typography.fontSize.base,
+  timeLabel: {
+    fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.secondary,
     marginBottom: Spacing[3],
   },
-  hoursContainer: {
-    flexDirection: 'row',
-  },
-  minutesContainer: {
-    flexDirection: 'row',
+  timeScrollView: {
+    maxHeight: 200,
+    width: '100%',
   },
   timeOption: {
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    marginRight: Spacing[3],
-    borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.background.tertiary,
-    minWidth: 60,
+    paddingVertical: Spacing[2],
+    paddingHorizontal: Spacing[3],
+    marginVertical: 1,
+    borderRadius: BorderRadius.sm,
     alignItems: 'center',
   },
-  selectedTimeOption: {
+  timeOptionSelected: {
     backgroundColor: Colors.primary[500],
   },
   timeOptionText: {
     fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.medium,
     color: Colors.text.primary,
   },
-  selectedTimeOptionText: {
+  timeOptionTextSelected: {
     color: Colors.white,
     fontWeight: Typography.fontWeight.semibold,
   },
-  actionButtons: {
+  periodContainer: {
     flexDirection: 'row',
-    padding: Spacing[5],
+    gap: Spacing[2],
+  },
+  periodOption: {
+    paddingVertical: Spacing[2],
+    paddingHorizontal: Spacing[4],
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  periodOptionSelected: {
+    backgroundColor: Colors.primary[500],
+    borderColor: Colors.primary[500],
+  },
+  periodOptionText: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+  },
+  periodOptionTextSelected: {
+    color: Colors.white,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  timePickerFooter: {
+    flexDirection: 'row',
     gap: Spacing[3],
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.light,
   },
   cancelButton: {
     flex: 1,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.md,
     paddingVertical: Spacing[3],
-    borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.background.tertiary,
     alignItems: 'center',
   },
   cancelButtonText: {
@@ -340,9 +338,9 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 1,
-    paddingVertical: Spacing[3],
-    borderRadius: BorderRadius.lg,
     backgroundColor: Colors.primary[500],
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing[3],
     alignItems: 'center',
   },
   confirmButtonText: {
@@ -352,4 +350,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TimePicker; 
+export default TimePicker;

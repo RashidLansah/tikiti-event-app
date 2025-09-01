@@ -15,4 +15,5 @@ export const eventCategories = [
   { id: 'workshop', name: 'Workshop & Training', icon: 'tool' },
   { id: 'exhibition', name: 'Exhibition & Trade Show', icon: 'image' },
   { id: 'other', name: 'Other', icon: 'more-horizontal' },
+  { id: 'others', name: 'Others', icon: 'more-horizontal' },
 ]; 

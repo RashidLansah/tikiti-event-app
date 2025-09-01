@@ -38,6 +38,7 @@ const CreateEventScreen = ({ navigation }) => {
   const [imageUri, setImageUri] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
+  const [focusedField, setFocusedField] = useState(null);
 
   const pickImage = async () => {
     try {
@@ -238,7 +239,10 @@ const CreateEventScreen = ({ navigation }) => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Event Name *</Text>
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer,
+              focusedField === 'eventName' && styles.inputContainerFocused
+            ]}>
               <Feather name="calendar" size={18} color="#9CA3AF" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
@@ -246,6 +250,8 @@ const CreateEventScreen = ({ navigation }) => {
                 onChangeText={setEventName}
                 placeholder="Enter event name"
                 placeholderTextColor="#9CA3AF"
+                onFocus={() => setFocusedField('eventName')}
+                onBlur={() => setFocusedField(null)}
               />
             </View>
           </View>
@@ -262,7 +268,10 @@ const CreateEventScreen = ({ navigation }) => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Description</Text>
-            <View style={styles.inputContainer}>
+            <View style={[
+              styles.inputContainer,
+              focusedField === 'eventDescription' && styles.inputContainerFocused
+            ]}>
               <Feather name="file-text" size={18} color="#9CA3AF" style={[styles.inputIcon, { alignSelf: 'flex-start', marginTop: 4 }]} />
               <TextInput
                 style={[styles.input, styles.textArea]}
@@ -272,6 +281,8 @@ const CreateEventScreen = ({ navigation }) => {
                 placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={4}
+                onFocus={() => setFocusedField('eventDescription')}
+                onBlur={() => setFocusedField(null)}
               />
             </View>
           </View>
@@ -293,24 +304,22 @@ const CreateEventScreen = ({ navigation }) => {
             <Text style={styles.sectionTitle}>Date & Time</Text>
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Date *</Text>
-              <DatePicker
-                selectedDate={eventDate}
-                onSelectDate={setEventDate}
-                placeholder="Select event date"
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Date *</Text>
+            <DatePicker
+              selectedDate={eventDate}
+              onSelectDate={setEventDate}
+              placeholder="Select event date"
+            />
+          </View>
 
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Time *</Text>
-              <TimePicker
-                selectedTime={eventTime}
-                onSelectTime={setEventTime}
-                placeholder="Select event time"
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Time *</Text>
+            <TimePicker
+              selectedTime={eventTime}
+              onSelectTime={setEventTime}
+              placeholder="Select event time"
+            />
           </View>
         </View>
 
@@ -353,28 +362,22 @@ const CreateEventScreen = ({ navigation }) => {
             <TouchableOpacity
               style={[
                 styles.eventTypeOption,
-                eventType === 'paid' && styles.eventTypeActive
+                styles.eventTypeDisabled
               ]}
-              onPress={() => setEventType('paid')}
+              disabled={true}
             >
               <View style={styles.eventTypeIconContainer}>
                 <Feather 
                   name="credit-card" 
                   size={24} 
-                  color={eventType === 'paid' ? '#FFFFFF' : 'Colors.primary[500]'} 
+                  color="#9CA3AF" 
                 />
               </View>
-              <Text style={[
-                styles.eventTypeTitle,
-                eventType === 'paid' && styles.eventTypeActiveText
-              ]}>
+              <Text style={styles.eventTypeTitleDisabled}>
                 Paid Event
               </Text>
-              <Text style={[
-                styles.eventTypeSubtitle,
-                eventType === 'paid' && styles.eventTypeActiveSubtext
-              ]}>
-                Users pay for tickets
+              <Text style={styles.eventTypeSubtitleDisabled}>
+                Coming Soon
               </Text>
             </TouchableOpacity>
           </View>
@@ -391,7 +394,10 @@ const CreateEventScreen = ({ navigation }) => {
             {eventType === 'paid' && (
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.label}>Ticket Price *</Text>
-                <View style={styles.inputContainer}>
+                <View style={[
+                  styles.inputContainer,
+                  focusedField === 'ticketPrice' && styles.inputContainerFocused
+                ]}>
                   <Text style={styles.currencySymbol}>₵</Text>
                   <TextInput
                     style={[styles.input, styles.priceInput]}
@@ -400,6 +406,8 @@ const CreateEventScreen = ({ navigation }) => {
                     placeholder="0.00"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="numeric"
+                    onFocus={() => setFocusedField('ticketPrice')}
+                    onBlur={() => setFocusedField(null)}
                   />
                 </View>
               </View>
@@ -410,7 +418,10 @@ const CreateEventScreen = ({ navigation }) => {
               eventType === 'paid' ? styles.halfWidth : { flex: 1 }
             ]}>
               <Text style={styles.label}>Total Tickets</Text>
-              <View style={styles.inputContainer}>
+              <View style={[
+                styles.inputContainer,
+                focusedField === 'totalTickets' && styles.inputContainerFocused
+              ]}>
                 <Feather name="users" size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
@@ -419,6 +430,8 @@ const CreateEventScreen = ({ navigation }) => {
                   placeholder="100"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="numeric"
+                  onFocus={() => setFocusedField('totalTickets')}
+                  onBlur={() => setFocusedField(null)}
                 />
               </View>
             </View>
@@ -585,6 +598,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  inputContainerFocused: {
+    borderWidth: 2,
+    borderColor: Colors.primary[500],
+    ...Shadows.md,
+  },
   inputIcon: {
     marginRight: Spacing[3],
   },
@@ -657,6 +675,22 @@ const styles = StyleSheet.create({
   },
   eventTypeActiveSubtext: {
     color: 'rgba(255, 255, 255, 0.8)',
+  },
+  eventTypeDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+  },
+  eventTypeTitleDisabled: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+  eventTypeSubtitleDisabled: {
+    fontSize: Typography.fontSize.sm,
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
   buttonContainer: {
     flexDirection: 'row',
