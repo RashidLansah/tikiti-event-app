@@ -225,11 +225,10 @@ const EventListScreen = ({ navigation }) => {
   };
 
   // Time-based section header component
-  const TimeSection = ({ title, subtitle, icon, count, events, showAll = false }) => {
+  const TimeSection = ({ title, subtitle, icon, count, events }) => {
     if (events.length === 0) return null;
 
-    const displayEvents = showAll ? events : events.slice(0, 3);
-    const hasMore = events.length > 3;
+    const displayEvents = events;
 
     return (
       <View style={styles.timeSection}>
@@ -250,18 +249,9 @@ const EventListScreen = ({ navigation }) => {
         
         <View style={styles.sectionEvents}>
           {displayEvents.map((event, index) => (
-            <EventCard key={event.id} event={event} index={index} isCompact={!showAll} />
+            <EventCard key={event.id} event={event} index={index} isCompact={false} />
           ))}
         </View>
-        
-        {hasMore && !showAll && (
-          <TouchableOpacity style={[styles.showMoreButton, { backgroundColor: colors.background.tertiary }]}>
-            <Text style={[styles.showMoreText, { color: colors.primary[500] }]}>
-              View all {events.length} events
-            </Text>
-            <Feather name="chevron-right" size={16} color={colors.primary[500]} />
-          </TouchableOpacity>
-        )}
       </View>
     );
   };
@@ -852,22 +842,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[5],
     gap: Spacing[4],
   },
-  showMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing[3],
-    marginHorizontal: Spacing[5],
-    marginTop: Spacing[2],
-    borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.background.tertiary,
-    gap: Spacing[2],
-  },
-  showMoreText: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.primary[500],
-  },
+
 });
 
 export default EventListScreen;
