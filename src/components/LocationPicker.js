@@ -26,7 +26,7 @@ const LocationPicker = ({
   const [manualLocation, setManualLocation] = useState({ name: '', address: '' });
 
   // Google Places API configuration
-  const GOOGLE_PLACES_API_KEY = 'AIzaSyCQkHC-01AhA_LsgrIU6g4NhA46dkINrZQ';
+  const GOOGLE_PLACES_API_KEY = 'AIzaSyBSoRcsl6qbX959I1dVGQO04d9aJRF3s8k';
   const GOOGLE_PLACES_BASE_URL = 'https://maps.googleapis.com/maps/api/place';
 
   // Search for places using Google Places API
