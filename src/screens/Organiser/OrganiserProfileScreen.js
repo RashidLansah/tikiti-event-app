@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -14,6 +15,7 @@ import { userService } from '../../services/firestoreService';
 
 const OrganiserProfileScreen = ({ navigation }) => {
   const { logout, userProfile, user, updateUserProfile } = useAuth();
+  const [isSwitching, setIsSwitching] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -46,23 +48,20 @@ const OrganiserProfileScreen = ({ navigation }) => {
           text: 'Switch', 
           onPress: async () => {
             try {
+              setIsSwitching(true);
               await updateUserProfile({ accountType: 'user' });
-              Alert.alert(
-                'Account Switched',
-                'You are now in attendee mode. The app will restart to apply changes.',
-                [{ 
-                  text: 'OK',
-                  onPress: () => {
-                    // Force navigation to user flow
-                    navigation.reset({
-                      index: 0,
-                      routes: [{ name: 'UserFlow' }],
-                    });
-                  }
-                }]
-              );
+              
+              // Small delay to show the loading state
+              setTimeout(() => {
+                // Force navigation to user flow
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'UserFlow' }],
+                });
+              }, 1000);
             } catch (error) {
               console.error('Error switching to attendee:', error);
+              setIsSwitching(false);
               Alert.alert('Error', 'Failed to switch account type. Please try again.');
             }
           }
@@ -129,6 +128,18 @@ const OrganiserProfileScreen = ({ navigation }) => {
         <Feather name="log-out" size={20} color={Colors.error[500]} />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
+
+      {/* Switching Loading Overlay */}
+      {isSwitching && (
+        <View style={styles.switchingOverlay}>
+          <View style={styles.switchingModal}>
+            <ActivityIndicator size="large" color={Colors.primary[500]} />
+            <Text style={styles.switchingText}>
+              Switching to attendee view...
+            </Text>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -236,6 +247,32 @@ const styles = StyleSheet.create({
     color: Colors.error[500],
     marginLeft: Spacing[2],
     fontWeight: Typography.fontWeight.semibold,
+  },
+  switchingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  switchingModal: {
+    backgroundColor: Colors.white,
+    padding: Spacing[8],
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    minWidth: 200,
+    ...Shadows.lg,
+  },
+  switchingText: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.medium,
+    marginTop: Spacing[4],
+    textAlign: 'center',
+    color: Colors.text.primary,
   },
 });
 

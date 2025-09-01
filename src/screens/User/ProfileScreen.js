@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -22,6 +23,7 @@ const ProfileScreen = ({ navigation }) => {
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [marketingEnabled, setMarketingEnabled] = useState(false);
   const [ticketStats, setTicketStats] = useState({ total: 0, upcoming: 0 });
+  const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
     // Load user ticket statistics when user changes
@@ -130,23 +132,20 @@ const ProfileScreen = ({ navigation }) => {
           text: 'Switch', 
           onPress: async () => {
             try {
+              setIsSwitching(true);
               await updateUserProfile({ accountType: 'organizer' });
-              Alert.alert(
-                'Account Switched',
-                'You are now in organiser mode. The app will restart to apply changes.',
-                [{ 
-                  text: 'OK',
-                  onPress: () => {
-                    // Force navigation to organiser flow
-                    navigation.reset({
-                      index: 0,
-                      routes: [{ name: 'OrganiserFlow' }],
-                    });
-                  }
-                }]
-              );
+              
+              // Small delay to show the loading state
+              setTimeout(() => {
+                // Force navigation to organiser flow
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'OrganiserFlow' }],
+                });
+              }, 1000);
             } catch (error) {
               console.error('Error switching to organiser:', error);
+              setIsSwitching(false);
               Alert.alert('Error', 'Failed to switch account type. Please try again.');
             }
           }
@@ -369,6 +368,18 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={[styles.versionText, { color: colors.text.tertiary }]}>Tikiti v1.0.0</Text>
         </View>
       </ScrollView>
+
+      {/* Switching Loading Overlay */}
+      {isSwitching && (
+        <View style={styles.switchingOverlay}>
+          <View style={styles.switchingModal}>
+            <ActivityIndicator size="large" color={colors.primary[500]} />
+            <Text style={[styles.switchingText, { color: colors.text.primary }]}>
+              Switching to organiser view...
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -548,6 +559,31 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 14,
     color: '#999999',
+  },
+  switchingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  switchingModal: {
+    backgroundColor: Colors.white,
+    padding: Spacing[8],
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    minWidth: 200,
+    ...Shadows.lg,
+  },
+  switchingText: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.medium,
+    marginTop: Spacing[4],
+    textAlign: 'center',
   },
 });
 
