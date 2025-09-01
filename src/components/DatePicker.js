@@ -3,12 +3,16 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Modal,
   StyleSheet,
   Platform,
+  Dimensions,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../styles/designSystem';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 const DatePicker = ({ 
   selectedDate, 
@@ -16,7 +20,7 @@ const DatePicker = ({
   placeholder = "Select date",
   minimumDate = new Date() // Default to today
 }) => {
-  const [showPicker, setShowPicker] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   // Format date for display
   const formatDate = (date) => {
@@ -30,26 +34,21 @@ const DatePicker = ({
   };
 
   const handleDateChange = (event, selectedDate) => {
-    if (Platform.OS === 'ios') {
-      // On iOS, keep the picker open and update the date
-      if (selectedDate) {
-        onSelectDate(selectedDate);
-      }
-    } else {
-      // On Android, close the picker
-      setShowPicker(false);
-      if (selectedDate) {
-        onSelectDate(selectedDate);
-      }
+    if (selectedDate) {
+      onSelectDate(selectedDate);
     }
   };
 
   const showDatePicker = () => {
-    setShowPicker(true);
+    setShowModal(true);
   };
 
-  const closePicker = () => {
-    setShowPicker(false);
+  const closeModal = () => {
+    setShowModal(false);
+  };
+
+  const handleDone = () => {
+    setShowModal(false);
   };
 
   return (
@@ -67,29 +66,47 @@ const DatePicker = ({
         <Feather name="chevron-right" size={20} color={Colors.text.tertiary} />
       </TouchableOpacity>
 
-      {showPicker && (
-        <View style={styles.pickerContainer}>
-          {Platform.OS === 'ios' && (
-            <View style={styles.iosPickerHeader}>
-              <TouchableOpacity onPress={closePicker} style={styles.cancelButton}>
+      <Modal
+        visible={showModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={closeModal}
+          />
+          <View style={styles.modalContainer}>
+            {/* Handle bar */}
+            <View style={styles.handleBar} />
+            
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={closeModal} style={styles.cancelButton}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <Text style={styles.pickerTitle}>Select Date</Text>
-              <TouchableOpacity onPress={closePicker} style={styles.doneButton}>
+              <Text style={styles.modalTitle}>Select Date</Text>
+              <TouchableOpacity onPress={handleDone} style={styles.doneButton}>
                 <Text style={styles.doneButtonText}>Done</Text>
               </TouchableOpacity>
             </View>
-          )}
-          <DateTimePicker
-            value={selectedDate || new Date()}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            minimumDate={minimumDate}
-            onChange={handleDateChange}
-            style={styles.picker}
-          />
+
+            {/* Date Picker */}
+            <View style={styles.pickerContainer}>
+              <DateTimePicker
+                value={selectedDate || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                minimumDate={minimumDate}
+                onChange={handleDateChange}
+                style={styles.picker}
+              />
+            </View>
+          </View>
         </View>
-      )}
+      </Modal>
     </View>
   );
 };
@@ -121,23 +138,41 @@ const styles = StyleSheet.create({
     marginLeft: Spacing[3],
     flex: 1,
   },
-  pickerContainer: {
-    backgroundColor: Colors.background.primary,
-    borderRadius: BorderRadius.lg,
-    ...Shadows.lg,
-    marginTop: Spacing[2],
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  iosPickerHeader: {
+  modalBackdrop: {
+    flex: 1,
+  },
+  modalContainer: {
+    backgroundColor: Colors.background.primary,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: screenHeight * 0.6,
+    ...Shadows.xl,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.border.light,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: Spacing[3],
+    marginBottom: Spacing[2],
+  },
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
-  pickerTitle: {
-    fontSize: Typography.fontSize.base,
+  modalTitle: {
+    fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.primary,
   },
@@ -158,8 +193,14 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.primary[500],
   },
+  pickerContainer: {
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
+    alignItems: 'center',
+  },
   picker: {
     backgroundColor: Colors.background.primary,
+    width: '100%',
   },
 });
 
