@@ -7,7 +7,7 @@ export const linkingConfig = {
     'tikiti://',
     'https://tikiti.com',
     'https://www.tikiti.com',
-    'https://tikiti-argtnjgr1-lansahs-projects-ff07a47b.vercel.app' // Production URL
+    'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app' // Production URL
   ],
   config: {
     screens: {
@@ -81,7 +81,7 @@ export const handleDeepLink = (url, navigation) => {
 // Generate shareable event link
 export const generateEventLink = (eventId) => {
   // Use production Vercel URL
-  const domain = 'https://tikiti-argtnjgr1-lansahs-projects-ff07a47b.vercel.app';
+  const domain = 'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app';
   return `${domain}/events/${eventId}`;
 };
 
