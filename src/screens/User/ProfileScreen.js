@@ -134,7 +134,16 @@ const ProfileScreen = ({ navigation }) => {
               Alert.alert(
                 'Account Switched',
                 'You are now in organiser mode. The app will restart to apply changes.',
-                [{ text: 'OK' }]
+                [{ 
+                  text: 'OK',
+                  onPress: () => {
+                    // Force navigation to organiser flow
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'OrganiserFlow' }],
+                    });
+                  }
+                }]
               );
             } catch (error) {
               console.error('Error switching to organiser:', error);

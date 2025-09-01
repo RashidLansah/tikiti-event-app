@@ -50,7 +50,16 @@ const OrganiserProfileScreen = ({ navigation }) => {
               Alert.alert(
                 'Account Switched',
                 'You are now in attendee mode. The app will restart to apply changes.',
-                [{ text: 'OK' }]
+                [{ 
+                  text: 'OK',
+                  onPress: () => {
+                    // Force navigation to user flow
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'UserFlow' }],
+                    });
+                  }
+                }]
               );
             } catch (error) {
               console.error('Error switching to attendee:', error);
