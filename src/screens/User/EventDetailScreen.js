@@ -44,6 +44,11 @@ const EventDetailScreen = ({ navigation, route }) => {
     console.log('🗺️ Get Directions clicked');
     console.log('📍 Event location:', event.location);
     
+    // Simple test alert first
+    Alert.alert('Test', 'Get Directions button clicked!', [
+      { text: 'OK', onPress: () => console.log('User confirmed button works') }
+    ]);
+    
     if (!event.location) {
       console.log('❌ No location data');
       Alert.alert('Error', 'Location information is not available for this event.');
