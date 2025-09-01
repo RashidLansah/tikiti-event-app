@@ -27,26 +27,26 @@ const OnboardingScreen = ({ navigation }) => {
       subtitle: 'Discover concerts, festivals, conferences and local events happening around you. Find your next great experience with just a tap.',
       backgroundColor: Colors.primary[50],
       accentColor: Colors.primary[500],
-      // Real illustration - browsing events
-      illustration: 'browsing-events',
+      icon: 'calendar',
+      iconSize: 80,
     },
     {
       id: 2,
-      title: 'Super\nClean & Flat',
-      subtitle: 'Praesent sapien massa, convallis a pellentesque nec, egestas non nulla sit amet erat tempus convallis quis ac lectus.',
+      title: 'Book Tickets\nInstantly',
+      subtitle: 'Secure your spot at any event with our streamlined booking process. Get instant confirmation and digital tickets delivered to your phone.',
       backgroundColor: Colors.secondary[50],
       accentColor: Colors.secondary[500],
-      // Placeholder for illustration - user will replace with real image
-      illustration: 'super-clean',
+      icon: 'credit-card',
+      iconSize: 80,
     },
     {
       id: 3,
-      title: 'Modern Vibrant\nColors',
-      subtitle: 'Praesent sapien massa, convallis a pellentesque nec, egestas non nulla sit amet erat tempus convallis quis ac lectus.',
+      title: 'Share & Connect',
+      subtitle: 'Share events with friends, connect with other attendees, and never miss out on the experiences that matter to you.',
       backgroundColor: Colors.warning[50],
       accentColor: Colors.warning[500],
-      // Placeholder for illustration - user will replace with real image
-      illustration: 'modern-colors',
+      icon: 'share-2',
+      iconSize: 80,
     },
   ];
 
@@ -88,28 +88,15 @@ const OnboardingScreen = ({ navigation }) => {
     });
   };
 
-  const renderIllustrationPlaceholder = (illustration, accentColor) => {
-    // This is a placeholder that will be replaced with real illustrations
-    const placeholderIcons = {
-      'professional-design': 'monitor',
-      'super-clean': 'layers',
-      'modern-colors': 'palette',
-    };
-
+  const renderIllustration = (slide) => {
     return (
       <View style={[styles.illustrationContainer, { backgroundColor: Colors.white }]}>
-        <View style={[styles.illustrationPlaceholder, { borderColor: accentColor }]}>
+        <View style={[styles.illustrationPlaceholder, { borderColor: slide.accentColor }]}>
           <Feather 
-            name={placeholderIcons[illustration] || 'image'} 
-            size={64} 
-            color={accentColor} 
+            name={slide.icon} 
+            size={slide.iconSize} 
+            color={slide.accentColor} 
           />
-          <Text style={[styles.placeholderText, { color: accentColor }]}>
-            Illustration Placeholder
-          </Text>
-          <Text style={styles.placeholderSubtext}>
-            Replace with real image
-          </Text>
         </View>
       </View>
     );
@@ -125,7 +112,7 @@ const OnboardingScreen = ({ navigation }) => {
       
       {/* Illustration Area */}
       <View style={styles.illustrationSection}>
-        {renderIllustrationPlaceholder(slide.illustration, slide.accentColor)}
+        {renderIllustration(slide)}
       </View>
       
       {/* Content Section */}

@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import ShareButton from '../../components/ShareButton';
+import CopyLinkButton from '../../components/CopyLinkButton';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { eventService } from '../../services/firestoreService';
 
@@ -183,12 +184,20 @@ const EventDetailScreen = ({ navigation, route }) => {
           <Feather name="arrow-left" size={24} color="Colors.primary[500]" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Event Details</Text>
-        <ShareButton
-          event={eventData}
-          style={styles.shareButton}
-          iconSize={24}
-          iconColor="Colors.primary[500]"
-        />
+        <View style={styles.headerActions}>
+          <CopyLinkButton
+            event={eventData}
+            style={styles.shareButton}
+            iconSize={24}
+            iconColor="Colors.primary[500]"
+          />
+          <ShareButton
+            event={eventData}
+            style={styles.shareButton}
+            iconSize={24}
+            iconColor="Colors.primary[500]"
+          />
+        </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -574,6 +583,10 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xl,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: Spacing[2],
   },
   shareButton: {
     padding: Spacing[2],

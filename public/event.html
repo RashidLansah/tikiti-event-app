@@ -576,7 +576,20 @@
             document.getElementById('eventCategory').textContent = event.category || 'Event';
             document.getElementById('eventDate').textContent = event.date || 'Date TBA';
             document.getElementById('eventTime').textContent = event.time || event.startTime || 'Time TBA';
-            document.getElementById('eventLocation').textContent = event.location || event.address || 'Location TBA';
+            
+            // Handle location object properly
+            let locationText = 'Location TBA';
+            if (event.location) {
+                if (typeof event.location === 'object') {
+                    locationText = event.location.name || event.location.address || 'Location TBA';
+                } else {
+                    locationText = event.location;
+                }
+            } else if (event.address) {
+                locationText = event.address;
+            }
+            document.getElementById('eventLocation').textContent = locationText;
+            
             document.getElementById('eventPrice').textContent = event.type === 'free' ? 'Free Event' : (event.price || 'Price TBA');
             document.getElementById('eventDescription').textContent = event.description || 'No description available.';
             
@@ -598,7 +611,20 @@
         // Share event
         function shareEvent() {
             const url = window.location.href;
-            const text = `🎉 ${currentEvent?.name || 'Event'}\n\n📅 ${currentEvent?.date || 'Date TBA'}\n📍 ${currentEvent?.location || 'Location TBA'}\n${currentEvent?.type === 'free' ? '🎟️ Free Event' : '💰 ' + (currentEvent?.price || 'Paid Event')}\n\n${currentEvent?.description || 'Join us for this amazing event!'}\n\n🔗 Register here:`;
+            
+            // Handle location object properly for sharing
+            let locationText = 'Location TBA';
+            if (currentEvent?.location) {
+                if (typeof currentEvent.location === 'object') {
+                    locationText = currentEvent.location.name || currentEvent.location.address || 'Location TBA';
+                } else {
+                    locationText = currentEvent.location;
+                }
+            } else if (currentEvent?.address) {
+                locationText = currentEvent.address;
+            }
+            
+            const text = `🎉 ${currentEvent?.name || 'Event'}\n\n📅 ${currentEvent?.date || 'Date TBA'}\n📍 ${locationText}\n${currentEvent?.type === 'free' ? '🎟️ Free Event' : '💰 ' + (currentEvent?.price || 'Paid Event')}\n\n${currentEvent?.description || 'Join us for this amazing event!'}\n\n🔗 Register here:`;
             
             if (navigator.share) {
                 navigator.share({

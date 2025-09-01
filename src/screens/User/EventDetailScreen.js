@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import ShareButton from '../../components/ShareButton';
+import CopyLinkButton from '../../components/CopyLinkButton';
 import { eventService, bookingService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
@@ -262,6 +263,13 @@ const EventDetailScreen = ({ navigation, route }) => {
             color={isFavorited ? "#EF4444" : "#FFFFFF"} 
           />
         </TouchableOpacity>
+        
+        <CopyLinkButton
+          event={event}
+          style={[styles.headerButton, { backgroundColor: 'rgba(0,0,0,0.3)' }]}
+          iconSize={24}
+          iconColor="#FFFFFF"
+        />
         
         <ShareButton
           event={event}

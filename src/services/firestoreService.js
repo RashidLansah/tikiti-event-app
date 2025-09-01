@@ -17,6 +17,7 @@ import {
   setDoc 
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { emailService } from '../config/emailService';
 
 // Collection names
 export const COLLECTIONS = {
@@ -278,6 +279,7 @@ export const bookingService = {
         status: 'confirmed',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        bookingReference: `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
       });
 
       // Update event ticket count
@@ -287,6 +289,27 @@ export const bookingService = {
           soldTickets: increment(bookingData.quantity),
           availableTickets: increment(-bookingData.quantity),
         });
+      }
+
+      // Send email confirmation
+      try {
+        const bookingWithId = {
+          ...bookingData,
+          id: docRef.id,
+          bookingReference: `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        };
+        
+        console.log('📧 Sending email confirmation for booking:', bookingWithId.id);
+        const emailResult = await emailService.sendTicketConfirmation(bookingWithId);
+        
+        if (emailResult.success) {
+          console.log('✅ Email confirmation sent successfully');
+        } else {
+          console.warn('⚠️ Email confirmation failed:', emailResult.message);
+        }
+      } catch (emailError) {
+        console.error('❌ Email service error (booking still created):', emailError);
+        // Don't throw here - booking was successful, email is secondary
       }
 
       return docRef;

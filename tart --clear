@@ -1,0 +1,10 @@
+[33m609ffd1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m Fix email functionality and QR code generation
+[33m9a3ce99[m Remove API key from public config file for security
+[33mbcc50ad[m Fix location object rendering errors in EventListScreen, EventDetailScreen, and DashboardScreen
+[33m89f98b3[m Fix location object rendering error in share functionality
+[33mec9e77d[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add SendGrid email integration with secure configuration
+[33m7a3bd21[m  TestFlight deployment ready - iOS app successfully submitted
+[33m7e6c30c[m  Fix QR code scanning: attendee name display and camera UI issues
+[33m7b19d85[m Add PDF ticket generation and download functionality
+[33med21fc4[m Fix web event sharing: resolve event ID parsing and improve HTML event display
+[33m3711083[m Implement web sharing with WhatsApp image support

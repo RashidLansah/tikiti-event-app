@@ -2,25 +2,37 @@
 export default async function handler(req, res) {
   const { eventId } = req.query;
   
+  console.log('OG API called with eventId:', eventId);
+  
   if (!eventId) {
+    console.log('No eventId provided, redirecting to home');
     return redirectToHome(res);
   }
   
   try {
     // Fetch event data from Firebase using REST API
     const firebaseUrl = `https://firestore.googleapis.com/v1/projects/tikiti-45ac4/databases/(default)/documents/events/${eventId}`;
+    console.log('Fetching event from:', firebaseUrl);
+    
     const response = await fetch(firebaseUrl);
     
     if (!response.ok) {
-      console.log('Event not found:', eventId);
+      console.log('Event not found:', eventId, 'Status:', response.status);
       return redirectToHome(res);
     }
     
     const data = await response.json();
     const event = convertFirestoreData(data.fields);
     
+    console.log('Event data:', {
+      name: event.name,
+      hasImage: !!event.imageBase64,
+      imageLength: event.imageBase64 ? event.imageBase64.length : 0,
+      imageStart: event.imageBase64 ? event.imageBase64.substring(0, 50) : 'none'
+    });
+    
     // Generate HTML with proper meta tags
-    const html = generateEventHTML(event, eventId);
+    const html = generateEventHTML(event, eventId, req);
     
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
@@ -44,6 +56,12 @@ function convertFirestoreData(fields) {
       event[key] = parseFloat(value.doubleValue);
     } else if (value.booleanValue !== undefined) {
       event[key] = value.booleanValue;
+    } else if (value.nullValue !== undefined) {
+      event[key] = null;
+    } else if (value.arrayValue !== undefined) {
+      event[key] = value.arrayValue.values || [];
+    } else if (value.mapValue !== undefined) {
+      event[key] = convertFirestoreData(value.mapValue.fields || {});
     }
   }
   
@@ -72,25 +90,42 @@ function redirectToHome(res) {
   res.status(200).send(html);
 }
 
-function generateEventHTML(event, eventId) {
+function generateEventHTML(event, eventId, req) {
+  // Get the current domain dynamically
+  const protocol = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers.host;
+  const baseUrl = `${protocol}://${host}`;
+  
   // Prepare event data
   const eventName = event.name || 'Amazing Event';
   const eventDescription = event.description || `Join us for ${eventName} on ${event.date || 'soon'}`;
   const eventDate = event.date || 'Date TBA';
-  const eventLocation = event.location || event.address || 'Location TBA';
-  const eventType = event.type === 'free' ? 'Free Event' : (event.price || 'Paid Event');
   
-  // Handle event image
-  let eventImage = 'https://tikiti-ozrqqbnjt-lansahs-projects-ff07a47b.vercel.app/tikiti-og.svg';
-  if (event.imageBase64) {
-    if (event.imageBase64.startsWith('data:')) {
-      eventImage = event.imageBase64;
+  // Handle location object properly
+  let eventLocation = 'Location TBA';
+  if (event.location) {
+    if (typeof event.location === 'object') {
+      eventLocation = event.location.name || event.location.address || 'Location TBA';
     } else {
-      eventImage = `data:image/jpeg;base64,${event.imageBase64}`;
+      eventLocation = event.location;
     }
+  } else if (event.address) {
+    eventLocation = event.address;
   }
   
-  const eventUrl = `https://tikiti-ozrqqbnjt-lansahs-projects-ff07a47b.vercel.app/events/${eventId}`;
+  const eventType = event.type === 'free' ? 'Free Event' : (event.price || 'Paid Event');
+  
+  // Handle event image - use a dedicated image endpoint for OG tags
+  let eventImage = `${baseUrl}/tikiti-og.svg`;
+  if (event.imageBase64) {
+    // Create a URL that points to our image endpoint
+    eventImage = `${baseUrl}/api/event-image/${eventId}`;
+    console.log('OG: Using event image URL:', eventImage);
+  } else {
+    console.log('OG: No image found, using default image');
+  }
+  
+  const eventUrl = `${baseUrl}/events/${eventId}`;
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -109,16 +144,25 @@ function generateEventHTML(event, eventId) {
     <meta property="og:url" content="${eventUrl}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:alt" content="${eventName} - Event Poster">
     
     <!-- Twitter Card meta tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="${eventName}">
     <meta name="twitter:description" content="${eventDescription}">
     <meta name="twitter:image" content="${eventImage}">
+    <meta name="twitter:image:alt" content="${eventName} - Event Poster">
+    
+    <!-- Additional meta tags for better sharing -->
+    <meta name="description" content="${eventDescription}">
+    <meta name="keywords" content="event, ${eventName}, tikiti, tickets, ${eventLocation}">
     
     <!-- WhatsApp specific meta tags -->
-    <meta property="og:image:type" content="image/jpeg">
-    <meta property="og:image:alt" content="${eventName} - Event Poster">
+    <meta property="og:image:secure_url" content="${eventImage}">
+    <meta property="og:image:type" content="${event.imageBase64 && event.imageBase64.startsWith('data:') ? event.imageBase64.split(';')[0].split(':')[1] : 'image/jpeg'}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     
     <style>
         body {
@@ -198,7 +242,7 @@ function generateEventHTML(event, eventId) {
 </head>
 <body>
     <div class="event-preview">
-        ${event.imageBase64 ? `<img src="${eventImage}" alt="${eventName}" class="event-image">` : ''}
+        ${event.imageBase64 ? `<img src="data:image/jpeg;base64,${event.imageBase64.startsWith('data:') ? event.imageBase64.split(',')[1] : event.imageBase64}" alt="${eventName}" class="event-image">` : ''}
         <div class="event-title">🎫 ${eventName}</div>
         <div class="event-details">
             📅 ${eventDate}<br>

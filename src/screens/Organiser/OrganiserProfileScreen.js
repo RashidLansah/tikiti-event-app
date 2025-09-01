@@ -10,9 +10,10 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import { userService } from '../../services/firestoreService';
 
-const OrganiserProfileScreen = () => {
-  const { logout, userProfile, user } = useAuth();
+const OrganiserProfileScreen = ({ navigation }) => {
+  const { logout, userProfile, user, updateUserProfile } = useAuth();
 
   const handleLogout = () => {
     Alert.alert(
@@ -28,6 +29,32 @@ const OrganiserProfileScreen = () => {
               await logout();
             } catch (error) {
               Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSwitchToAttendee = () => {
+    Alert.alert(
+      'Switch to Attendee Account',
+      'Do you want to switch to attendee mode? This will allow you to browse and book events.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Switch', 
+          onPress: async () => {
+            try {
+              await updateUserProfile({ accountType: 'user' });
+              Alert.alert(
+                'Account Switched',
+                'You are now in attendee mode. The app will restart to apply changes.',
+                [{ text: 'OK' }]
+              );
+            } catch (error) {
+              console.error('Error switching to attendee:', error);
+              Alert.alert('Error', 'Failed to switch account type. Please try again.');
             }
           }
         }
@@ -78,6 +105,13 @@ const OrganiserProfileScreen = () => {
         <TouchableOpacity style={styles.settingItem}>
           <Feather name="lock" size={20} color={Colors.text.secondary} />
           <Text style={styles.settingText}>Change Password</Text>
+          <Feather name="chevron-right" size={20} color={Colors.text.tertiary} />
+        </TouchableOpacity>
+
+        {/* Switch to Attendee */}
+        <TouchableOpacity style={styles.settingItem} onPress={handleSwitchToAttendee}>
+          <Feather name="user" size={20} color={Colors.warning[500]} />
+          <Text style={styles.settingText}>Switch to Attendee</Text>
           <Feather name="chevron-right" size={20} color={Colors.text.tertiary} />
         </TouchableOpacity>
       </View>

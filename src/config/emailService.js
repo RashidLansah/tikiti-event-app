@@ -2,7 +2,8 @@
 const SENDGRID_CONFIG = {
   apiKey: process.env.EXPO_PUBLIC_SENDGRID_API_KEY || 'YOUR_SENDGRID_API_KEY_HERE',
   fromEmail: 'gettikiti@gmail.com',
-  fromName: 'Tikiti Events'
+  fromName: 'Tikiti Events',
+  replyTo: 'gettikiti@gmail.com' // Add reply-to address
 };
 
 // SendGrid email service
@@ -44,12 +45,28 @@ export const emailService = {
           personalizations: [
             {
               to: [{ email: bookingData.userEmail, name: bookingData.userName }],
-              subject: `Your Ticket for ${bookingData.eventName}`
+              subject: `Your Ticket for ${bookingData.eventName}`,
+              // Add custom args for better tracking
+              custom_args: {
+                event_id: bookingData.eventId,
+                booking_id: bookingData.id,
+                user_id: bookingData.userId
+              }
             }
           ],
           from: {
             email: SENDGRID_CONFIG.fromEmail,
             name: SENDGRID_CONFIG.fromName
+          },
+          reply_to: {
+            email: SENDGRID_CONFIG.replyTo,
+            name: 'Tikiti Events'
+          },
+          // Add proper headers to improve deliverability
+          headers: {
+            'X-Mailer': 'Tikiti Events',
+            'X-Priority': '3',
+            'X-MSMail-Priority': 'Normal'
           },
           content: [
             {
@@ -116,8 +133,13 @@ export const emailService = {
                   </div>
                   
                   <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
-                    <p style="color: #666; margin: 0; font-size: 14px;">
+                    <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">
                       Thank you for using Tikiti Events! 🎉
+                    </p>
+                    <p style="color: #999; margin: 0; font-size: 12px;">
+                      This is a transactional email for your event ticket. 
+                      <a href="mailto:gettikiti@gmail.com?subject=Unsubscribe&body=Please unsubscribe me from Tikiti Events emails" 
+                         style="color: #999; text-decoration: underline;">Unsubscribe</a>
                     </p>
                   </div>
                 </div>

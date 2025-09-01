@@ -12,11 +12,11 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
-import { bookingService } from '../../services/firestoreService';
+import { bookingService, userService } from '../../services/firestoreService';
 
 
-const ProfileScreen = () => {
-  const { user, userProfile, logout } = useAuth();
+const ProfileScreen = ({ navigation }) => {
+  const { user, userProfile, logout, updateUserProfile } = useAuth();
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
@@ -120,6 +120,32 @@ const ProfileScreen = () => {
     );
   };
 
+  const handleSwitchToOrganiser = () => {
+    Alert.alert(
+      'Switch to Organiser Account',
+      'Do you want to switch to organiser mode? This will allow you to create and manage events.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Switch', 
+          onPress: async () => {
+            try {
+              await updateUserProfile({ accountType: 'organizer' });
+              Alert.alert(
+                'Account Switched',
+                'You are now in organiser mode. The app will restart to apply changes.',
+                [{ text: 'OK' }]
+              );
+            } catch (error) {
+              console.error('Error switching to organiser:', error);
+              Alert.alert('Error', 'Failed to switch account type. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
 
 
   return (
@@ -193,6 +219,21 @@ const ProfileScreen = () => {
             <View style={styles.menuContent}>
               <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Browse Events</Text>
               <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>Discover new events</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
+          </TouchableOpacity>
+
+          {/* Switch to Organiser */}
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: 'transparent' }]}
+            onPress={handleSwitchToOrganiser}
+          >
+            <View style={styles.menuIcon}>
+              <Feather name="users" size={20} color={getSubtleIconColor(colors.warning[500])} />
+            </View>
+            <View style={styles.menuContent}>
+              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Switch to Organiser</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>Create and manage events</Text>
             </View>
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>

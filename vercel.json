@@ -3,15 +3,11 @@
   "rewrites": [
     {
       "source": "/events/(.*)",
-      "destination": "/event.html"
+      "destination": "/api/og?eventId=$1"
     },
     {
       "source": "/ticket-pdf",
       "destination": "/ticket-pdf.html"
-    },
-    {
-      "source": "/api/og",
-      "destination": "/api/og.js"
     },
     {
       "source": "/(.*)",

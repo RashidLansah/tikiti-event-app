@@ -1,6 +1,6 @@
 // Email configuration for static HTML files
 window.EMAIL_CONFIG = {
-  sendgridApiKey: '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',
+  sendgridApiKey: 'YOUR_SENDGRID_API_KEY_HERE',
   fromEmail: 'gettikiti@gmail.com',
   fromName: 'Tikiti Events'
 };
