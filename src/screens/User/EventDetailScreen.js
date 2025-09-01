@@ -41,7 +41,11 @@ const EventDetailScreen = ({ navigation, route }) => {
 
   // Handle opening directions in Google Maps
   const handleGetDirections = () => {
+    console.log('🗺️ Get Directions clicked');
+    console.log('📍 Event location:', event.location);
+    
     if (!event.location) {
+      console.log('❌ No location data');
       Alert.alert('Error', 'Location information is not available for this event.');
       return;
     }
@@ -53,11 +57,14 @@ const EventDetailScreen = ({ navigation, route }) => {
     if (typeof event.location === 'object') {
       locationString = event.location.address || event.location.name || '';
       coordinates = event.location.coordinates;
+      console.log('📍 Object location - String:', locationString, 'Coordinates:', coordinates);
     } else {
       locationString = event.location;
+      console.log('📍 String location:', locationString);
     }
 
     if (!locationString && !coordinates) {
+      console.log('❌ No valid location data');
       Alert.alert('Error', 'Location information is not available for this event.');
       return;
     }
@@ -68,9 +75,11 @@ const EventDetailScreen = ({ navigation, route }) => {
     if (coordinates && coordinates.latitude && coordinates.longitude) {
       // Use coordinates if available (more accurate)
       mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${coordinates.latitude},${coordinates.longitude}`;
+      console.log('🗺️ Using coordinates URL:', mapsUrl);
     } else {
       // Use address string
       mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(locationString)}`;
+      console.log('🗺️ Using address URL:', mapsUrl);
     }
 
     // Try to open in Google Maps app first, then fallback to web
@@ -78,20 +87,26 @@ const EventDetailScreen = ({ navigation, route }) => {
       ? `comgooglemaps://?daddr=${coordinates ? `${coordinates.latitude},${coordinates.longitude}` : encodeURIComponent(locationString)}&directionsmode=driving`
       : `google.navigation:q=${coordinates ? `${coordinates.latitude},${coordinates.longitude}` : encodeURIComponent(locationString)}`;
 
+    console.log('📱 Platform:', Platform.OS);
+    console.log('🔗 Google Maps URL:', googleMapsUrl);
+
     Linking.canOpenURL(googleMapsUrl)
       .then((supported) => {
+        console.log('📱 Can open Google Maps app:', supported);
         if (supported) {
+          console.log('✅ Opening Google Maps app');
           return Linking.openURL(googleMapsUrl);
         } else {
+          console.log('🌐 Opening web version');
           // Fallback to web version
           return Linking.openURL(mapsUrl);
         }
       })
       .catch((err) => {
-        console.error('Error opening maps:', err);
+        console.error('💥 Error opening maps:', err);
         // Final fallback to web version
         Linking.openURL(mapsUrl).catch((webErr) => {
-          console.error('Error opening web maps:', webErr);
+          console.error('💥 Error opening web maps:', webErr);
           Alert.alert('Error', 'Unable to open maps. Please try again.');
         });
       });
@@ -388,7 +403,11 @@ const EventDetailScreen = ({ navigation, route }) => {
           <Text style={[styles.infoValue, { color: colors.text.primary }]}>
             {typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA')}
           </Text>
-          <TouchableOpacity onPress={handleGetDirections}>
+          <TouchableOpacity 
+            onPress={handleGetDirections}
+            activeOpacity={0.7}
+            style={styles.directionsTouchable}
+          >
             <View style={styles.directionsButton}>
               <Feather name="navigation" size={16} color={colors.primary[500]} />
               <Text style={[styles.mapLink, { color: colors.primary[500] }]}>Get Directions</Text>
@@ -818,6 +837,9 @@ const styles = StyleSheet.create({
     color: '#6366F1',
     fontWeight: '600',
     marginLeft: 4,
+  },
+  directionsTouchable: {
+    alignSelf: 'flex-start',
   },
   directionsButton: {
     flexDirection: 'row',
