@@ -23,19 +23,42 @@ import DatePicker from '../../components/DatePicker';
 import TimePicker from '../../components/TimePicker';
 import { eventCategories } from '../../data/categories';
 
-const CreateEventScreen = ({ navigation }) => {
+const CreateEventScreen = ({ navigation, route }) => {
   const { user, userProfile } = useAuth();
-  const [eventName, setEventName] = useState('');
-  const [eventDescription, setEventDescription] = useState('');
-  const [eventDate, setEventDate] = useState(null);
-  const [eventTime, setEventTime] = useState('');
-  const [ticketPrice, setTicketPrice] = useState('');
-  const [totalTickets, setTotalTickets] = useState('');
-  const [eventType, setEventType] = useState('free'); // 'free' or 'paid'
-  const [category, setCategory] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState(null);
+  
+  // Check if we're editing an existing event
+  const isEdit = route?.params?.isEdit || false;
+  const existingEvent = route?.params?.event || null;
+  
+  const [eventName, setEventName] = useState(existingEvent?.name || '');
+  const [eventDescription, setEventDescription] = useState(existingEvent?.description || '');
+  const [eventDate, setEventDate] = useState(() => {
+    if (existingEvent?.date) {
+      // Handle both string and Date formats
+      if (typeof existingEvent.date === 'string') {
+        return new Date(existingEvent.date);
+      }
+      return existingEvent.date;
+    }
+    return null;
+  });
+  const [eventTime, setEventTime] = useState(existingEvent?.startTime || existingEvent?.time || '');
+  const [ticketPrice, setTicketPrice] = useState(existingEvent?.price?.toString() || '');
+  const [totalTickets, setTotalTickets] = useState(existingEvent?.maxTickets?.toString() || existingEvent?.totalTickets?.toString() || '');
+  const [eventType, setEventType] = useState(existingEvent?.eventType || existingEvent?.type || 'free'); // 'free' or 'paid'
+  const [category, setCategory] = useState(existingEvent?.category || '');
+  const [selectedLocation, setSelectedLocation] = useState(() => {
+    if (existingEvent?.location) {
+      // Handle both string and object formats
+      if (typeof existingEvent.location === 'string') {
+        return { name: existingEvent.location, address: existingEvent.address || '' };
+      }
+      return existingEvent.location;
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(false);
-  const [imageUri, setImageUri] = useState(null);
+  const [imageUri, setImageUri] = useState(existingEvent?.imageUrl || existingEvent?.imageBase64 || null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
 
@@ -119,9 +142,9 @@ const CreateEventScreen = ({ navigation }) => {
     setLoading(true);
 
     try {
-      // Convert image if selected
+      // Convert image if selected (only if it's a new image or we're creating a new event)
       let base64Image = null;
-      if (imageUri) {
+      if (imageUri && (!isEdit || imageUri !== existingEvent?.imageUrl)) {
         base64Image = await uploadImageToFirebase(imageUri);
         
         // Check image size and show warning if needed
@@ -131,6 +154,9 @@ const CreateEventScreen = ({ navigation }) => {
             Alert.alert('Image Size Warning', sizeWarning, [{ text: 'OK' }]);
           }
         }
+      } else if (isEdit && existingEvent?.imageBase64) {
+        // Keep existing image if no new image is selected
+        base64Image = existingEvent.imageBase64;
       }
 
       const eventData = {
@@ -151,26 +177,45 @@ const CreateEventScreen = ({ navigation }) => {
         organizerEmail: user?.email || '',
       };
 
-      const docRef = await eventService.create(eventData, user.uid);
-      
-      Alert.alert(
-        'Success',
-        `${eventType === 'paid' ? 'Paid' : 'Free'} event "${eventName}" created successfully!`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      if (isEdit && existingEvent?.id) {
+        // Update existing event
+        await eventService.update(existingEvent.id, eventData);
+        
+        Alert.alert(
+          'Success',
+          `Event "${eventName}" updated successfully!`,
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
 
-      console.log('Event created with ID:', docRef.id);
+        console.log('Event updated with ID:', existingEvent.id);
+      } else {
+        // Create new event
+        const docRef = await eventService.create(eventData, user.uid);
+        
+        Alert.alert(
+          'Success',
+          `${eventType === 'paid' ? 'Paid' : 'Free'} event "${eventName}" created successfully!`,
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+
+        console.log('Event created with ID:', docRef.id);
+      }
       
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error(`Error ${isEdit ? 'updating' : 'creating'} event:`, error);
       Alert.alert(
         'Error',
-        'Failed to create event. Please try again.',
+        `Failed to ${isEdit ? 'update' : 'create'} event. Please try again.`,
         [{ text: 'OK' }]
       );
     } finally {
@@ -188,7 +233,7 @@ const CreateEventScreen = ({ navigation }) => {
         >
           <Feather name="arrow-left" size={24} color={Colors.primary[500]} />
         </TouchableOpacity>
-        <Text style={styles.title}>Create New Event</Text>
+        <Text style={styles.title}>{isEdit ? 'Edit Event' : 'Create New Event'}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -474,8 +519,8 @@ const CreateEventScreen = ({ navigation }) => {
               <ActivityIndicator color={Colors.white} size="small" />
             ) : (
               <>
-                <Feather name="plus" size={18} color={Colors.white} style={{ marginRight: 8 }} />
-                <Text style={styles.createButtonText}>Create Event</Text>
+                <Feather name={isEdit ? "edit-2" : "plus"} size={18} color={Colors.white} style={{ marginRight: 8 }} />
+                <Text style={styles.createButtonText}>{isEdit ? 'Update Event' : 'Create Event'}</Text>
               </>
             )}
           </TouchableOpacity>

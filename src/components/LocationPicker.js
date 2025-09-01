@@ -150,7 +150,18 @@ const LocationPicker = ({
   // Format selected location for display
   const formatSelectedLocation = () => {
     if (!selectedLocation) return '';
-    return `${selectedLocation.name}${selectedLocation.address ? `, ${selectedLocation.address}` : ''}`;
+    
+    // Handle both string and object formats
+    if (typeof selectedLocation === 'string') {
+      return selectedLocation;
+    }
+    
+    // Handle object format
+    if (selectedLocation.name) {
+      return `${selectedLocation.name}${selectedLocation.address ? `, ${selectedLocation.address}` : ''}`;
+    }
+    
+    return '';
   };
 
   const renderSearchResult = ({ item }) => (
