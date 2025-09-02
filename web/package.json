@@ -1,0 +1,14 @@
+{
+  "name": "tikiti-web",
+  "version": "1.0.0",
+  "description": "Tikiti Event RSVP Web Interface",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "build": "echo 'No build step needed for static HTML'"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
