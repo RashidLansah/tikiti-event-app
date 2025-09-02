@@ -71,7 +71,8 @@ export default {
     extra: {
       eas: {
         projectId: "4a3d499a-fee7-465b-b0c6-3c9ba76073bc"
-      }
+      },
+      sendgridApiKey: process.env.EXPO_PUBLIC_SENDGRID_API_KEY
     }
   }
 };
