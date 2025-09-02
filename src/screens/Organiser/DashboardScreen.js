@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { eventService } from '../../services/firestoreService';
+import { eventService, bookingService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
@@ -74,11 +74,35 @@ const DashboardScreen = ({ navigation }) => {
     navigation.navigate('EventDetail', { event });
   };
 
-  const EventCard = ({ event }) => (
-    <TouchableOpacity 
-      style={[styles.eventCard, { backgroundColor: colors.background.secondary, borderColor: colors.border.light }]}
-      onPress={() => handleEventPress(event)}
-    >
+  const EventCard = ({ event }) => {
+    const [attendeeCount, setAttendeeCount] = useState(0);
+    const [loadingAttendees, setLoadingAttendees] = useState(false);
+
+    // Fetch real-time attendee count for this event
+    useEffect(() => {
+      const fetchAttendeeCount = async () => {
+        if (!event?.id) return;
+        
+        try {
+          setLoadingAttendees(true);
+          const attendees = await bookingService.getEventAttendees(event.id);
+          setAttendeeCount(attendees?.length || 0);
+        } catch (error) {
+          console.error('Error fetching attendee count for event card:', error);
+          setAttendeeCount(0);
+        } finally {
+          setLoadingAttendees(false);
+        }
+      };
+
+      fetchAttendeeCount();
+    }, [event?.id]);
+
+    return (
+      <TouchableOpacity 
+        style={[styles.eventCard, { backgroundColor: colors.background.secondary, borderColor: colors.border.light }]}
+        onPress={() => handleEventPress(event)}
+      >
       {event.imageBase64 && (
         <Image 
           source={{ 
@@ -105,31 +129,29 @@ const DashboardScreen = ({ navigation }) => {
         </Text>
         
         {/* Organiser info */}
-        {event.organizerName && (
-          <View style={[styles.organizerInfo, { backgroundColor: colors.background.primary }]}>
-            <Feather name="user" size={12} color={colors.text.tertiary} />
-            <Text style={[styles.organizerText, { color: colors.text.tertiary }]} numberOfLines={1}>
-              by {event.organizerName}
-            </Text>
-          </View>
-        )}
+        <View style={[styles.organizerInfo, { backgroundColor: colors.background.primary }]}>
+          <Feather name="user" size={12} color={colors.text.tertiary} />
+          <Text style={[styles.organizerText, { color: colors.text.tertiary }]} numberOfLines={1}>
+            by {event.organizerName || 'Event Organizer'}
+          </Text>
+        </View>
         
         <View style={[styles.eventStats, { backgroundColor: colors.background.primary, borderColor: colors.border.light }]}>
           {event.type === 'paid' && event.price > 0 ? (
             <>
               <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: colors.primary[500] }]}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
+                <Text style={[styles.statValue, { color: colors.primary[500] }]}>{loadingAttendees ? '...' : `${attendeeCount}/${event.totalTickets || 0}`}</Text>
                 <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Tickets Sold</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: colors.primary[500] }]}>₵{(event.soldTickets || 0) * (event.price || 0)}</Text>
+                <Text style={[styles.statValue, { color: colors.primary[500] }]}>₵{loadingAttendees ? '...' : (attendeeCount * (event.price || 0))}</Text>
                 <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Revenue</Text>
               </View>
             </>
           ) : (
             <>
               <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: colors.primary[500] }]}>{event.soldTickets || 0}/{event.totalTickets || 0}</Text>
+                <Text style={[styles.statValue, { color: colors.primary[500] }]}>{loadingAttendees ? '...' : `${attendeeCount}/${event.totalTickets || 0}`}</Text>
                 <Text style={[styles.statLabel, { color: colors.text.secondary }]}>Attendees</Text>
               </View>
               <View style={styles.stat}>
@@ -141,7 +163,8 @@ const DashboardScreen = ({ navigation }) => {
         </View>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.primary }]}>

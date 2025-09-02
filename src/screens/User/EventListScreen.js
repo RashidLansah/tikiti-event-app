@@ -17,7 +17,7 @@ import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { eventService } from '../../services/firestoreService';
+import { eventService, bookingService } from '../../services/firestoreService';
 
 const EventListScreen = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
@@ -285,6 +285,28 @@ const EventListScreen = ({ navigation }) => {
 
   const EventCard = ({ event, index, isCompact = false }) => {
     const animatedValue = new Animated.Value(0);
+    const [attendeeCount, setAttendeeCount] = useState(0);
+    const [loadingAttendees, setLoadingAttendees] = useState(false);
+
+    // Fetch real-time attendee count for this event
+    useEffect(() => {
+      const fetchAttendeeCount = async () => {
+        if (!event?.id) return;
+        
+        try {
+          setLoadingAttendees(true);
+          const attendees = await bookingService.getEventAttendees(event.id);
+          setAttendeeCount(attendees?.length || 0);
+        } catch (error) {
+          console.error('Error fetching attendee count for event card:', error);
+          setAttendeeCount(0);
+        } finally {
+          setLoadingAttendees(false);
+        }
+      };
+
+      fetchAttendeeCount();
+    }, [event?.id]);
     
     React.useEffect(() => {
       Animated.timing(animatedValue, {
@@ -362,27 +384,25 @@ const EventListScreen = ({ navigation }) => {
             
             {/* Minimal description */}
             {event.description && (
-              <Text style={[styles.eventDescription, { color: colors.text.secondary }]} numberOfLines={2}>
+              <Text style={[styles.eventDescription, { color: colors.text.secondary }]} numberOfLines={2} ellipsizeMode="tail">
                 {event.description}
               </Text>
             )}
             
             {/* Organiser info */}
-            {event.organizerName && (
-              <View style={[styles.organizerInfo, { backgroundColor: colors.background.tertiary }]}>
-                <Feather name="user" size={12} color={colors.text.tertiary} />
-                <Text style={[styles.organizerText, { color: colors.text.tertiary }]} numberOfLines={1}>
-                  by {event.organizerName}
-                </Text>
-              </View>
-            )}
+            <View style={[styles.organizerInfo, { backgroundColor: colors.background.tertiary }]}>
+              <Feather name="user" size={12} color={colors.text.tertiary} />
+              <Text style={[styles.organizerText, { color: colors.text.tertiary }]} numberOfLines={1}>
+                by {event.organizerName || 'Event Organizer'}
+              </Text>
+            </View>
             
             {/* Event stats */}
             <View style={[styles.eventStats, { backgroundColor: colors.background.tertiary }]}>
               <View style={styles.statItem}>
                 <Feather name="users" size={12} color={colors.text.tertiary} />
                 <Text style={[styles.statText, { color: colors.text.tertiary }]}>
-                  {event.soldTickets || 0} attending
+                  {loadingAttendees ? '...' : `${attendeeCount} attending`}
                 </Text>
               </View>
               {event.type === 'paid' && event.price > 0 && (
