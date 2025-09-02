@@ -18,10 +18,7 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organisationName != null);
     }
     
-    function isValidUser() {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid));
-    }
+
     
     // Users collection - user profiles
     match /users/{userId} {
@@ -80,6 +77,9 @@ service cloud.firestore {
       // Users can create bookings (purchase/RSVP)
       allow create: if isAuthenticated() && 
         request.auth.uid == request.resource.data.userId;
+      
+      // Allow unauthenticated web RSVPs (for web interface)
+      allow create: if request.resource.data.source == 'web';
       
       // Event organizers can read bookings for their events
       allow read: if isOrganizer() && 

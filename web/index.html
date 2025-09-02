@@ -505,8 +505,8 @@
             try {
                 console.log('📝 Submitting RSVP:', rsvpData);
                 
-                // Add RSVP to Firestore
-                const docRef = await addDoc(collection(db, 'rsvps'), rsvpData);
+                // Add RSVP to Firestore (using bookings collection)
+                const docRef = await addDoc(collection(db, 'bookings'), rsvpData);
                 console.log('✅ RSVP submitted successfully with ID:', docRef.id);
                 
                 // Show success
