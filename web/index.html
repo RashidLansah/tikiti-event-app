@@ -4,6 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tikiti - Event RSVP</title>
+    
+    <!-- Open Graph Meta Tags for Social Media Previews -->
+    <meta property="og:title" content="Tikiti - Event RSVP" id="og-title">
+    <meta property="og:description" content="Join this amazing event on Tikiti - the modern event platform for organizers and attendees." id="og-description">
+    <meta property="og:image" content="https://gettikiti.com/assets/tikiti-logo.svg" id="og-image">
+    <meta property="og:url" content="" id="og-url">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Tikiti">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tikiti - Event RSVP" id="twitter-title">
+    <meta name="twitter:description" content="Join this amazing event on Tikiti - the modern event platform for organizers and attendees." id="twitter-description">
+    <meta name="twitter:image" content="https://gettikiti.com/assets/tikiti-logo.svg" id="twitter-image">
+    
+    <!-- Additional Meta Tags -->
+    <meta name="description" content="Join this amazing event on Tikiti - the modern event platform for organizers and attendees.">
+    <meta name="keywords" content="events, RSVP, tickets, event management, Tikiti">
+    <meta name="author" content="Tikiti">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://gettikiti.com/assets/favicon.png">
     <style>
         * {
             margin: 0;
@@ -444,7 +466,8 @@
             document.getElementById('event-price').textContent = priceText;
             
             // Handle description
-            document.getElementById('event-description').textContent = event.description || 'Join us for this amazing event!';
+            const eventDescription = event.description || 'Join us for this amazing event!';
+            document.getElementById('event-description').textContent = eventDescription;
             
             // Handle image
             if (event.imageBase64) {
@@ -453,9 +476,45 @@
                 document.getElementById('event-image').style.display = 'none';
             }
             
+            // Update meta tags for social media previews
+            updateMetaTags(event, locationText, eventDescription);
+            
             // Show content
             document.getElementById('loading').style.display = 'none';
             document.getElementById('event-content').style.display = 'block';
+        }
+        
+        // Update meta tags for social media previews
+        function updateMetaTags(event, locationText, eventDescription) {
+            const eventTitle = event.name || 'Event Title';
+            const eventDate = event.date || 'Date TBA';
+            const eventTime = `${event.startTime || 'Time TBA'} - ${event.endTime || 'End Time TBA'}`;
+            const priceText = event.type === 'free' ? 'Free Event' : `$${event.price || 'Price TBA'}`;
+            
+            // Create rich description for social media
+            const socialDescription = `🎉 ${eventTitle}\n\n📅 ${eventDate} at ${eventTime}\n📍 ${locationText}\n🎟️ ${priceText}\n\n${eventDescription}\n\nRSVP now on Tikiti!`;
+            
+            // Update page title
+            document.title = `${eventTitle} - Tikiti Events`;
+            
+            // Update Open Graph tags
+            document.getElementById('og-title').setAttribute('content', `${eventTitle} - Tikiti Events`);
+            document.getElementById('og-description').setAttribute('content', socialDescription);
+            document.getElementById('og-url').setAttribute('content', window.location.href);
+            
+            // Update Twitter tags
+            document.getElementById('twitter-title').setAttribute('content', `${eventTitle} - Tikiti Events`);
+            document.getElementById('twitter-description').setAttribute('content', socialDescription);
+            
+            // Update meta description
+            document.querySelector('meta[name="description"]').setAttribute('content', socialDescription);
+            
+            // Use event image if available, otherwise use default logo
+            const imageUrl = event.imageBase64 || 'https://gettikiti.com/assets/tikiti-logo.svg';
+            document.getElementById('og-image').setAttribute('content', imageUrl);
+            document.getElementById('twitter-image').setAttribute('content', imageUrl);
+            
+            console.log('📱 Meta tags updated for social media previews');
         }
 
         // Show error state

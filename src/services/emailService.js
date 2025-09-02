@@ -6,8 +6,9 @@ const SENDGRID_API_KEY = process.env.EXPO_PUBLIC_SENDGRID_API_KEY || 'YOUR_SENDG
 
 class EmailService {
   constructor() {
-    this.fromEmail = 'lansah@gettikiti.com'; // Your founder email
-    this.fromName = 'Lansah (Founder & CEO)';
+    this.fromEmail = 'noreply@gettikiti.com'; // Use noreply for better deliverability
+    this.fromName = 'Tikiti Events';
+    this.replyTo = 'lansah@gettikiti.com'; // Set reply-to for responses
   }
 
   // Send welcome email to new users
@@ -22,13 +23,27 @@ class EmailService {
           email: this.fromEmail,
           name: this.fromName
         },
+        reply_to: {
+          email: this.replyTo,
+          name: 'Lansah (Founder & CEO)'
+        },
         content: [{
           type: 'text/html',
           value: this.getWelcomeEmailTemplate(userName)
         }, {
           type: 'text/plain',
           value: this.getWelcomeEmailText(userName)
-        }]
+        }],
+        headers: {
+          'X-Mailer': 'Tikiti Events Platform',
+          'X-Priority': '3',
+          'X-MSMail-Priority': 'Normal'
+        },
+        categories: ['welcome', 'user-onboarding'],
+        custom_args: {
+          source: 'welcome-email',
+          user_type: 'new-user'
+        }
       };
 
       const response = await fetch(SENDGRID_API_ENDPOINT, {
@@ -259,13 +274,27 @@ Thank you for choosing Tikiti. Let's create amazing memories together!
           email: this.fromEmail,
           name: this.fromName
         },
+        reply_to: {
+          email: this.replyTo,
+          name: 'Lansah (Founder & CEO)'
+        },
         content: [{
           type: 'text/html',
           value: this.getEventReminderTemplate(userName, eventName, eventDate, eventLocation)
         }, {
           type: 'text/plain',
           value: this.getEventReminderText(userName, eventName, eventDate, eventLocation)
-        }]
+        }],
+        headers: {
+          'X-Mailer': 'Tikiti Events Platform',
+          'X-Priority': '3',
+          'X-MSMail-Priority': 'Normal'
+        },
+        categories: ['event-reminder', 'notification'],
+        custom_args: {
+          source: 'event-reminder',
+          event_name: eventName
+        }
       };
 
       const response = await fetch(SENDGRID_API_ENDPOINT, {
