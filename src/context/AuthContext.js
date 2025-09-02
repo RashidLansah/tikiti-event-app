@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentRole, setCurrentRole] = useState('attendee'); // 'attendee' or 'organiser'
 
 
 
@@ -110,6 +111,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Switch between attendee and organiser roles
+  const switchRole = (newRole) => {
+    setCurrentRole(newRole);
+  };
+
+  // Check if user has organiser capabilities
+  const hasOrganiserRole = () => {
+    return userProfile?.accountType === 'organiser' || userProfile?.organisationName;
+  };
+
 
 
   const loginUser = async (email, password) => {
@@ -156,15 +167,21 @@ export const AuthProvider = ({ children }) => {
     user,
     userProfile,
     loading,
+    currentRole,
     login: loginUser,
     register: registerUser,
     logout,
     resetPassword,
     createUserProfile,
     updateUserProfile,
+    switchRole,
+    hasOrganiserRole,
     isAuthenticated: !!user,
     isOrganizer: userProfile?.accountType === 'organiser',
     isUser: userProfile?.accountType === 'user' || !userProfile?.accountType,
+    // Role-based checks
+    isCurrentlyOrganiser: currentRole === 'organiser' && hasOrganiserRole(),
+    isCurrentlyAttendee: currentRole === 'attendee',
   };
 
   return (

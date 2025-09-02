@@ -20,7 +20,18 @@ import { bookingService, userService } from '../../services/firestoreService';
 
 
 const ProfileScreen = ({ navigation }) => {
-  const { user, userProfile, logout, updateUserProfile, isOrganizer } = useAuth();
+  const { 
+    user, 
+    userProfile, 
+    logout, 
+    updateUserProfile, 
+    isOrganizer, 
+    hasOrganiserRole, 
+    currentRole, 
+    switchRole,
+    isCurrentlyOrganiser,
+    isCurrentlyAttendee 
+  } = useAuth();
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [ticketStats, setTicketStats] = useState({ total: 0, upcoming: 0 });
@@ -126,16 +137,26 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleSwitchToOrganiser = () => {
-    if (isOrganizer) {
-      // User is already an organiser, switch to organiser flow
+    if (hasOrganiserRole()) {
+      // User has organiser capabilities, switch to organiser role and navigate
+      switchRole('organiser');
       navigation.reset({
         index: 0,
         routes: [{ name: 'OrganiserFlow' }],
       });
     } else {
-      // User is not an organiser, start upgrade flow
+      // User doesn't have organiser capabilities, start upgrade flow
       navigation.navigate('OrganiserUpgrade');
     }
+  };
+
+  const handleSwitchToAttendee = () => {
+    // Switch to attendee role and navigate to user flow
+    switchRole('attendee');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'UserFlow' }],
+    });
   };
 
   const handleHelpSupport = () => {
@@ -257,20 +278,30 @@ Thank you!`;
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
 
-          {/* Switch to Organiser - Always show */}
+          {/* Role Switch - Show appropriate option based on current role and capabilities */}
           <TouchableOpacity 
             style={[styles.menuItem, { borderBottomColor: 'transparent' }]}
-            onPress={handleSwitchToOrganiser}
+            onPress={isCurrentlyAttendee ? handleSwitchToOrganiser : handleSwitchToAttendee}
           >
             <View style={styles.menuIcon}>
-              <Feather name="users" size={20} color={getSubtleIconColor(colors.warning[500])} />
+              <Feather 
+                name={isCurrentlyAttendee ? "users" : "user"} 
+                size={20} 
+                color={getSubtleIconColor(colors.warning[500])} 
+              />
             </View>
             <View style={styles.menuContent}>
               <Text style={[styles.menuTitle, { color: colors.text.primary }]}>
-                {isOrganizer ? 'Switch to Organiser' : 'Become an Organiser'}
+                {isCurrentlyAttendee 
+                  ? (hasOrganiserRole() ? 'Switch to Organiser' : 'Become an Organiser')
+                  : 'Switch to Attendee'
+                }
               </Text>
               <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>
-                {isOrganizer ? 'Manage your events' : 'Create and manage events'}
+                {isCurrentlyAttendee 
+                  ? (hasOrganiserRole() ? 'Manage your events' : 'Create and manage events')
+                  : 'Browse and attend events'
+                }
               </Text>
             </View>
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />

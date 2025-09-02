@@ -18,7 +18,17 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles
 import { eventService } from '../../services/firestoreService';
 
 const OrganiserProfileScreen = ({ navigation }) => {
-  const { logout, userProfile, user, updateUserProfile } = useAuth();
+  const { 
+    logout, 
+    userProfile, 
+    user, 
+    updateUserProfile, 
+    switchRole,
+    hasOrganiserRole,
+    currentRole,
+    isCurrentlyOrganiser,
+    isCurrentlyAttendee 
+  } = useAuth();
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [eventStats, setEventStats] = useState({ total: 0, active: 0 });
@@ -113,36 +123,15 @@ const OrganiserProfileScreen = ({ navigation }) => {
     );
   };
 
+
+
   const handleSwitchToAttendee = () => {
-    Alert.alert(
-      'Switch to Attendee Account',
-      'Do you want to switch to attendee mode? This will allow you to browse and book events.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Switch', 
-          onPress: async () => {
-            try {
-              setIsSwitching(true);
-              await updateUserProfile({ accountType: 'user' });
-              
-              // Small delay to show the loading state
-              setTimeout(() => {
-                // Force navigation to user flow
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'UserFlow' }],
-                });
-              }, 1000);
-            } catch (error) {
-              console.error('Error switching to attendee:', error);
-              setIsSwitching(false);
-              Alert.alert('Error', 'Failed to switch account type. Please try again.');
-            }
-          }
-        }
-      ]
-    );
+    // Switch to attendee role and navigate to user flow
+    switchRole('attendee');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'UserFlow' }],
+    });
   };
 
   const handleHelpSupport = () => {

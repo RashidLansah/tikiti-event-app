@@ -80,14 +80,14 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
   const handleComplete = async () => {
     setLoading(true);
     try {
-      // Update user profile with organiser information
+      // Update user profile with organiser information (keep accountType as 'user' but add organiser capabilities)
       await updateUserProfile({
-        accountType: 'organiser',
         organisationName: formData.organisationName,
         eventTypes: formData.eventTypes,
         organisationDescription: formData.description,
         organisationCountry: formData.country,
         upgradedAt: new Date(),
+        // Keep accountType as 'user' to maintain dual-role capability
       });
       
       // Call the completion callback
