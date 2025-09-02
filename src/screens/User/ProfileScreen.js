@@ -248,7 +248,7 @@ Thank you!`;
             onPress={() => navigation.navigate('MyTickets')}
           >
             <View style={styles.menuIcon}>
-              <Feather name="ticket" size={20} color={getSubtleIconColor(colors.success[500])} />
+              <Feather name="tag" size={20} color={getSubtleIconColor(colors.success[500])} />
             </View>
             <View style={styles.menuContent}>
               <Text style={[styles.menuTitle, { color: colors.text.primary }]}>My Tickets</Text>

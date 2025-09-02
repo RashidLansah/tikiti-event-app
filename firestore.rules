@@ -70,6 +70,31 @@ service cloud.firestore {
         get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid;
     }
     
+    // Bookings collection - event bookings/RSVPs
+    match /bookings/{bookingId} {
+      // Users can read their own bookings
+      allow read: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // Users can create bookings (purchase/RSVP)
+      allow create: if isAuthenticated() && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // Event organizers can read bookings for their events
+      allow read: if isOrganizer() && 
+        exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid;
+      
+      // Users can update their own bookings (cancel, etc.)
+      allow update: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // Organizers can update bookings for their events (check-in, etc.)
+      allow update: if isOrganizer() && 
+        exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid;
+    }
+    
     // Categories collection - event categories
     match /categories/{categoryId} {
       // Anyone can read categories
