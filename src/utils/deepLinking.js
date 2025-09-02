@@ -78,15 +78,28 @@ export const handleDeepLink = (url, navigation) => {
 };
 
 // Generate shareable event link
-export const generateEventLink = (eventId) => {
-  // Use production Vercel URL
-  const domain = 'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app';
+export const generateEventLink = (eventId, eventName = null) => {
+  // Use custom domain
+  const domain = 'https://gettikiti.com';
+  
+  if (eventName) {
+    // Create SEO-friendly URL slug
+    const slug = eventName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .trim();
+    
+    return `${domain}/events/${slug}-${eventId}`;
+  }
+  
   return `${domain}/events/${eventId}`;
 };
 
 // Share event function
 export const shareEvent = async (event) => {
-  const eventUrl = generateEventLink(event.id);
+  const eventUrl = generateEventLink(event.id, event.name);
   
   // Create event description with details
   // Handle location object properly
