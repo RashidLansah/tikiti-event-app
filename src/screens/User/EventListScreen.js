@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.secondary,
     borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
+    paddingVertical: Spacing[2],
     gap: Spacing[3],
   },
   searchContainerFocused: {
@@ -714,8 +714,8 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
     fontWeight: Typography.fontWeight.normal,
-    paddingVertical: Spacing[2],
-    minHeight: 40,
+    paddingVertical: Spacing[1],
+    minHeight: 32,
   },
   
   // Time Filter
