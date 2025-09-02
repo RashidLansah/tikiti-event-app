@@ -18,7 +18,6 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { eventService } from '../../services/firestoreService';
-import { cleanupSampleEvents } from '../../utils/cleanupSampleEvents';
 
 const EventListScreen = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
@@ -133,14 +132,6 @@ const EventListScreen = ({ navigation }) => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-
-      // One-time cleanup of sample events from database
-      try {
-        await cleanupSampleEvents();
-      } catch (error) {
-        console.log('Sample events cleanup completed or not needed');
-      }
-      
       await loadEvents();
       setLoading(false);
     };
