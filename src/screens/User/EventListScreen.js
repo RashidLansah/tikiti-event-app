@@ -318,7 +318,7 @@ const EventListScreen = ({ navigation }) => {
     }, []);
 
     const cardTransform = {
-      opacity: animatedValue,
+      opacity: 1,
       transform: [
         {
           translateY: animatedValue.interpolate({
@@ -332,7 +332,7 @@ const EventListScreen = ({ navigation }) => {
     return (
       <Animated.View style={cardTransform}>
         <TouchableOpacity
-          style={[styles.eventCard, { backgroundColor: colors.background.secondary, borderColor: colors.border.light }]}
+          style={[styles.eventCard, { backgroundColor: colors.background.primary, borderColor: colors.border.light }]}
           onPress={() => navigation.navigate('EventDetail', { event })}
           activeOpacity={0.95}
         >
