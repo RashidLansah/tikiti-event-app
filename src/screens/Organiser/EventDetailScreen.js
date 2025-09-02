@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { Feather } from '@expo/vector-icons';
 import ShareButton from '../../components/ShareButton';
 import CopyLinkButton from '../../components/CopyLinkButton';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
-import { eventService } from '../../services/firestoreService';
+import { eventService, bookingService } from '../../services/firestoreService';
 
 const { width } = Dimensions.get('window');
 
@@ -35,6 +35,28 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [isActive, setIsActive] = useState(event?.status === 'active');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [attendeeCount, setAttendeeCount] = useState(0);
+  const [loadingAttendees, setLoadingAttendees] = useState(false);
+
+  // Fetch real-time attendee count
+  const fetchAttendeeCount = async () => {
+    if (!event?.id) return;
+    
+    try {
+      setLoadingAttendees(true);
+      const attendees = await bookingService.getEventAttendees(event.id);
+      setAttendeeCount(attendees?.length || 0);
+    } catch (error) {
+      console.error('Error fetching attendee count:', error);
+      setAttendeeCount(0);
+    } finally {
+      setLoadingAttendees(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttendeeCount();
+  }, [event?.id]);
 
   // Use the real event data directly
   const eventData = {
@@ -189,7 +211,7 @@ const EventDetailScreen = ({ navigation, route }) => {
     }
   };
 
-  const salesPercentage = Math.round((eventData.soldTickets / eventData.totalTickets) * 100);
+  const salesPercentage = eventData.totalTickets > 0 ? Math.round((attendeeCount / eventData.totalTickets) * 100) : 0;
 
   return (
     <View style={styles.container}>
@@ -341,15 +363,19 @@ const EventDetailScreen = ({ navigation, route }) => {
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
               <Feather name="users" size={24} color={Colors.primary[500]} />
-              <Text style={styles.statNumber}>{eventData.soldTickets || 0}</Text>
+              {loadingAttendees ? (
+                <ActivityIndicator size="small" color={Colors.primary[500]} />
+              ) : (
+                <Text style={styles.statNumber}>{attendeeCount}</Text>
+              )}
               <Text style={styles.statLabel}>
-                {eventData.type === 'paid' ? 'Sold' : 'Attendees'}
+                {eventData.type === 'paid' ? 'Attendees' : 'Attendees'}
               </Text>
             </View>
             
             <View style={styles.statCard}>
               <Feather name="tag" size={24} color={Colors.success[500]} />
-              <Text style={styles.statNumber}>{(eventData.totalTickets || 0) - (eventData.soldTickets || 0)}</Text>
+              <Text style={styles.statNumber}>{(eventData.totalTickets || 0) - attendeeCount}</Text>
               <Text style={styles.statLabel}>Available</Text>
             </View>
             
@@ -357,7 +383,7 @@ const EventDetailScreen = ({ navigation, route }) => {
               <View style={styles.statCard}>
                 <Feather name="dollar-sign" size={24} color={Colors.warning[500]} />
                 <Text style={styles.statNumber}>
-                  ₵{((eventData.soldTickets || 0) * (eventData.price || 0)).toFixed(2)}
+                  ₵{(attendeeCount * (eventData.price || 0)).toFixed(2)}
                 </Text>
                 <Text style={styles.statLabel}>Revenue</Text>
               </View>
@@ -387,7 +413,7 @@ const EventDetailScreen = ({ navigation, route }) => {
               />
             </View>
             <Text style={styles.progressText}>
-              {eventData.soldTickets} of {eventData.totalTickets} tickets sold
+              {attendeeCount} of {eventData.totalTickets} tickets {eventData.type === 'paid' ? 'sold' : 'claimed'}
             </Text>
           </View>
         </View>

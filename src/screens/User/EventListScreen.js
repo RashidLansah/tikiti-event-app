@@ -367,6 +367,16 @@ const EventListScreen = ({ navigation }) => {
               </Text>
             )}
             
+            {/* Organiser info */}
+            {event.organizerName && (
+              <View style={[styles.organizerInfo, { backgroundColor: colors.background.tertiary }]}>
+                <Feather name="user" size={12} color={colors.text.tertiary} />
+                <Text style={[styles.organizerText, { color: colors.text.tertiary }]} numberOfLines={1}>
+                  by {event.organizerName}
+                </Text>
+              </View>
+            )}
+            
             {/* Event stats */}
             <View style={[styles.eventStats, { backgroundColor: colors.background.tertiary }]}>
               <View style={styles.statItem}>
@@ -812,6 +822,21 @@ const styles = StyleSheet.create({
     lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.normal,
     marginBottom: Spacing[2],
+  },
+  
+  // Organiser Info
+  organizerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing[1],
+  },
+  organizerText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.medium,
+    marginLeft: Spacing[1],
   },
   
   // Event Stats

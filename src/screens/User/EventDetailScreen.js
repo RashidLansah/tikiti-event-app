@@ -36,8 +36,30 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [userBooking, setUserBooking] = useState(null);
   const [checkingBooking, setCheckingBooking] = useState(false);
+  const [attendeeCount, setAttendeeCount] = useState(0);
+  const [loadingAttendees, setLoadingAttendees] = useState(false);
   
   // Note: RSVP form removed - app users use their existing profile data
+
+  // Fetch real-time attendee count
+  const fetchAttendeeCount = async () => {
+    if (!event?.id) return;
+    
+    try {
+      setLoadingAttendees(true);
+      const attendees = await bookingService.getEventAttendees(event.id);
+      setAttendeeCount(attendees?.length || 0);
+    } catch (error) {
+      console.error('Error fetching attendee count:', error);
+      setAttendeeCount(0);
+    } finally {
+      setLoadingAttendees(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttendeeCount();
+  }, [event?.id]);
 
   // Handle opening directions in Google Maps
   const handleGetDirections = () => {
@@ -423,10 +445,14 @@ const EventDetailScreen = ({ navigation, route }) => {
         <View style={styles.infoContent}>
           <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Attendees</Text>
           <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-            {event.soldTickets || 0} going
+            {loadingAttendees ? (
+              <ActivityIndicator size="small" color={colors.text.primary} />
+            ) : (
+              `${attendeeCount} going`
+            )}
           </Text>
           <Text style={[styles.infoSubValue, { color: colors.text.tertiary }]}>
-            {event.availableTickets || event.totalTickets || 0} spots left
+            {(event.totalTickets || 0) - attendeeCount} spots left
           </Text>
         </View>
       </View>

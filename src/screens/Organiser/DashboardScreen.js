@@ -103,6 +103,17 @@ const DashboardScreen = ({ navigation }) => {
         <Text style={[styles.eventLocation, { color: colors.text.secondary }]}>
           {event.address || (typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA'))}
         </Text>
+        
+        {/* Organiser info */}
+        {event.organizerName && (
+          <View style={[styles.organizerInfo, { backgroundColor: colors.background.primary }]}>
+            <Feather name="user" size={12} color={colors.text.tertiary} />
+            <Text style={[styles.organizerText, { color: colors.text.tertiary }]} numberOfLines={1}>
+              by {event.organizerName}
+            </Text>
+          </View>
+        )}
+        
         <View style={[styles.eventStats, { backgroundColor: colors.background.primary, borderColor: colors.border.light }]}>
           {event.type === 'paid' && event.price > 0 ? (
             <>
@@ -300,8 +311,18 @@ const styles = StyleSheet.create({
   eventLocation: {
     fontSize: 15,
     color: '#6B7280',
-    marginBottom: 16,
+    marginBottom: 8,
     fontWeight: '500',
+  },
+  organizerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  organizerText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
   },
   eventStats: {
     flexDirection: 'row',
