@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isOrganizer() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountType == 'organiser';
+    }
+    
+    function isValidUser() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // Users collection - user profiles
+    match /users/{userId} {
+      // Users can read and write their own profile
+      allow read, write: if isOwner(userId);
+      
+      // Other authenticated users can read basic profile info (for event organizers)
+      allow read: if isAuthenticated();
+    }
+    
+    // Events collection
+    match /events/{eventId} {
+      // Anyone can read events (for public event listing)
+      allow read: if true;
+      
+      // Only organizers can create events
+      allow create: if isOrganizer() && 
+        request.auth.uid == resource.data.organizerId;
+      
+      // Only the event organizer can update/delete their events
+      allow update, delete: if isOrganizer() && 
+        request.auth.uid == resource.data.organizerId;
+    }
+    
+    // Tickets collection - ticket purchases
+    match /tickets/{ticketId} {
+      // Users can read their own tickets
+      allow read: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // Users can create tickets (purchase)
+      allow create: if isAuthenticated() && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // Event organizers can read tickets for their events
+      allow read: if isOrganizer() && 
+        exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid;
+      
+      // Users can update their own tickets (for check-in status)
+      allow update: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // Organizers can update tickets for their events (for check-in)
+      allow update: if isOrganizer() && 
+        exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid;
+    }
+    
+    // Categories collection - event categories
+    match /categories/{categoryId} {
+      // Anyone can read categories
+      allow read: if true;
+      
+      // Only organizers can create/update categories (if needed)
+      allow write: if isOrganizer();
+    }
+    
+    // Admin collection - admin users (if you have admin functionality)
+    match /admins/{adminId} {
+      // Only admins can read/write admin data
+      allow read, write: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Analytics collection - event analytics (if you track analytics)
+    match /analytics/{analyticsId} {
+      // Only the event organizer can read their event analytics
+      allow read: if isOrganizer() && 
+        request.auth.uid == resource.data.organizerId;
+      
+      // System can write analytics (you might want to restrict this further)
+      allow write: if isAuthenticated();
+    }
+    
+    // Notifications collection - user notifications
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // System can create notifications
+      allow create: if isAuthenticated();
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+    }
+    
+    // Default rule - deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
