@@ -92,17 +92,7 @@ class EmailService {
           border-left: 4px solid #ff6b35;
           margin: 20px 0;
         }
-        .cta-button {
-          display: inline-block;
-          background-color: #ff6b35;
-          color: white;
-          padding: 15px 30px;
-          text-decoration: none;
-          border-radius: 8px;
-          font-weight: bold;
-          margin: 20px 0;
-          text-align: center;
-        }
+
         .features {
           margin: 30px 0;
         }
@@ -183,10 +173,6 @@ class EmailService {
           </div>
           
           <p>I'm personally committed to making your experience on Tikiti exceptional. If you have any questions, suggestions, or just want to say hello, don't hesitate to reach out to me directly.</p>
-          
-          <div style="text-align: center;">
-            <a href="https://gettikiti.com" class="cta-button">Start Exploring Events</a>
-          </div>
         </div>
         
         <div class="signature">
@@ -230,8 +216,6 @@ Here's what you can do with Tikiti:
 🔔 Receive timely reminders for your events
 
 I'm personally committed to making your experience on Tikiti exceptional. If you have any questions, suggestions, or just want to say hello, don't hesitate to reach out to me directly.
-
-Start exploring events at: https://gettikiti.com
 
 Best regards,
 Lansah
@@ -342,17 +326,7 @@ Thank you for choosing Tikiti. Let's create amazing memories together!
         .event-info strong {
           color: #ff6b35;
         }
-        .cta-button {
-          display: inline-block;
-          background-color: #ff6b35;
-          color: white;
-          padding: 15px 30px;
-          text-decoration: none;
-          border-radius: 8px;
-          font-weight: bold;
-          margin: 20px 0;
-          text-align: center;
-        }
+
       </style>
     </head>
     <body>
