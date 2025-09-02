@@ -1,8 +1,8 @@
-import sgMail from '@sendgrid/mail';
+// Using SendGrid Web API directly instead of Node.js library
+const SENDGRID_API_ENDPOINT = 'https://api.sendgrid.com/v3/mail/send';
 
-// Initialize SendGrid with API key
-// Note: Using the same SendGrid API key as the existing email service
-sgMail.setApiKey(process.env.EXPO_PUBLIC_SENDGRID_API_KEY || 'YOUR_SENDGRID_API_KEY_HERE');
+// SendGrid API key from environment variables
+const SENDGRID_API_KEY = process.env.EXPO_PUBLIC_SENDGRID_API_KEY || 'YOUR_SENDGRID_API_KEY_HERE';
 
 class EmailService {
   constructor() {
@@ -13,20 +13,38 @@ class EmailService {
   // Send welcome email to new users
   async sendWelcomeEmail(userEmail, userName) {
     try {
-      const msg = {
-        to: userEmail,
+      const emailData = {
+        personalizations: [{
+          to: [{ email: userEmail }],
+          subject: 'Welcome to Tikiti! 🎉 Your journey to amazing events starts here'
+        }],
         from: {
           email: this.fromEmail,
-          name: this.fromName,
+          name: this.fromName
         },
-        subject: 'Welcome to Tikiti! 🎉 Your journey to amazing events starts here',
-        html: this.getWelcomeEmailTemplate(userName),
-        text: this.getWelcomeEmailText(userName),
+        content: [{
+          type: 'text/html',
+          value: this.getWelcomeEmailTemplate(userName)
+        }, {
+          type: 'text/plain',
+          value: this.getWelcomeEmailText(userName)
+        }]
       };
 
-      const response = await sgMail.send(msg);
-      console.log('✅ Welcome email sent successfully:', response[0].statusCode);
-      return { success: true, messageId: response[0].headers['x-message-id'] };
+      const response = await fetch(SENDGRID_API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailData)
+      });
+      if (!response.ok) {
+        throw new Error(`SendGrid API error: ${response.status}`);
+      }
+
+      console.log('✅ Welcome email sent successfully!');
+      return { success: true };
     } catch (error) {
       console.error('❌ Error sending welcome email:', error);
       return { success: false, error: error.message };
@@ -232,20 +250,39 @@ Thank you for choosing Tikiti. Let's create amazing memories together!
   // Send event reminder email
   async sendEventReminderEmail(userEmail, userName, eventName, eventDate, eventLocation) {
     try {
-      const msg = {
-        to: userEmail,
+      const emailData = {
+        personalizations: [{
+          to: [{ email: userEmail }],
+          subject: `Don't forget: ${eventName} is tomorrow! 🎉`
+        }],
         from: {
           email: this.fromEmail,
-          name: this.fromName,
+          name: this.fromName
         },
-        subject: `Don't forget: ${eventName} is tomorrow! 🎉`,
-        html: this.getEventReminderTemplate(userName, eventName, eventDate, eventLocation),
-        text: this.getEventReminderText(userName, eventName, eventDate, eventLocation),
+        content: [{
+          type: 'text/html',
+          value: this.getEventReminderTemplate(userName, eventName, eventDate, eventLocation)
+        }, {
+          type: 'text/plain',
+          value: this.getEventReminderText(userName, eventName, eventDate, eventLocation)
+        }]
       };
 
-      const response = await sgMail.send(msg);
-      console.log('✅ Event reminder email sent successfully:', response[0].statusCode);
-      return { success: true, messageId: response[0].headers['x-message-id'] };
+      const response = await fetch(SENDGRID_API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`SendGrid API error: ${response.status}`);
+      }
+
+      console.log('✅ Event reminder email sent successfully!');
+      return { success: true };
     } catch (error) {
       console.error('❌ Error sending event reminder email:', error);
       return { success: false, error: error.message };
