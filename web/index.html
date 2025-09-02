@@ -469,31 +469,53 @@
             e.preventDefault();
             
             const eventId = getEventIdFromUrl();
+            if (!eventId) {
+                alert('Error: Could not identify event. Please refresh the page and try again.');
+                return;
+            }
+            
             const formData = new FormData(e.target);
             const rsvpData = {
                 eventId: eventId,
-                name: formData.get('name'),
-                email: formData.get('email'),
-                phone: formData.get('phone'),
+                name: formData.get('name').trim(),
+                email: formData.get('email').trim(),
+                phone: formData.get('phone').trim(),
                 timestamp: new Date().toISOString(),
-                source: 'web'
+                source: 'web',
+                status: 'confirmed'
             };
+            
+            // Basic validation
+            if (!rsvpData.name || !rsvpData.email || !rsvpData.phone) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(rsvpData.email)) {
+                alert('Please enter a valid email address.');
+                return;
+            }
             
             const button = document.getElementById('rsvp-button');
             button.disabled = true;
             button.textContent = 'Processing...';
             
             try {
+                console.log('📝 Submitting RSVP:', rsvpData);
+                
                 // Add RSVP to Firestore
-                await addDoc(collection(db, 'rsvps'), rsvpData);
+                const docRef = await addDoc(collection(db, 'rsvps'), rsvpData);
+                console.log('✅ RSVP submitted successfully with ID:', docRef.id);
                 
                 // Show success
                 document.getElementById('event-content').style.display = 'none';
                 document.getElementById('success').style.display = 'block';
                 
             } catch (error) {
-                console.error('Error submitting RSVP:', error);
-                alert('Sorry, there was an error processing your RSVP. Please try again.');
+                console.error('❌ Error submitting RSVP:', error);
+                alert(`Sorry, there was an error processing your RSVP: ${error.message}. Please try again.`);
                 button.disabled = false;
                 button.textContent = 'RSVP Now';
             }

@@ -101,6 +101,21 @@ service cloud.firestore {
         get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid;
     }
     
+    // RSVPs collection - web RSVPs (unauthenticated users)
+    match /rsvps/{rsvpId} {
+      // Anyone can create RSVPs (for web interface)
+      allow create: if true;
+      
+      // Event organizers can read RSVPs for their events
+      allow read: if isOrganizer() && 
+        exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid;
+      
+      // Authenticated users can read their own RSVPs
+      allow read: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+    }
+    
     // Categories collection - event categories
     match /categories/{categoryId} {
       // Anyone can read categories
