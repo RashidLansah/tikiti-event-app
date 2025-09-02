@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ const EventListScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchInputRef = useRef(null);
 
   // Load events and categories from Firestore
   const loadEvents = async () => {
@@ -454,17 +455,24 @@ const EventListScreen = ({ navigation }) => {
         </View>
         
         {/* Modern Search Bar */}
-        <View style={[
-          styles.searchContainer, 
-          { 
-            backgroundColor: colors.background.secondary,
-            borderColor: isSearchFocused ? colors.primary[500] : colors.border.light,
-            borderWidth: isSearchFocused ? 2 : 1,
-          },
-          isSearchFocused && styles.searchContainerFocused
-        ]}>
+        <TouchableOpacity 
+          style={[
+            styles.searchContainer, 
+            { 
+              backgroundColor: colors.background.secondary,
+              borderColor: isSearchFocused ? colors.primary[500] : colors.border.light,
+              borderWidth: isSearchFocused ? 2 : 1,
+            },
+            isSearchFocused && styles.searchContainerFocused
+          ]}
+          activeOpacity={1}
+          onPress={() => {
+            searchInputRef.current?.focus();
+          }}
+        >
           <Feather name="search" size={16} color={isSearchFocused ? colors.primary[500] : colors.text.tertiary} />
           <TextInput
+            ref={searchInputRef}
             style={[styles.searchInput, { color: colors.text.primary }]}
             placeholder="Search events..."
             placeholderTextColor={colors.text.tertiary}
@@ -476,13 +484,16 @@ const EventListScreen = ({ navigation }) => {
             blurOnSubmit={false}
             autoCorrect={false}
             autoCapitalize="none"
+            editable={true}
+            pointerEvents="auto"
+            selectTextOnFocus={true}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
               <Feather name="x" size={16} color={colors.text.tertiary} />
             </TouchableOpacity>
           )}
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Time Filter Pills */}
@@ -703,6 +714,8 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
     fontWeight: Typography.fontWeight.normal,
+    paddingVertical: Spacing[2],
+    minHeight: 40,
   },
   
   // Time Filter
