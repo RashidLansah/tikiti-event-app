@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { db } from '../config/firebase';
-import { collection, addDoc, query, where, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
 // import emailService from './emailService'; // Commented out to avoid circular dependency
 
 // Configure notification behavior
@@ -239,6 +239,54 @@ class NotificationService {
     
     // Show immediate local notification
     await this.createLocalNotification(title, body, {});
+  }
+
+  // Mark all notifications as read for a user
+  async markAllAsRead(userId) {
+    try {
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(
+        notificationsRef,
+        where('userId', '==', userId),
+        where('read', '==', false)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      
+      querySnapshot.docs.forEach((doc) => {
+        batch.update(doc.ref, { read: true });
+      });
+      
+      await batch.commit();
+      console.log(`✅ Marked ${querySnapshot.docs.length} notifications as read`);
+      return { success: true, count: querySnapshot.docs.length };
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
+  }
+
+  // Clear all notifications for a user (delete them)
+  async clearAllNotifications(userId) {
+    try {
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(notificationsRef, where('userId', '==', userId));
+      
+      const querySnapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      
+      querySnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+      
+      await batch.commit();
+      console.log(`✅ Cleared ${querySnapshot.docs.length} notifications`);
+      return { success: true, count: querySnapshot.docs.length };
+    } catch (error) {
+      console.error('Error clearing all notifications:', error);
+      throw error;
+    }
   }
 }
 

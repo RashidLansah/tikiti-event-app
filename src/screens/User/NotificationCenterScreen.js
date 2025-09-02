@@ -63,6 +63,46 @@ const NotificationCenterScreen = ({ navigation }) => {
     }
   };
 
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead(user.uid);
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, read: true }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    Alert.alert(
+      'Clear All Notifications',
+      'Are you sure you want to delete all notifications? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await notificationService.clearAllNotifications(user.uid);
+              setNotifications([]);
+              setUnreadCount(0);
+            } catch (error) {
+              console.error('Error clearing all notifications:', error);
+              Alert.alert('Error', 'Failed to clear notifications');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleNotificationPress = async (notification) => {
     // Mark as read if not already read
     if (!notification.read) {
@@ -80,6 +120,10 @@ const NotificationCenterScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       loadNotifications();
+      // Mark all notifications as read when viewing the notification center
+      if (user?.uid && unreadCount > 0) {
+        markAllAsRead();
+      }
     }, [user?.uid])
   );
 
@@ -218,7 +262,14 @@ const NotificationCenterScreen = ({ navigation }) => {
         <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
           Notifications
         </Text>
-        <View style={styles.headerRight} />
+        {notifications.length > 0 && (
+          <TouchableOpacity 
+            style={styles.clearAllButton}
+            onPress={clearAllNotifications}
+          >
+            <Feather name="trash-2" size={20} color={colors.text.secondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Notifications List */}
@@ -272,6 +323,9 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
+  },
+  clearAllButton: {
+    padding: Spacing[2],
   },
   listContainer: {
     padding: Spacing[4],

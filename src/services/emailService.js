@@ -14,6 +14,15 @@ class EmailService {
   // Send welcome email to new users
   async sendWelcomeEmail(userEmail, userName) {
     try {
+      console.log('📧 Attempting to send welcome email to:', userEmail);
+      console.log('📧 SendGrid API Key available:', !!SENDGRID_API_KEY && SENDGRID_API_KEY !== 'YOUR_SENDGRID_API_KEY_HERE');
+      
+      // Check if API key is properly configured
+      if (!SENDGRID_API_KEY || SENDGRID_API_KEY === 'YOUR_SENDGRID_API_KEY_HERE') {
+        console.error('❌ SendGrid API Key not configured. Please set EXPO_PUBLIC_SENDGRID_API_KEY environment variable.');
+        return { success: false, error: 'SendGrid API Key not configured' };
+      }
+      
       const emailData = {
         personalizations: [{
           to: [{ email: userEmail }],
