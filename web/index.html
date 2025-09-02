@@ -327,7 +327,7 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, doc, getDoc, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, doc, getDoc, collection, addDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         // Firebase configuration
         const firebaseConfig = {
@@ -366,24 +366,46 @@
             const eventId = getEventIdFromUrl();
             
             if (!eventId) {
+                console.log('❌ No event ID found in URL');
                 showError();
                 return;
             }
 
             try {
-                console.log('Loading event with ID:', eventId);
+                console.log('🔍 Loading event with ID:', eventId);
+                console.log('🔍 Full URL path:', window.location.pathname);
+                
                 const eventDoc = await getDoc(doc(db, 'events', eventId));
+                console.log('📄 Event document fetched:', eventDoc.exists());
                 
                 if (eventDoc.exists()) {
                     const eventData = eventDoc.data();
-                    console.log('Event data loaded:', eventData);
+                    console.log('✅ Event data loaded:', eventData);
                     displayEvent(eventData);
                 } else {
-                    console.log('Event not found');
+                    console.log('❌ Event document does not exist');
+                    console.log('🔍 Attempting to list all events to debug...');
+                    
+                    // Debug: Try to list some events to see what's in the database
+                    try {
+                        const eventsRef = collection(db, 'events');
+                        const snapshot = await getDocs(eventsRef);
+                        console.log('📋 Total events in database:', snapshot.size);
+                        
+                        if (snapshot.size > 0) {
+                            console.log('📋 First few event IDs:');
+                            snapshot.docs.slice(0, 3).forEach((doc, index) => {
+                                console.log(`  ${index + 1}. ${doc.id}`);
+                            });
+                        }
+                    } catch (debugError) {
+                        console.error('❌ Error listing events:', debugError);
+                    }
+                    
                     showError();
                 }
             } catch (error) {
-                console.error('Error loading event:', error);
+                console.error('❌ Error loading event:', error);
                 showError();
             }
         }
