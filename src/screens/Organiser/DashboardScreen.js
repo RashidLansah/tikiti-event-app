@@ -163,8 +163,8 @@ const DashboardScreen = ({ navigation }) => {
         </View>
       </View>
     </TouchableOpacity>
-    );
-  };
+  );
+};
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
