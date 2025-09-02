@@ -364,26 +364,6 @@ const CreateAccountFlow = ({ navigation }) => {
             </TouchableOpacity>
           ))}
         </View>
-
-        <TouchableOpacity
-          style={[
-            styles.typeformContinueButton,
-            { 
-              backgroundColor: colors.primary[500]
-            }
-          ]}
-          onPress={nextStep}
-        >
-          <Text style={[
-            styles.typeformContinueText,
-            { color: colors.white }
-          ]}>
-            {formData.interests.length > 0 
-              ? `Continue (${formData.interests.length} selected)` 
-              : 'Continue'
-            }
-          </Text>
-        </TouchableOpacity>
       </View>
     );
   };
@@ -503,7 +483,10 @@ const CreateAccountFlow = ({ navigation }) => {
               styles.continueButtonText, 
               { color: canProceed() ? colors.white : colors.text.tertiary }
             ]}>
-              Continue
+              {currentStep === 5 && formData.interests.length > 0 
+                ? `Continue (${formData.interests.length} selected)` 
+                : 'Continue'
+              }
             </Text>
           </TouchableOpacity>
         )}

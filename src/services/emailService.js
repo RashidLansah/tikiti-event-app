@@ -17,6 +17,7 @@ class EmailService {
       console.log('📧 Attempting to send welcome email to:', userEmail);
       console.log('📧 SendGrid API Key available:', !!SENDGRID_API_KEY && SENDGRID_API_KEY !== 'YOUR_SENDGRID_API_KEY_HERE');
       console.log('📧 API Key starts with SG.:', SENDGRID_API_KEY?.startsWith('SG.'));
+      console.log('📧 API Key length:', SENDGRID_API_KEY?.length);
       
       // Check if API key is properly configured
       if (!SENDGRID_API_KEY || SENDGRID_API_KEY === 'YOUR_SENDGRID_API_KEY_HERE') {
@@ -65,10 +66,13 @@ class EmailService {
         body: JSON.stringify(emailData)
       });
       if (!response.ok) {
-        throw new Error(`SendGrid API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ SendGrid API error:', response.status, errorText);
+        throw new Error(`SendGrid API error: ${response.status} - ${errorText}`);
       }
 
-      console.log('✅ Welcome email sent successfully!');
+      const responseData = await response.json();
+      console.log('✅ Welcome email sent successfully!', responseData);
       return { success: true };
     } catch (error) {
       console.error('❌ Error sending welcome email:', error);
