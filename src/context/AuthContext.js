@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { authService } from '../services/authService';
 import notificationService from '../services/notificationService';
+import emailService from '../services/emailService';
 
 const AuthContext = createContext({});
 
@@ -90,6 +91,17 @@ export const AuthProvider = ({ children }) => {
       // Send welcome notification
       const userName = profileData.displayName || profileData.email || 'there';
       await notificationService.sendWelcomeNotification(userId, userName);
+      
+      // Send welcome email from Founder & CEO
+      if (profileData.email) {
+        try {
+          await emailService.sendWelcomeEmail(profileData.email, userName);
+          console.log('✅ Welcome email sent successfully');
+        } catch (error) {
+          console.error('❌ Failed to send welcome email:', error);
+          // Don't throw error - email failure shouldn't break registration
+        }
+      }
       
       // Force a small delay to ensure state is updated
       await new Promise(resolve => setTimeout(resolve, 100));

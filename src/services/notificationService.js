@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { db } from '../config/firebase';
 import { collection, addDoc, query, where, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
+import emailService from './emailService';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
