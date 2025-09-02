@@ -493,6 +493,29 @@
             }
         });
 
+        // Test URL parsing
+        function testUrlParsing() {
+            const testUrls = [
+                '/events/tamale-offline-hangout-v6ttm49VSholZtnPWINz',
+                '/events/v6ttm49VSholZtnPWINz',
+                '/events/some-event-name-abc123'
+            ];
+            
+            console.log('🧪 Testing URL parsing:');
+            testUrls.forEach(url => {
+                const match = url.match(/^\/events\/(.+)$/);
+                if (match) {
+                    const pathPart = match[1];
+                    const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
+                    const eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
+                    console.log(`URL: ${url} → Event ID: ${eventId}`);
+                }
+            });
+        }
+        
+        // Run URL parsing test
+        testUrlParsing();
+        
         // Load event when page loads
         loadEvent();
     </script>

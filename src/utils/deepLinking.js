@@ -68,9 +68,11 @@ export const handleDeepLink = (url, navigation) => {
       extractedEventId: eventId
     });
     
-    // For web, navigate to web view
+    // For web, redirect to the web interface
     if (Platform.OS === 'web') {
-      navigation.navigate('EventWeb', { eventId });
+      const eventUrl = generateEventLink(eventId);
+      window.location.href = eventUrl;
+      return;
     } else {
       // For mobile, check if user is logged in
       // If not logged in, show onboarding first
