@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Event Loading</title>
+</head>
+<body>
+    <h1>Event Loading Test</h1>
+    <div id="results"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, doc, getDoc, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxY-IGHevGAi7tvOGZ9V4VwFhU28zCKQc",
+            authDomain: "tikiti-45ac4.firebaseapp.com",
+            projectId: "tikiti-45ac4",
+            storageBucket: "tikiti-45ac4.firebasestorage.app",
+            messagingSenderId: "843705368074",
+            appId: "1:843705368074:web:15f123d0e423a5a0b069f3"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const resultsDiv = document.getElementById('results');
+
+        async function testEventLoading() {
+            const eventId = 'v6ttm49VSholZtnPWINz';
+            
+            resultsDiv.innerHTML = '<p>Testing event loading...</p>';
+            
+            try {
+                // Test 1: Direct document fetch
+                console.log('🔍 Testing direct document fetch for:', eventId);
+                const eventDoc = await getDoc(doc(db, 'events', eventId));
+                resultsDiv.innerHTML += `<p>Direct fetch result: ${eventDoc.exists() ? 'EXISTS' : 'NOT FOUND'}</p>`;
+                
+                if (eventDoc.exists()) {
+                    const eventData = eventDoc.data();
+                    resultsDiv.innerHTML += `<p>Event data: ${JSON.stringify(eventData, null, 2)}</p>`;
+                }
+                
+                // Test 2: List all events
+                console.log('🔍 Listing all events...');
+                const eventsRef = collection(db, 'events');
+                const snapshot = await getDocs(eventsRef);
+                resultsDiv.innerHTML += `<p>Total events in database: ${snapshot.size}</p>`;
+                
+                if (snapshot.size > 0) {
+                    resultsDiv.innerHTML += '<p>Event IDs:</p><ul>';
+                    snapshot.docs.forEach((doc) => {
+                        const isTarget = doc.id === eventId;
+                        resultsDiv.innerHTML += `<li style="color: ${isTarget ? 'green' : 'black'}">${doc.id} ${isTarget ? '(TARGET EVENT)' : ''}</li>`;
+                    });
+                    resultsDiv.innerHTML += '</ul>';
+                }
+                
+                // Test 3: Query active events
+                console.log('🔍 Querying active events...');
+                const activeQuery = query(eventsRef, where('isActive', '==', true));
+                const activeSnapshot = await getDocs(activeQuery);
+                resultsDiv.innerHTML += `<p>Active events: ${activeSnapshot.size}</p>`;
+                
+                if (activeSnapshot.size > 0) {
+                    resultsDiv.innerHTML += '<p>Active Event IDs:</p><ul>';
+                    activeSnapshot.docs.forEach((doc) => {
+                        const isTarget = doc.id === eventId;
+                        resultsDiv.innerHTML += `<li style="color: ${isTarget ? 'green' : 'black'}">${doc.id} ${isTarget ? '(TARGET EVENT)' : ''}</li>`;
+                    });
+                    resultsDiv.innerHTML += '</ul>';
+                }
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                resultsDiv.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Run the test
+        testEventLoading();
+    </script>
+</body>
+</html>
