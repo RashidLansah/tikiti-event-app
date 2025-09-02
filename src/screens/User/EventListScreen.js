@@ -27,6 +27,7 @@ const EventListScreen = ({ navigation }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Load events and categories from Firestore
   const loadEvents = async () => {
@@ -423,14 +424,20 @@ const EventListScreen = ({ navigation }) => {
         </View>
         
         {/* Modern Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.background.secondary }]}>
-          <Feather name="search" size={16} color={colors.text.tertiary} />
+        <View style={[
+          styles.searchContainer, 
+          { backgroundColor: colors.background.secondary },
+          isSearchFocused && styles.searchContainerFocused
+        ]}>
+          <Feather name="search" size={16} color={isSearchFocused ? colors.primary[500] : colors.text.tertiary} />
           <TextInput
             style={[styles.searchInput, { color: colors.text.primary }]}
             placeholder="Search events..."
             placeholderTextColor={colors.text.tertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -649,6 +656,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[4],
     paddingVertical: Spacing[3],
     gap: Spacing[3],
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  searchContainerFocused: {
+    borderWidth: 2,
+    borderColor: Colors.primary[500],
+    ...Shadows.md,
   },
   searchInput: {
     flex: 1,
