@@ -35,9 +35,9 @@ const EventListScreen = ({ navigation }) => {
       let eventsData = [];
       
       // If user has a country set, load events near them
-      if (userProfile?.country) {
-        console.log('📍 Loading events for user country:', userProfile.country);
-        eventsData = await eventService.getNearUser(userProfile.country, 20);
+      if (userProfile?.organisationCountry) {
+        console.log('📍 Loading events for user country:', userProfile.organisationCountry);
+        eventsData = await eventService.getNearUser(userProfile.organisationCountry, 20);
       } else {
         // Fallback to all events if no country set
         console.log('📍 No user country set, loading all events');
@@ -439,11 +439,11 @@ const EventListScreen = ({ navigation }) => {
           <View>
               <Text style={[styles.greeting, { color: colors.text.tertiary }]}>Discover</Text>
             <Text style={[styles.title, { color: colors.text.primary }]}>Events near you</Text>
-            {userProfile?.country && (
+            {userProfile?.organisationCountry && (
               <View style={styles.locationIndicator}>
                 <Feather name="map-pin" size={12} color={colors.primary[500]} />
                 <Text style={[styles.locationText, { color: colors.primary[500] }]}>
-                  Showing events in {userProfile.country}
+                  Showing events in {userProfile.organisationCountry}
                 </Text>
               </View>
             )}

@@ -86,6 +86,11 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
         get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid;
       
+      // Allow users to read attendee counts for public events (for event cards)
+      allow read: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.isActive == true;
+      
       // Users can update their own bookings (cancel, etc.)
       allow update: if isAuthenticated() && 
         request.auth.uid == resource.data.userId;
