@@ -132,9 +132,19 @@ export const eventService = {
 
       const querySnapshot = await getDocs(q);
       const events = [];
+      const now = new Date();
       
       querySnapshot.forEach((doc) => {
-        events.push({ id: doc.id, ...doc.data() });
+        const eventData = doc.data();
+        const eventDate = new Date(eventData.date);
+        const eventEndTime = new Date(`${eventData.date} ${eventData.endTime || '23:59'}`);
+        
+        // Only include events that haven't ended yet (with 2-hour buffer)
+        const bufferTime = new Date(eventEndTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after event ends
+        
+        if (now <= bufferTime) {
+          events.push({ id: doc.id, ...eventData });
+        }
       });
 
       return {
@@ -160,9 +170,19 @@ export const eventService = {
 
       const querySnapshot = await getDocs(q);
       const events = [];
+      const now = new Date();
       
       querySnapshot.forEach((doc) => {
-        events.push({ id: doc.id, ...doc.data() });
+        const eventData = doc.data();
+        const eventDate = new Date(eventData.date);
+        const eventEndTime = new Date(`${eventData.date} ${eventData.endTime || '23:59'}`);
+        
+        // Only include events that haven't ended yet (with 2-hour buffer)
+        const bufferTime = new Date(eventEndTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after event ends
+        
+        if (now <= bufferTime) {
+          events.push({ id: doc.id, ...eventData });
+        }
       });
 
       return events;
@@ -183,13 +203,22 @@ export const eventService = {
 
       const querySnapshot = await getDocs(q);
       const events = [];
+      const now = new Date();
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         const searchableText = `${data.name} ${data.description} ${data.location} ${data.category}`.toLowerCase();
         
         if (searchableText.includes(searchTerm.toLowerCase())) {
-          events.push({ id: doc.id, ...data });
+          const eventDate = new Date(data.date);
+          const eventEndTime = new Date(`${data.date} ${data.endTime || '23:59'}`);
+          
+          // Only include events that haven't ended yet (with 2-hour buffer)
+          const bufferTime = new Date(eventEndTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after event ends
+          
+          if (now <= bufferTime) {
+            events.push({ id: doc.id, ...data });
+          }
         }
       });
 
@@ -211,9 +240,19 @@ export const eventService = {
 
       const querySnapshot = await getDocs(q);
       const events = [];
+      const now = new Date();
       
       querySnapshot.forEach((doc) => {
-        events.push({ id: doc.id, ...doc.data() });
+        const eventData = doc.data();
+        const eventDate = new Date(eventData.date);
+        const eventEndTime = new Date(`${eventData.date} ${eventData.endTime || '23:59'}`);
+        
+        // Only include events that haven't ended yet (with 2-hour buffer)
+        const bufferTime = new Date(eventEndTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after event ends
+        
+        if (now <= bufferTime) {
+          events.push({ id: doc.id, ...eventData });
+        }
       });
 
       return events;
@@ -235,25 +274,33 @@ export const eventService = {
 
       const querySnapshot = await getDocs(q);
       const events = [];
+      const now = new Date();
       
       querySnapshot.forEach((doc) => {
         const eventData = doc.data();
         const eventLocation = eventData.location;
+        const eventDate = new Date(eventData.date);
+        const eventEndTime = new Date(`${eventData.date} ${eventData.endTime || '23:59'}`);
         
-        // Check if event location matches user's country
-        let locationMatches = false;
+        // Only include events that haven't ended yet (with 2-hour buffer)
+        const bufferTime = new Date(eventEndTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after event ends
         
-        if (typeof eventLocation === 'string') {
-          // Simple string location - check if it contains the country
-          locationMatches = eventLocation.toLowerCase().includes(country.toLowerCase());
-        } else if (typeof eventLocation === 'object' && eventLocation) {
-          // Object location - check name, address, or country fields
-          const locationText = `${eventLocation.name || ''} ${eventLocation.address || ''} ${eventLocation.country || ''}`.toLowerCase();
-          locationMatches = locationText.includes(country.toLowerCase());
-        }
-        
-        if (locationMatches) {
-          events.push({ id: doc.id, ...eventData });
+        if (now <= bufferTime) {
+          // Check if event location matches user's country
+          let locationMatches = false;
+          
+          if (typeof eventLocation === 'string') {
+            // Simple string location - check if it contains the country
+            locationMatches = eventLocation.toLowerCase().includes(country.toLowerCase());
+          } else if (typeof eventLocation === 'object' && eventLocation) {
+            // Object location - check name, address, or country fields
+            const locationText = `${eventLocation.name || ''} ${eventLocation.address || ''} ${eventLocation.country || ''}`.toLowerCase();
+            locationMatches = locationText.includes(country.toLowerCase());
+          }
+          
+          if (locationMatches) {
+            events.push({ id: doc.id, ...eventData });
+          }
         }
       });
 
