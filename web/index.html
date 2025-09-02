@@ -352,9 +352,13 @@
             const eventMatch = path.match(/^\/events\/(.+)$/);
             if (eventMatch) {
                 const pathPart = eventMatch[1];
+                console.log('Path part:', pathPart);
+                
                 // Extract event ID from the end (after the last hyphen)
+                // Look for a pattern like: event-name-abc123 where abc123 is the actual ID
                 const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
                 const eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
+                console.log('Event ID match:', eventIdMatch);
                 console.log('Extracted event ID:', eventId);
                 return eventId;
             }
