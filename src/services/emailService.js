@@ -1,8 +1,8 @@
 import sgMail from '@sendgrid/mail';
 
 // Initialize SendGrid with API key
-// Note: Set SENDGRID_API_KEY in your environment variables
-sgMail.setApiKey(process.env.SENDGRID_API_KEY || 'your-sendgrid-api-key-here');
+// Note: Using the same SendGrid API key as the existing email service
+sgMail.setApiKey(process.env.EXPO_PUBLIC_SENDGRID_API_KEY || 'YOUR_SENDGRID_API_KEY_HERE');
 
 class EmailService {
   constructor() {

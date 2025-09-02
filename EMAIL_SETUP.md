@@ -16,8 +16,8 @@ To enable welcome emails from Lansah (Founder & CEO), you need to set up SendGri
 Create a `.env` file in your project root with:
 
 ```env
-# SendGrid Configuration
-SENDGRID_API_KEY=your-sendgrid-api-key-here
+# SendGrid Configuration (same as existing email service)
+EXPO_PUBLIC_SENDGRID_API_KEY=your-sendgrid-api-key-here
 
 # Email Configuration
 FROM_EMAIL=lansah@gettikiti.com
@@ -26,14 +26,11 @@ FROM_NAME=Lansah (Founder & CEO)
 
 ### 3. Update Email Service
 
-In `src/services/emailService.js`, replace the placeholder API key:
+In `src/services/emailService.js`, the API key is already configured to use the same key as your existing email service:
 
 ```javascript
-// Replace this line:
-sgMail.setApiKey(process.env.SENDGRID_API_KEY || 'your-sendgrid-api-key-here');
-
-// With:
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+// Already configured to use the same API key as ticket confirmations
+sgMail.setApiKey(process.env.EXPO_PUBLIC_SENDGRID_API_KEY || 'YOUR_SENDGRID_API_KEY_HERE');
 ```
 
 ### 4. Domain Authentication (Recommended)
