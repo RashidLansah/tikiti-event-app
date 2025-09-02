@@ -36,7 +36,7 @@ service cloud.firestore {
       
       // Only organizers can create events
       allow create: if isOrganizer() && 
-        request.auth.uid == resource.data.organizerId;
+        request.auth.uid == request.resource.data.organizerId;
       
       // Only the event organizer can update/delete their events
       allow update, delete: if isOrganizer() && 
@@ -88,8 +88,7 @@ service cloud.firestore {
       
       // Allow users to read attendee counts for public events (for event cards)
       allow read: if isAuthenticated() && 
-        exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
-        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.isActive == true;
+        exists(/databases/$(database)/documents/events/$(resource.data.eventId));
       
       // Users can update their own bookings (cancel, etc.)
       allow update: if isAuthenticated() && 
@@ -148,26 +147,12 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
         request.auth.uid == resource.data.userId;
       
-      // System can create notifications
-      allow create: if isAuthenticated();
-      
-      // Users can update their own notifications (mark as read)
-      allow update: if isAuthenticated() && 
-        request.auth.uid == resource.data.userId;
-    }
-    
-    // Notifications collection - user notifications
-    match /notifications/{notificationId} {
-      // Users can read their own notifications
-      allow read: if isAuthenticated() && 
-        request.auth.uid == resource.data.userId;
-      
-      // Users can update their own notifications (mark as read)
-      allow update: if isAuthenticated() && 
-        request.auth.uid == resource.data.userId;
-      
       // System can create notifications for users
       allow create: if isAuthenticated();
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
     }
     
     // Default rule - deny all other access
