@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  SafeAreaView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { eventService, bookingService } from '../../services/firestoreService';
@@ -167,7 +168,7 @@ const DashboardScreen = ({ navigation }) => {
 };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background.primary }]}>
       <View style={[styles.header, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
         <Text style={[styles.title, { color: colors.text.primary }]}>My Events</Text>
         <TouchableOpacity
@@ -253,9 +254,7 @@ const DashboardScreen = ({ navigation }) => {
           </View>
         )}
       </ScrollView>
-
-
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -268,7 +267,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Spacing[12],
+    paddingTop: Spacing[4],
     paddingHorizontal: Spacing[6],
     paddingBottom: Spacing[6],
     backgroundColor: Colors.white,
