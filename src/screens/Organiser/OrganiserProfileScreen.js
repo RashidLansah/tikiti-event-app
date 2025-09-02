@@ -123,8 +123,6 @@ const OrganiserProfileScreen = ({ navigation }) => {
     );
   };
 
-
-
   const handleSwitchToAttendee = () => {
     // Switch to attendee role and navigate to user flow
     switchRole('attendee');
