@@ -56,7 +56,17 @@ export const handleDeepLink = (url, navigation) => {
   // Check if it's an event link
   const eventMatch = path?.match(/^\/events\/(.+)$/);
   if (eventMatch) {
-    const eventId = eventMatch[1];
+    // Extract event ID from the path - handle both formats:
+    // 1. /events/event-name-abc123 (SEO-friendly)
+    // 2. /events/abc123 (simple)
+    const pathPart = eventMatch[1];
+    const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
+    const eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
+    console.log('🔍 Deep linking event details:', {
+      pathPart,
+      eventIdMatch,
+      extractedEventId: eventId
+    });
     
     // For web, navigate to web view
     if (Platform.OS === 'web') {
@@ -100,6 +110,11 @@ export const generateEventLink = (eventId, eventName = null) => {
 // Share event function
 export const shareEvent = async (event) => {
   const eventUrl = generateEventLink(event.id, event.name);
+  console.log('🔗 Generated share URL:', {
+    eventId: event.id,
+    eventName: event.name,
+    generatedUrl: eventUrl
+  });
   
   // Create event description with details
   // Handle location object properly
