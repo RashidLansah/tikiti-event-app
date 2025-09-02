@@ -26,6 +26,7 @@ import EventDetailScreen from '../screens/User/EventDetailScreen';
 import TicketScreen from '../screens/User/TicketScreen';
 import MyTicketsScreen from '../screens/User/MyTicketsScreen';
 import ProfileScreen from '../screens/User/ProfileScreen';
+import NotificationCenterScreen from '../screens/User/NotificationCenterScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -40,6 +41,7 @@ const EventsStack = () => (
     <Stack.Screen name="EventList" component={EventListScreen} />
     <Stack.Screen name="EventDetail" component={EventDetailScreen} />
     <Stack.Screen name="Ticket" component={TicketScreen} />
+    <Stack.Screen name="NotificationCenter" component={NotificationCenterScreen} />
   </Stack.Navigator>
 );
 

@@ -4,6 +4,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { authService } from '../services/authService';
+import notificationService from '../services/notificationService';
 
 const AuthContext = createContext({});
 
@@ -85,6 +86,10 @@ export const AuthProvider = ({ children }) => {
       });
       console.log('✅ User profile created successfully');
       setUserProfile(profileData);
+      
+      // Send welcome notification
+      const userName = profileData.displayName || profileData.email || 'there';
+      await notificationService.sendWelcomeNotification(userId, userName);
       
       // Force a small delay to ensure state is updated
       await new Promise(resolve => setTimeout(resolve, 100));

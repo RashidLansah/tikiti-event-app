@@ -18,17 +18,31 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { eventService, bookingService } from '../../services/firestoreService';
+import notificationService from '../../services/notificationService';
 
 const EventListScreen = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState('All');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const searchInputRef = useRef(null);
+
+  // Load unread notifications count
+  const loadUnreadNotifications = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const count = await notificationService.getUnreadCount(user.uid);
+      setUnreadNotifications(count);
+    } catch (error) {
+      console.error('Error loading unread notifications:', error);
+    }
+  };
 
   // Load events and categories from Firestore
   const loadEvents = async () => {
@@ -135,10 +149,11 @@ const EventListScreen = ({ navigation }) => {
     const loadData = async () => {
       setLoading(true);
       await loadEvents();
+      await loadUnreadNotifications();
       setLoading(false);
     };
     loadData();
-  }, []);
+  }, [userProfile, user]);
 
   // Set up real-time listener for all events
   useEffect(() => {
@@ -449,8 +464,18 @@ const EventListScreen = ({ navigation }) => {
               </View>
             )}
           </View>
-          <TouchableOpacity style={[styles.notificationButton, { backgroundColor: colors.background.tertiary }]}>
+          <TouchableOpacity 
+            style={[styles.notificationButton, { backgroundColor: colors.background.tertiary }]}
+            onPress={() => navigation.navigate('NotificationCenter')}
+          >
             <Feather name="bell" size={20} color={colors.text.secondary} />
+            {unreadNotifications > 0 && (
+              <View style={[styles.notificationBadge, { backgroundColor: colors.primary[500] }]}>
+                <Text style={styles.badgeText}>
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
         
@@ -694,6 +719,23 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: Colors.white,
+    fontSize: 10,
+    fontWeight: Typography.fontWeight.bold,
   },
   
   // Modern Search Styles

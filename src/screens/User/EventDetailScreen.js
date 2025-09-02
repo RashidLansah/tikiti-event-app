@@ -19,6 +19,7 @@ import ShareButton from '../../components/ShareButton';
 import CopyLinkButton from '../../components/CopyLinkButton';
 import { eventService, bookingService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
+import notificationService from '../../services/notificationService';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -259,6 +260,19 @@ const EventDetailScreen = ({ navigation, route }) => {
       const successMessage = event.type === 'free' 
         ? `You have successfully registered for ${event.name}`
         : `Successfully booked ${finalQuantity} ticket(s) for ${event.name}`;
+      
+      // Send RSVP confirmation notification
+      if (event.type === 'free') {
+        await notificationService.sendRSVPConfirmation(user.uid, event.name, event.id);
+        // Schedule event reminder notification
+        await notificationService.scheduleEventReminder(user.uid, event.name, event.id, event.date);
+      }
+      
+      // Send new RSVP notification to organizer
+      if (event.organizerId) {
+        const attendeeName = userProfile?.displayName || userProfile?.email || 'Someone';
+        await notificationService.sendNewRSVPNotification(event.organizerId, event.name, attendeeName, event.id);
+      }
       
       // Refresh user booking status
       const newBooking = await bookingService.getUserBookingForEvent(user.uid, event.id);

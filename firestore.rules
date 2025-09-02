@@ -141,6 +141,20 @@ service cloud.firestore {
         request.auth.uid == resource.data.userId;
     }
     
+    // Notifications collection - user notifications
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      
+      // System can create notifications for users
+      allow create: if isAuthenticated();
+    }
+    
     // Default rule - deny all other access
     match /{document=**} {
       allow read, write: if false;
