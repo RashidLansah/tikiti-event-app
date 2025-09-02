@@ -16,6 +16,7 @@ class EmailService {
     try {
       console.log('📧 Attempting to send welcome email to:', userEmail);
       console.log('📧 SendGrid API Key available:', !!SENDGRID_API_KEY && SENDGRID_API_KEY !== 'YOUR_SENDGRID_API_KEY_HERE');
+      console.log('📧 API Key starts with SG.:', SENDGRID_API_KEY?.startsWith('SG.'));
       
       // Check if API key is properly configured
       if (!SENDGRID_API_KEY || SENDGRID_API_KEY === 'YOUR_SENDGRID_API_KEY_HERE') {
