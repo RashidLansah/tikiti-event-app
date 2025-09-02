@@ -456,7 +456,11 @@ const EventListScreen = ({ navigation }) => {
         {/* Modern Search Bar */}
         <View style={[
           styles.searchContainer, 
-          { backgroundColor: colors.background.secondary },
+          { 
+            backgroundColor: colors.background.secondary,
+            borderColor: isSearchFocused ? colors.primary[500] : colors.border.light,
+            borderWidth: isSearchFocused ? 2 : 1,
+          },
           isSearchFocused && styles.searchContainerFocused
         ]}>
           <Feather name="search" size={16} color={isSearchFocused ? colors.primary[500] : colors.text.tertiary} />
@@ -468,6 +472,10 @@ const EventListScreen = ({ navigation }) => {
             onChangeText={setSearchQuery}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
+            returnKeyType="search"
+            blurOnSubmit={false}
+            autoCorrect={false}
+            autoCapitalize="none"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -686,12 +694,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[4],
     paddingVertical: Spacing[3],
     gap: Spacing[3],
-    borderWidth: 1,
-    borderColor: Colors.border.light,
   },
   searchContainerFocused: {
-    borderWidth: 2,
-    borderColor: Colors.primary[500],
     ...Shadows.md,
   },
   searchInput: {

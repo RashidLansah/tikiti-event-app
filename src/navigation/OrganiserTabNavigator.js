@@ -50,7 +50,7 @@ const OrganiserTabNavigator = () => {
 
           return <Feather name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: Colors.success[500],
+        tabBarActiveTintColor: Colors.primary[500],
         tabBarInactiveTintColor: Colors.text.tertiary,
         tabBarStyle: {
           backgroundColor: Colors.white,

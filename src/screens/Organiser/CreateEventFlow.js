@@ -507,7 +507,12 @@ const CreateEventFlow = ({ navigation, route }) => {
         <Text style={[styles.title, { color: colors.text.primary }]}>
           {isEdit ? 'Edit Event' : 'Create Event'}
         </Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity 
+          style={[styles.cancelButton, { backgroundColor: colors.background.secondary }]}
+          onPress={() => navigation.goBack()}
+        >
+          <Feather name="x" size={20} color={colors.text.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Progress Bar */}
@@ -519,12 +524,13 @@ const CreateEventFlow = ({ navigation, route }) => {
         contentContainerStyle={styles.contentContainer}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
         {renderCurrentStep()}
       </ScrollView>
 
       {/* Footer */}
-      <View style={[styles.footer, { backgroundColor: colors.background.primary }]}>
+      <View style={[styles.footer, { backgroundColor: colors.background.primary, borderTopWidth: 1, borderTopColor: colors.border.light }]}>
         {currentStep === totalSteps ? (
           <TouchableOpacity
             style={[
@@ -584,6 +590,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: Colors.background.secondary,
   },
+  cancelButton: {
+    padding: Spacing[2],
+    borderRadius: 8,
+    backgroundColor: Colors.background.secondary,
+  },
   title: {
     fontSize: Typography.fontSize.xl,
     fontWeight: Typography.fontWeight.bold,
@@ -601,7 +612,7 @@ const styles = StyleSheet.create({
   },
   progressBarWrapper: {
     width: '100%',
-    marginBottom: Spacing[6],
+    marginBottom: Spacing[2],
     position: 'relative',
   },
   progressBar: {
