@@ -354,13 +354,19 @@
                 const pathPart = eventMatch[1];
                 console.log('Path part:', pathPart);
                 
-                // Extract event ID from the end (after the last hyphen)
-                // Look for a pattern like: event-name-abc123 where abc123 is the actual ID
-                const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
-                const eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
-                console.log('Event ID match:', eventIdMatch);
-                console.log('Extracted event ID:', eventId);
-                return eventId;
+                // Check if it's a simple ID (no hyphens) or SEO-friendly URL
+                if (pathPart.includes('-')) {
+                    // SEO-friendly URL: extract ID from the end (after the last hyphen)
+                    const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
+                    const eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
+                    console.log('SEO URL detected, Event ID match:', eventIdMatch);
+                    console.log('Extracted event ID:', eventId);
+                    return eventId;
+                } else {
+                    // Simple URL: the path part is the event ID
+                    console.log('Simple URL detected, Event ID:', pathPart);
+                    return pathPart;
+                }
             }
             return null;
         }
@@ -506,8 +512,15 @@
                 const match = url.match(/^\/events\/(.+)$/);
                 if (match) {
                     const pathPart = match[1];
-                    const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
-                    const eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
+                    let eventId;
+                    if (pathPart.includes('-')) {
+                        // SEO-friendly URL
+                        const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
+                        eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
+                    } else {
+                        // Simple URL
+                        eventId = pathPart;
+                    }
                     console.log(`URL: ${url} → Event ID: ${eventId}`);
                 }
             });
