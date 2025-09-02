@@ -46,7 +46,8 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "static"
     },
     "plugins": [
       "expo-camera",
@@ -56,6 +57,11 @@
       "eas": {
         "projectId": "4a3d499a-fee7-465b-b0c6-3c9ba76073bc"
       }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
     }
   }
 }

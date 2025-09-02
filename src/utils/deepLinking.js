@@ -5,9 +5,9 @@ import * as Linking from 'expo-linking';
 export const linkingConfig = {
   prefixes: [
     'tikiti://',
-    'https://tikiti.com',
-    'https://www.tikiti.com',
-    'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app' // Production URL
+    'https://gettikiti.com',
+    'https://www.gettikiti.com',
+    'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app' // Fallback URL
   ],
   config: {
     screens: {
