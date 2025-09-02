@@ -14,7 +14,8 @@ service cloud.firestore {
     function isOrganizer() {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountType == 'organiser';
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountType == 'organiser' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organisationName != null);
     }
     
     function isValidUser() {
