@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
-import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 
 const RegisterScreen = ({ navigation, route }) => {
@@ -30,7 +29,7 @@ const RegisterScreen = ({ navigation, route }) => {
   const [selectedAccountType, setSelectedAccountType] = useState('user');
   const [focusedInput, setFocusedInput] = useState(null);
   
-  const { createUserProfile } = useAuth();
+  const { register } = useAuth();
   const accountType = selectedAccountType;
 
   const updateFormData = (key, value) => {
@@ -73,29 +72,26 @@ const RegisterScreen = ({ navigation, route }) => {
       const { firstName, lastName, email, password } = formData;
       const displayName = `${firstName} ${lastName}`;
       
-      // Create Firebase auth user
-      const user = await authService.register(email.trim(), password, displayName);
-      
-      // Create user profile in Firestore
+      // Create user profile data
       const profileData = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
         displayName,
         accountType,
-        isEmailVerified: user.emailVerified,
       };
       
       console.log('🔍 Creating profile with accountType:', accountType);
       console.log('🔍 Full profile data:', profileData);
       
-      await createUserProfile(user.uid, profileData);
+      // Register user and create profile (handled by AuthContext)
+      const user = await register(email.trim(), password, displayName, profileData);
 
       console.log('✅ Registration successful:', user.email);
       
       // Navigation will be handled by AuthContext state change
     } catch (error) {
-      Alert.alert('Registration Failed', authService.getErrorMessage(error));
+      Alert.alert('Registration Failed', error.message || 'An error occurred during registration. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -312,6 +308,7 @@ const RegisterScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeIcon}
+                activeOpacity={0.7}
               >
                 <Feather 
                   name={showPassword ? 'eye-off' : 'eye'} 
@@ -344,6 +341,7 @@ const RegisterScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 style={styles.eyeIcon}
+                activeOpacity={0.7}
               >
                 <Feather 
                   name={showConfirmPassword ? 'eye-off' : 'eye'} 

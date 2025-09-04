@@ -82,7 +82,10 @@ const DashboardScreen = ({ navigation }) => {
     // Fetch real-time attendee count for this event
     useEffect(() => {
       const fetchAttendeeCount = async () => {
-        if (!event?.id) return;
+        if (!event?.id || !user) {
+          console.log('⚠️ Skipping attendee fetch for event card: no event ID or user not authenticated');
+          return;
+        }
         
         try {
           setLoadingAttendees(true);
@@ -90,6 +93,7 @@ const DashboardScreen = ({ navigation }) => {
           setAttendeeCount(attendees?.length || 0);
         } catch (error) {
           console.error('Error fetching attendee count for event card:', error);
+          // Don't show error to user, just set count to 0
           setAttendeeCount(0);
         } finally {
           setLoadingAttendees(false);
@@ -97,7 +101,7 @@ const DashboardScreen = ({ navigation }) => {
       };
 
       fetchAttendeeCount();
-    }, [event?.id]);
+    }, [event?.id, user]);
 
     return (
       <TouchableOpacity 
@@ -105,14 +109,23 @@ const DashboardScreen = ({ navigation }) => {
         onPress={() => handleEventPress(event)}
       >
       {event.imageBase64 && (
-        <Image 
-          source={{ 
-            uri: event.imageBase64.startsWith('data:') 
-              ? event.imageBase64 
-              : `data:image/jpeg;base64,${event.imageBase64}` 
-          }} 
-          style={styles.eventImage} 
-        />
+        <View style={styles.eventImageContainer}>
+          <Image 
+            source={{ 
+              uri: event.imageBase64.startsWith('data:') 
+                ? event.imageBase64 
+                : `data:image/jpeg;base64,${event.imageBase64}` 
+            }} 
+            style={styles.eventImage} 
+          />
+          
+          {/* Full Event Badge */}
+          {event.availableTickets <= 0 && (
+            <View style={[styles.fullEventBadge, { backgroundColor: colors.error[500] }]}>
+              <Text style={[styles.fullEventText, { color: colors.white }]}>FULL</Text>
+            </View>
+          )}
+        </View>
       )}
       <View style={styles.eventContent}>
         <View style={styles.eventHeader}>
@@ -198,7 +211,7 @@ const DashboardScreen = ({ navigation }) => {
         ) : (
           <View style={styles.emptyState}>
             <View style={[styles.emptyIcon, { backgroundColor: colors.primary[50] }]}>
-              <Feather name="calendar-plus" size={48} color={colors.primary[500]} />
+              <Feather name="calendar" size={48} color={colors.primary[500]} />
             </View>
             
             <Text style={[styles.emptyStateTitle, { color: colors.text.primary }]}>
@@ -304,10 +317,30 @@ const styles = StyleSheet.create({
     ...Shadows.medium,
     overflow: 'hidden',
   },
+  eventImageContainer: {
+    position: 'relative',
+  },
   eventImage: {
     width: '100%',
     height: 150,
     resizeMode: 'cover',
+  },
+  
+  // Full Event Badge
+  fullEventBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: Colors.error[500],
+  },
+  fullEventText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.white,
+    letterSpacing: 0.5,
   },
   eventContent: {
     padding: 20,

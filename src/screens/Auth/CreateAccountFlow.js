@@ -142,7 +142,17 @@ const CreateAccountFlow = ({ navigation }) => {
           style={[
             styles.typeformInput,
             { color: colors.text.primary, borderColor: colors.border.medium },
-            focusedField === 'firstName' && { borderColor: colors.primary[500], borderWidth: 2 }
+            focusedField === 'firstName' && { 
+              borderColor: colors.primary[500], 
+              borderWidth: 2,
+              shadowColor: colors.primary[500],
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 2,
+              borderBottomWidth: 3,
+              borderBottomColor: colors.primary[400],
+            }
           ]}
           placeholder="First name"
           placeholderTextColor={colors.text.tertiary}
@@ -159,7 +169,17 @@ const CreateAccountFlow = ({ navigation }) => {
           style={[
             styles.typeformInput,
             { color: colors.text.primary, borderColor: colors.border.medium },
-            focusedField === 'lastName' && { borderColor: colors.primary[500], borderWidth: 2 }
+            focusedField === 'lastName' && { 
+              borderColor: colors.primary[500], 
+              borderWidth: 2,
+              shadowColor: colors.primary[500],
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 2,
+              borderBottomWidth: 3,
+              borderBottomColor: colors.primary[400],
+            }
           ]}
           placeholder="Last name"
           placeholderTextColor={colors.text.tertiary}
@@ -185,7 +205,17 @@ const CreateAccountFlow = ({ navigation }) => {
         style={[
           styles.typeformInput,
           { color: colors.text.primary, borderColor: colors.border.medium },
-          focusedField === 'email' && { borderColor: colors.primary[500], borderWidth: 2 }
+          focusedField === 'email' && { 
+            borderColor: colors.primary[500], 
+            borderWidth: 2,
+            shadowColor: colors.primary[500],
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 2,
+            borderBottomWidth: 3,
+            borderBottomColor: colors.primary[400],
+          }
         ]}
         placeholder="your@email.com"
         placeholderTextColor={colors.text.tertiary}
@@ -211,7 +241,17 @@ const CreateAccountFlow = ({ navigation }) => {
         <View style={[
           styles.typeformPasswordContainer,
           { borderColor: colors.border.medium },
-          focusedField === 'password' && { borderColor: colors.primary[500], borderWidth: 2 }
+          focusedField === 'password' && { 
+            borderColor: colors.primary[500], 
+            borderWidth: 2,
+            shadowColor: colors.primary[500],
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 2,
+            borderBottomWidth: 3,
+            borderBottomColor: colors.primary[400],
+          }
         ]}>
           <TextInput
             style={[styles.typeformPasswordInput, { color: colors.text.primary }]}
@@ -228,6 +268,7 @@ const CreateAccountFlow = ({ navigation }) => {
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
             style={styles.eyeIcon}
+            activeOpacity={0.7}
           >
             <Feather 
               name={showPassword ? "eye-off" : "eye"} 
@@ -240,7 +281,17 @@ const CreateAccountFlow = ({ navigation }) => {
         <View style={[
           styles.typeformPasswordContainer,
           { borderColor: colors.border.medium },
-          focusedField === 'confirmPassword' && { borderColor: colors.primary[500], borderWidth: 2 },
+          focusedField === 'confirmPassword' && { 
+            borderColor: colors.primary[500], 
+            borderWidth: 2,
+            shadowColor: colors.primary[500],
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 2,
+            borderBottomWidth: 3,
+            borderBottomColor: colors.primary[400],
+          },
           formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && { borderColor: colors.success[500], borderWidth: 2 }
         ]}>
           <TextInput
@@ -267,6 +318,7 @@ const CreateAccountFlow = ({ navigation }) => {
             <TouchableOpacity
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               style={styles.eyeIcon}
+              activeOpacity={0.7}
             >
               <Feather 
                 name={showConfirmPassword ? "eye-off" : "eye"} 
@@ -294,7 +346,17 @@ const CreateAccountFlow = ({ navigation }) => {
         style={[
           styles.typeformDropdown,
           { borderColor: colors.border.medium },
-          focusedField === 'country' && { borderColor: colors.primary[500], borderWidth: 2 }
+          focusedField === 'country' && { 
+            borderColor: colors.primary[500], 
+            borderWidth: 2,
+            shadowColor: colors.primary[500],
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 2,
+            borderBottomWidth: 3,
+            borderBottomColor: colors.primary[400],
+          }
         ]}
         onPress={() => {
           setShowCountryDropdown(true);
@@ -870,6 +932,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[4],
     minHeight: 56,
+    position: 'relative',
   },
   typeformPasswordInput: {
     flex: 1,

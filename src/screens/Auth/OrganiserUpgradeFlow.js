@@ -25,6 +25,7 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [showCountryCodeDropdown, setShowCountryCodeDropdown] = useState(false);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -32,6 +33,8 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
     eventTypes: [],
     description: '',
     country: '',
+    phoneNumber: '',
+    countryCode: '+233', // Default to Ghana
   });
 
   // Countries list
@@ -45,6 +48,48 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
     'Other'
   ].sort();
 
+  // Country codes for phone numbers
+  const countryCodes = [
+    { code: '+233', country: 'Ghana', flag: '🇬🇭' },
+    { code: '+234', country: 'Nigeria', flag: '🇳🇬' },
+    { code: '+254', country: 'Kenya', flag: '🇰🇪' },
+    { code: '+27', country: 'South Africa', flag: '🇿🇦' },
+    { code: '+20', country: 'Egypt', flag: '🇪🇬' },
+    { code: '+212', country: 'Morocco', flag: '🇲🇦' },
+    { code: '+216', country: 'Tunisia', flag: '🇹🇳' },
+    { code: '+1', country: 'United States', flag: '🇺🇸' },
+    { code: '+44', country: 'United Kingdom', flag: '🇬🇧' },
+    { code: '+1', country: 'Canada', flag: '🇨🇦' },
+    { code: '+61', country: 'Australia', flag: '🇦🇺' },
+    { code: '+49', country: 'Germany', flag: '🇩🇪' },
+    { code: '+33', country: 'France', flag: '🇫🇷' },
+    { code: '+39', country: 'Italy', flag: '🇮🇹' },
+    { code: '+34', country: 'Spain', flag: '🇪🇸' },
+    { code: '+31', country: 'Netherlands', flag: '🇳🇱' },
+    { code: '+46', country: 'Sweden', flag: '🇸🇪' },
+    { code: '+47', country: 'Norway', flag: '🇳🇴' },
+    { code: '+45', country: 'Denmark', flag: '🇩🇰' },
+    { code: '+358', country: 'Finland', flag: '🇫🇮' },
+    { code: '+55', country: 'Brazil', flag: '🇧🇷' },
+    { code: '+54', country: 'Argentina', flag: '🇦🇷' },
+    { code: '+52', country: 'Mexico', flag: '🇲🇽' },
+    { code: '+91', country: 'India', flag: '🇮🇳' },
+    { code: '+86', country: 'China', flag: '🇨🇳' },
+    { code: '+81', country: 'Japan', flag: '🇯🇵' },
+    { code: '+82', country: 'South Korea', flag: '🇰🇷' },
+    { code: '+65', country: 'Singapore', flag: '🇸🇬' },
+    { code: '+60', country: 'Malaysia', flag: '🇲🇾' },
+    { code: '+66', country: 'Thailand', flag: '🇹🇭' },
+    { code: '+62', country: 'Indonesia', flag: '🇮🇩' },
+    { code: '+63', country: 'Philippines', flag: '🇵🇭' },
+    { code: '+84', country: 'Vietnam', flag: '🇻🇳' },
+    { code: '+971', country: 'United Arab Emirates', flag: '🇦🇪' },
+    { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
+    { code: '+90', country: 'Turkey', flag: '🇹🇷' },
+    { code: '+972', country: 'Israel', flag: '🇮🇱' },
+    { code: '+961', country: 'Lebanon', flag: '🇱🇧' },
+  ];
+
   // Set default country from user profile
   useEffect(() => {
     if (userProfile?.country && !formData.country) {
@@ -52,7 +97,7 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
     }
   }, [userProfile?.country]);
 
-  const totalSteps = 5;
+  const totalSteps = 6;
 
   // Event types for dropdown
   const eventTypes = [
@@ -86,6 +131,7 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
         eventTypes: formData.eventTypes,
         organisationDescription: formData.description,
         organisationCountry: formData.country,
+        organisationPhone: `${formData.countryCode}${formData.phoneNumber}`,
         upgradedAt: new Date(),
         // Keep accountType as 'user' to maintain dual-role capability
       });
@@ -143,7 +189,17 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
         style={[
           styles.typeformInput,
           { color: '#000000', borderColor: colors.border.medium },
-          focusedField === 'organisationName' && { borderColor: colors.primary[500], borderWidth: 2 }
+          focusedField === 'organisationName' && { 
+            borderColor: colors.primary[500], 
+            borderWidth: 2,
+            shadowColor: colors.primary[500],
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 2,
+            borderBottomWidth: 3,
+            borderBottomColor: colors.primary[400],
+          }
         ]}
         placeholder="Your organisation name"
         placeholderTextColor={colors.text.tertiary}
@@ -212,7 +268,17 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
         style={[
           styles.typeformTextArea,
           { color: '#000000', borderColor: colors.border.medium },
-          focusedField === 'description' && { borderColor: colors.primary[500], borderWidth: 2 }
+          focusedField === 'description' && { 
+            borderColor: colors.primary[500], 
+            borderWidth: 2,
+            shadowColor: colors.primary[500],
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 2,
+            borderBottomWidth: 3,
+            borderBottomColor: colors.primary[400],
+          }
         ]}
         placeholder="Describe your organisation, mission, or what makes your events special..."
         placeholderTextColor={colors.text.tertiary}
@@ -246,7 +312,17 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
             backgroundColor: colors.background.primary,
             borderColor: colors.border.medium 
           },
-          focusedField === 'country' && { borderColor: colors.primary[500], borderWidth: 2 }
+          focusedField === 'country' && { 
+            borderColor: colors.primary[500], 
+            borderWidth: 2,
+            shadowColor: colors.primary[500],
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 2,
+            borderBottomWidth: 3,
+            borderBottomColor: colors.primary[400],
+          }
         ]}
         onPress={() => {
           setFocusedField('country');
@@ -326,6 +402,136 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
   const renderStep5 = () => (
     <View style={styles.typeformContainer}>
       <Text style={[styles.typeformQuestion, { color: colors.text.primary }]}>
+        What's your organisation phone number?
+      </Text>
+      
+      <Text style={[styles.typeformSubtitle, { color: colors.text.secondary }]}>
+        This will be displayed on your events for attendees to contact you
+      </Text>
+      
+      <View style={styles.phoneInputContainer}>
+        <TouchableOpacity
+          style={[
+            styles.countryCodeButton,
+            { 
+              backgroundColor: colors.background.primary,
+              borderColor: colors.border.medium 
+            },
+            focusedField === 'countryCode' && { 
+              borderColor: colors.primary[500], 
+              borderWidth: 2,
+              shadowColor: colors.primary[500],
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 2,
+              borderBottomWidth: 3,
+              borderBottomColor: colors.primary[400],
+            }
+          ]}
+          onPress={() => {
+            setFocusedField('countryCode');
+            setShowCountryCodeDropdown(true);
+          }}
+        >
+          <Text style={[styles.countryCodeText, { color: colors.text.primary }]}>
+            {countryCodes.find(c => c.code === formData.countryCode)?.flag} {formData.countryCode}
+          </Text>
+          <Feather name="chevron-down" size={16} color={colors.text.tertiary} />
+        </TouchableOpacity>
+        
+        <TextInput
+          style={[
+            styles.phoneNumberInput,
+            { color: '#000000', borderColor: colors.border.medium },
+            focusedField === 'phoneNumber' && { 
+              borderColor: colors.primary[500], 
+              borderWidth: 2,
+              shadowColor: colors.primary[500],
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 2,
+              borderBottomWidth: 3,
+              borderBottomColor: colors.primary[400],
+            }
+          ]}
+          placeholder="Phone number"
+          placeholderTextColor={colors.text.tertiary}
+          value={formData.phoneNumber}
+          onChangeText={(value) => updateFormData('phoneNumber', value)}
+          onFocus={() => setFocusedField('phoneNumber')}
+          onBlur={() => setFocusedField(null)}
+          keyboardType="phone-pad"
+          autoCorrect={false}
+          returnKeyType="done"
+        />
+      </View>
+
+      {/* Country Code Selection Modal */}
+      <Modal
+        visible={showCountryCodeDropdown}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCountryCodeDropdown(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background.primary }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text.primary }]}>
+                Select Country Code
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowCountryCodeDropdown(false)}
+                style={styles.modalCloseButton}
+              >
+                <Feather name="x" size={24} color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={countryCodes}
+              keyExtractor={(item) => `${item.code}-${item.country}`}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.countryItem,
+                    { 
+                      backgroundColor: colors.background.secondary,
+                      borderBottomColor: colors.border.light 
+                    },
+                    formData.countryCode === item.code && { backgroundColor: colors.primary[50] }
+                  ]}
+                  onPress={() => {
+                    updateFormData('countryCode', item.code);
+                    setShowCountryCodeDropdown(false);
+                    setFocusedField(null);
+                  }}
+                >
+                  <Text style={[
+                    styles.countryText,
+                    { 
+                      color: formData.countryCode === item.code ? colors.primary[500] : colors.text.primary,
+                      fontWeight: formData.countryCode === item.code ? '600' : '400'
+                    }
+                  ]}>
+                    {item.flag} {item.code} {item.country}
+                  </Text>
+                  {formData.countryCode === item.code && (
+                    <Feather name="check" size={20} color={colors.primary[500]} />
+                  )}
+                </TouchableOpacity>
+              )}
+              style={styles.countryList}
+            />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+
+  const renderStep6 = () => (
+    <View style={styles.typeformContainer}>
+      <Text style={[styles.typeformQuestion, { color: colors.text.primary }]}>
         You're ready to become an organiser!
       </Text>
       
@@ -356,6 +562,12 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
             {formData.country || 'Not selected'}
           </Text>
         </View>
+        <View style={styles.typeformReviewItem}>
+          <Text style={[styles.typeformReviewLabel, { color: colors.text.secondary }]}>Phone:</Text>
+          <Text style={[styles.typeformReviewValue, { color: colors.text.primary }]}>
+            {formData.phoneNumber ? `${formData.countryCode}${formData.phoneNumber}` : 'Not provided'}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -367,6 +579,7 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
       case 3: return renderStep3();
       case 4: return renderStep4();
       case 5: return renderStep5();
+      case 6: return renderStep6();
       default: return renderStep1();
     }
   };
@@ -377,7 +590,8 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
       case 2: return true; // Optional step
       case 3: return true; // Optional step
       case 4: return formData.country.trim();
-      case 5: return true;
+      case 5: return formData.phoneNumber.trim();
+      case 6: return true;
       default: return false;
     }
   };
@@ -415,7 +629,7 @@ const OrganiserUpgradeFlow = ({ navigation, onComplete }) => {
 
       {/* Footer */}
       <View style={[styles.footer, { backgroundColor: colors.background.primary }]}>
-        {currentStep === 5 ? (
+        {currentStep === 6 ? (
           <TouchableOpacity
             style={[
               styles.continueButton,
@@ -689,6 +903,39 @@ const styles = StyleSheet.create({
   countryText: {
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    gap: Spacing[3],
+  },
+  countryCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[4],
+    minHeight: 56,
+    minWidth: 120,
+  },
+  countryCodeText: {
+    fontSize: 16,
+    color: Colors.text.primary,
+    marginRight: Spacing[2],
+  },
+  phoneNumberInput: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[5],
+    fontSize: 18,
+    color: Colors.text.primary,
+    minHeight: 56,
+    textAlignVertical: 'center',
   },
 });
 

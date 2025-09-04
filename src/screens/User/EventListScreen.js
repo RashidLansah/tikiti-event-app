@@ -307,7 +307,10 @@ const EventListScreen = ({ navigation }) => {
     // Fetch real-time attendee count for this event
     useEffect(() => {
       const fetchAttendeeCount = async () => {
-        if (!event?.id) return;
+        if (!event?.id || !user) {
+          console.log('⚠️ Skipping attendee fetch for event list card: no event ID or user not authenticated');
+          return;
+        }
         
         try {
           setLoadingAttendees(true);
@@ -315,6 +318,7 @@ const EventListScreen = ({ navigation }) => {
           setAttendeeCount(attendees?.length || 0);
         } catch (error) {
           console.error('Error fetching attendee count for event card:', error);
+          // Don't show error to user, just set count to 0
           setAttendeeCount(0);
         } finally {
           setLoadingAttendees(false);
@@ -322,7 +326,7 @@ const EventListScreen = ({ navigation }) => {
       };
 
       fetchAttendeeCount();
-    }, [event?.id]);
+    }, [event?.id, user]);
     
     React.useEffect(() => {
       Animated.timing(animatedValue, {
@@ -375,6 +379,13 @@ const EventListScreen = ({ navigation }) => {
               <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(event.category) }]} />
               <Text style={[styles.categoryText, { color: colors.text.primary }]}>{event.category}</Text>
             </View>
+            
+            {/* Full Event Badge */}
+            {event.availableTickets <= 0 && (
+              <View style={[styles.fullEventBadge, { backgroundColor: colors.error[500] }]}>
+                <Text style={[styles.fullEventText, { color: colors.white }]}>FULL</Text>
+              </View>
+            )}
           </View>
           
           {/* Content Section */}
@@ -749,7 +760,15 @@ const styles = StyleSheet.create({
     gap: Spacing[3],
   },
   searchContainerFocused: {
-    ...Shadows.md,
+    borderColor: Colors.primary[500],
+    borderWidth: 2,
+    shadowColor: Colors.primary[500],
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+    borderBottomWidth: 3,
+    borderBottomColor: Colors.primary[400],
   },
   searchInput: {
     flex: 1,
@@ -851,6 +870,23 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xs,
     fontWeight: Typography.fontWeight.semibold,
     letterSpacing: Typography.letterSpacing.wide,
+  },
+  
+  // Full Event Badge
+  fullEventBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: Colors.error[500],
+  },
+  fullEventText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.white,
+    letterSpacing: 0.5,
   },
   
   // Compact Content Area

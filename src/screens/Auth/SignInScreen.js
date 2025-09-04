@@ -17,7 +17,7 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles
 
 const SignInScreen = ({ navigation }) => {
   const { colors } = useTheme();
-  const { signIn } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +32,7 @@ const SignInScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      await signIn(email.trim(), password);
+      await login(email.trim(), password);
     } catch (error) {
       Alert.alert('Sign In Failed', error.message);
     } finally {
@@ -53,7 +53,7 @@ const SignInScreen = ({ navigation }) => {
         >
           <Feather name="arrow-left" size={24} color={colors.primary[500]} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text.primary }]}>Welcome Back</Text>
+        <Text style={[styles.title, { color: colors.text.primary }]}>Welcome Back to Tikiti</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -107,6 +107,7 @@ const SignInScreen = ({ navigation }) => {
             <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeIcon}
+              activeOpacity={0.7}
             >
               <Feather 
                 name={showPassword ? "eye-off" : "eye"} 
@@ -142,6 +143,18 @@ const SignInScreen = ({ navigation }) => {
             Forgot Password?
           </Text>
         </TouchableOpacity>
+
+        {/* Create Account Link */}
+        <View style={styles.createAccountSection}>
+          <Text style={[styles.createAccountText, { color: colors.text.secondary }]}>
+            Don't have an account?{' '}
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('CreateAccount')}>
+            <Text style={[styles.createAccountLink, { color: colors.primary[500] }]}>
+              Create Account
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -170,6 +183,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xl,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
+    textAlign: 'center',
   },
   headerRight: {
     width: 40,
@@ -205,11 +219,19 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     minHeight: 48,
     textAlignVertical: 'center',
+    position: 'relative',
   },
   inputFieldFocused: {
     borderWidth: 2,
     borderColor: Colors.primary[500],
-    ...Shadows.md,
+    shadowColor: Colors.primary[500],
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+    // Double stroke effect
+    borderBottomWidth: 3,
+    borderBottomColor: Colors.primary[400],
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -221,6 +243,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[4],
     paddingVertical: Spacing[3],
     minHeight: 48,
+    position: 'relative',
   },
   passwordInput: {
     flex: 1,
@@ -254,6 +277,22 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.primary[500],
     fontWeight: Typography.fontWeight.medium,
+  },
+  createAccountSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing[8],
+    paddingBottom: Spacing[8],
+  },
+  createAccountText: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+  },
+  createAccountLink: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.primary[500],
+    fontWeight: Typography.fontWeight.semibold,
   },
 });
 

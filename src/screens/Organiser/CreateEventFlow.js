@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import { eventService } from '../../services/firestoreService';
 import { imageUploadService } from '../../services/imageUploadService';
+import { imageOptimization } from '../../utils/imageOptimization';
 import LocationPicker from '../../components/LocationPicker';
 import DatePicker from '../../components/DatePicker';
 import TimePicker from '../../components/TimePicker';
@@ -119,6 +120,35 @@ const CreateEventFlow = ({ navigation, route }) => {
         } else {
           base64Image = await imageUploadService.uploadEventImage(formData.imageUri, user.uid);
         }
+        
+        // Check image size before proceeding
+        if (base64Image) {
+          const sizeWarning = imageOptimization.getSizeWarning(base64Image);
+          if (sizeWarning) {
+            if (sizeWarning.type === 'error') {
+              Alert.alert(
+                sizeWarning.title,
+                sizeWarning.message,
+                [
+                  { text: 'Choose Different Image', onPress: () => setFormData(prev => ({ ...prev, imageUri: null })) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+              setLoading(false);
+              return;
+            } else {
+              // Show warning but allow proceeding
+              Alert.alert(
+                sizeWarning.title,
+                sizeWarning.message,
+                [
+                  { text: 'Use This Image', onPress: () => {} },
+                  { text: 'Choose Different', onPress: () => setFormData(prev => ({ ...prev, imageUri: null })) }
+                ]
+              );
+            }
+          }
+        }
       }
 
       const eventData = {
@@ -139,6 +169,7 @@ const CreateEventFlow = ({ navigation, route }) => {
         imageUrl: null,
         organizerName: userProfile?.displayName || user?.displayName || 'Event Organizer',
         organizerEmail: user?.email || '',
+        organizerPhone: userProfile?.organisationPhone || '',
       };
 
       if (isEdit && existingEvent?.id) {
@@ -154,7 +185,22 @@ const CreateEventFlow = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error creating event:', error);
-      Alert.alert('Error', 'Failed to create event. Please try again.');
+      
+      // Show specific error messages
+      if (error.message.includes('Image is too large')) {
+        Alert.alert(
+          'Image Too Large',
+          error.message,
+          [
+            { text: 'Choose Different Image', onPress: () => setFormData(prev => ({ ...prev, imageUri: null })) },
+            { text: 'OK' }
+          ]
+        );
+      } else if (error.message.includes('Permission denied')) {
+        Alert.alert('Permission Error', error.message);
+      } else {
+        Alert.alert('Error', error.message || 'Failed to create event. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -195,7 +241,17 @@ const CreateEventFlow = ({ navigation, route }) => {
           style={[
             styles.typeformInput,
             { color: '#000000', borderColor: colors.border.medium },
-            focusedField === 'eventName' && { borderColor: colors.primary[500], borderWidth: 2 }
+            focusedField === 'eventName' && { 
+              borderColor: colors.primary[500], 
+              borderWidth: 2,
+              shadowColor: colors.primary[500],
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 2,
+              borderBottomWidth: 3,
+              borderBottomColor: colors.primary[400],
+            }
           ]}
           value={formData.eventName}
           onChangeText={(text) => updateFormData('eventName', text)}
@@ -225,7 +281,17 @@ const CreateEventFlow = ({ navigation, route }) => {
           style={[
             styles.typeformTextArea,
             { color: '#000000', borderColor: colors.border.medium },
-            focusedField === 'eventDescription' && { borderColor: colors.primary[500], borderWidth: 2 }
+            focusedField === 'eventDescription' && { 
+              borderColor: colors.primary[500], 
+              borderWidth: 2,
+              shadowColor: colors.primary[500],
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 2,
+              borderBottomWidth: 3,
+              borderBottomColor: colors.primary[400],
+            }
           ]}
           value={formData.eventDescription}
           onChangeText={(text) => updateFormData('eventDescription', text)}
@@ -365,7 +431,17 @@ const CreateEventFlow = ({ navigation, route }) => {
            style={[
              styles.typeformInput,
              { color: '#000000', borderColor: colors.border.medium },
-             focusedField === 'totalTickets' && { borderColor: colors.primary[500], borderWidth: 2 }
+             focusedField === 'totalTickets' && { 
+               borderColor: colors.primary[500], 
+               borderWidth: 2,
+               shadowColor: colors.primary[500],
+               shadowOffset: { width: 0, height: 0 },
+               shadowOpacity: 0.3,
+               shadowRadius: 4,
+               elevation: 2,
+               borderBottomWidth: 3,
+               borderBottomColor: colors.primary[400],
+             }
            ]}
            value={formData.totalTickets}
            onChangeText={(text) => updateFormData('totalTickets', text)}

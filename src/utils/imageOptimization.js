@@ -14,8 +14,19 @@ export const imageOptimization = {
     
     console.log(`📏 Image size: ${sizeInKB.toFixed(2)} KB`);
     
-    // Recommend keeping under 700KB to stay well within Firestore limits
-    return sizeInKB < 700;
+    // Firestore limit is 1MB, but we'll be more conservative at 800KB
+    return sizeInKB < 800;
+  },
+
+  // Check if image exceeds Firestore hard limit
+  exceedsFirestoreLimit: (base64String) => {
+    if (!base64String) return false;
+    
+    const sizeInBytes = Math.ceil((base64String.length * 3) / 4);
+    const sizeInMB = sizeInBytes / (1024 * 1024);
+    
+    // Firestore hard limit is 1MB
+    return sizeInMB > 1;
   },
 
   // Get image size warning message
@@ -24,11 +35,29 @@ export const imageOptimization = {
     
     const sizeInBytes = Math.ceil((base64String.length * 3) / 4);
     const sizeInKB = sizeInBytes / 1024;
+    const sizeInMB = sizeInBytes / (1024 * 1024);
     
-    if (sizeInKB > 700) {
-      return `⚠️ Image is large (${sizeInKB.toFixed(1)} KB). Consider using a smaller image to avoid Firestore limits.`;
+    if (sizeInMB > 1) {
+      return {
+        type: 'error',
+        title: 'Image Too Large',
+        message: `Your image is ${sizeInMB.toFixed(2)} MB, which exceeds Firestore's 1MB limit. Please choose a smaller image or compress it before uploading.`,
+        canProceed: false
+      };
+    } else if (sizeInKB > 800) {
+      return {
+        type: 'warning',
+        title: 'Large Image',
+        message: `Your image is ${sizeInKB.toFixed(1)} KB. While it will work, consider using a smaller image (under 500KB) for better performance.`,
+        canProceed: true
+      };
     } else if (sizeInKB > 500) {
-      return `ℹ️ Image size: ${sizeInKB.toFixed(1)} KB. This is acceptable but consider smaller images for better performance.`;
+      return {
+        type: 'info',
+        title: 'Image Size',
+        message: `Image size: ${sizeInKB.toFixed(1)} KB. This is acceptable but smaller images load faster.`,
+        canProceed: true
+      };
     }
     
     return null;

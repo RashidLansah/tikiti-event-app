@@ -13,12 +13,14 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { bookingService } from '../../services/firestoreService';
+import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
 const EventAttendeesScreen = ({ navigation, route }) => {
   console.log('🚀 EventAttendeesScreen component mounting...');
   console.log('📋 Route params:', route?.params);
   
+  const { user } = useAuth();
   const { event } = route?.params || {};
   
   // Safety check for event
@@ -63,6 +65,12 @@ const EventAttendeesScreen = ({ navigation, route }) => {
         throw new Error('Event ID is missing');
       }
       
+      if (!user) {
+        console.log('⚠️ User not authenticated, skipping attendee fetch');
+        setAttendees([]);
+        return;
+      }
+      
       const eventAttendees = await bookingService.getEventAttendees(event.id);
       console.log('✅ Fetched attendees:', eventAttendees?.length || 0);
       console.log('📋 Sample attendee data:', eventAttendees?.[0] || 'No attendees');
@@ -92,7 +100,7 @@ const EventAttendeesScreen = ({ navigation, route }) => {
       setError('Event ID is missing');
       setLoading(false);
     }
-  }, [event?.id]); // Safe navigation
+  }, [event?.id, user]); // Safe navigation
 
   // Filter and search logic
   const getFilteredAttendees = () => {

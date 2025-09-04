@@ -33,7 +33,6 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
   const [ticketQuantity, setTicketQuantity] = useState(1);
-  const [isFavorited, setIsFavorited] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [userBooking, setUserBooking] = useState(null);
   const [checkingBooking, setCheckingBooking] = useState(false);
@@ -44,7 +43,10 @@ const EventDetailScreen = ({ navigation, route }) => {
 
   // Fetch real-time attendee count
   const fetchAttendeeCount = async () => {
-    if (!event?.id) return;
+    if (!event?.id || !user) {
+      console.log('⚠️ Skipping attendee fetch: no event ID or user not authenticated');
+      return;
+    }
     
     try {
       setLoadingAttendees(true);
@@ -52,6 +54,7 @@ const EventDetailScreen = ({ navigation, route }) => {
       setAttendeeCount(attendees?.length || 0);
     } catch (error) {
       console.error('Error fetching attendee count:', error);
+      // Don't show error to user, just set count to 0
       setAttendeeCount(0);
     } finally {
       setLoadingAttendees(false);
@@ -60,7 +63,7 @@ const EventDetailScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchAttendeeCount();
-  }, [event?.id]);
+  }, [event?.id, user]);
 
   // Handle opening directions in Google Maps
   const handleGetDirections = () => {
@@ -219,8 +222,25 @@ const EventDetailScreen = ({ navigation, route }) => {
       return;
     }
 
-    if (!event || (event.type !== 'free' && event.availableTickets < ticketQuantity)) {
-      Alert.alert('Error', 'Not enough tickets available');
+    if (!event) {
+      Alert.alert('Error', 'Event information not available');
+      return;
+    }
+
+    // Check if event is full
+    if (event.availableTickets <= 0) {
+      Alert.alert('Event Full', 'Sorry, this event is fully booked. No more spots are available.');
+      return;
+    }
+
+    // Check if event is active
+    if (event.status !== 'active' && event.isActive !== true) {
+      Alert.alert('Event Not Available', 'This event is no longer accepting bookings.');
+      return;
+    }
+
+    if (event.type !== 'free' && event.availableTickets < ticketQuantity) {
+      Alert.alert('Not Enough Tickets', `Only ${event.availableTickets} spots remaining. Cannot book ${ticketQuantity} tickets.`);
       return;
     }
 
@@ -234,6 +254,7 @@ const EventDetailScreen = ({ navigation, route }) => {
     setBooking(true);
 
     try {
+      console.log('🚀 Starting booking process...');
       const finalQuantity = event.type === 'free' ? 1 : ticketQuantity;
       const bookingData = {
         eventId: event.id,
@@ -254,38 +275,58 @@ const EventDetailScreen = ({ navigation, route }) => {
         gender: user.gender || '',
       };
 
-      await bookingService.create(bookingData);
+      console.log('📝 Creating booking with data:', bookingData);
+      const bookingResult = await bookingService.create(bookingData);
+      console.log('✅ Booking created successfully:', bookingResult);
+      
+      // If we get here, the booking was successful - no need to continue if there are errors
+      console.log('🎯 Core booking process completed successfully');
 
       const successTitle = event.type === 'free' ? 'RSVP Confirmed!' : 'Booking Confirmed!';
       const successMessage = event.type === 'free' 
         ? `You have successfully registered for ${event.name}`
         : `Successfully booked ${finalQuantity} ticket(s) for ${event.name}`;
       
-      // Send RSVP confirmation notification
+      // Send RSVP confirmation notification (non-blocking)
       if (event.type === 'free') {
-        await notificationService.sendRSVPConfirmation(user.uid, event.name, event.id);
-        // Schedule event reminder notification
-        await notificationService.scheduleEventReminder(user.uid, event.name, event.id, event.date);
+        notificationService.sendRSVPConfirmation(user.uid, event.name, event.id).catch(error => {
+          console.warn('Failed to send RSVP confirmation notification:', error);
+        });
+        // Schedule event reminder notification (non-blocking)
+        notificationService.scheduleEventReminder(user.uid, event.name, event.id, event.date).catch(error => {
+          console.warn('Failed to schedule event reminder notification:', error);
+        });
       }
       
-      // Send new RSVP notification to organizer
+      // Send new RSVP notification to organizer (non-blocking)
       if (event.organizerId) {
         const attendeeName = userProfile?.displayName || userProfile?.email || 'Someone';
-        await notificationService.sendNewRSVPNotification(event.organizerId, event.name, attendeeName, event.id);
+        notificationService.sendNewRSVPNotification(event.organizerId, event.name, attendeeName, event.id).catch(error => {
+          console.warn('Failed to send new RSVP notification to organizer:', error);
+        });
       }
       
-      // Refresh user booking status
-      const newBooking = await bookingService.getUserBookingForEvent(user.uid, event.id);
-      setUserBooking(newBooking);
+      // Refresh user booking status (non-blocking)
+      bookingService.getUserBookingForEvent(user.uid, event.id).then(newBooking => {
+        setUserBooking(newBooking);
+      }).catch(error => {
+        console.warn('Failed to refresh user booking status:', error);
+      });
       
-      // Update the event state to reflect new booking numbers
+      // Update the event state to reflect new booking numbers (non-blocking)
       if (event?.id) {
-        const updatedEvent = await eventService.getById(event.id);
-        if (updatedEvent) {
-          setEvent(updatedEvent);
-        }
+        eventService.getById(event.id).then(updatedEvent => {
+          if (updatedEvent) {
+            setEvent(updatedEvent);
+          }
+        }).catch(error => {
+          console.warn('Failed to refresh event data:', error);
+        });
       }
 
+      console.log('🎉 Showing success alert:', successTitle, successMessage);
+      
+      // Always show success alert - the booking was successful
       Alert.alert(
         successTitle,
         successMessage,
@@ -293,23 +334,21 @@ const EventDetailScreen = ({ navigation, route }) => {
       );
 
     } catch (error) {
-      console.error('Booking error:', error);
-      Alert.alert('Booking Failed', 'Please try again later');
+      console.error('❌ Booking error:', error);
+      
+      // Handle specific error messages
+      if (error.message.includes('spots remaining') || error.message.includes('spots available')) {
+        Alert.alert('Event Full', error.message);
+      } else if (error.message.includes('no longer accepting')) {
+        Alert.alert('Event Not Available', error.message);
+      } else {
+        Alert.alert('Booking Failed', error.message || 'Please try again later');
+      }
     } finally {
       setBooking(false);
     }
   };
 
-  // Mock data for enhanced features
-  const eventImages = [
-    '🎭', '🎪', '🎨', '🎬', '🎤'
-  ];
-
-  // Reviews will be implemented later
-  const reviews = [];
-
-  // Related events will be fetched from database later
-  const relatedEvents = [];
 
   const handleBuyTicket = () => {
     const priceValue = parseFloat(event.price.replace('₵', ''));
@@ -339,13 +378,6 @@ const EventDetailScreen = ({ navigation, route }) => {
 
 
 
-  const toggleFavorite = () => {
-    setIsFavorited(!isFavorited);
-    Alert.alert(
-      isFavorited ? 'Removed from Favorites' : 'Added to Favorites',
-      isFavorited ? 'Event removed from your favorites' : 'Event saved to your favorites'
-    );
-  };
 
   const adjustQuantity = (delta) => {
     const newQuantity = ticketQuantity + delta;
@@ -364,17 +396,6 @@ const EventDetailScreen = ({ navigation, route }) => {
       </TouchableOpacity>
       
       <View style={styles.headerActions}>
-        <TouchableOpacity 
-          style={[styles.headerButton, { backgroundColor: 'rgba(0,0,0,0.3)' }]}
-          onPress={toggleFavorite}
-        >
-          <Feather 
-            name="heart" 
-            size={24} 
-            color={isFavorited ? "#EF4444" : "#FFFFFF"} 
-          />
-        </TouchableOpacity>
-        
         <CopyLinkButton
           event={event}
           style={[styles.headerButton, { backgroundColor: 'rgba(0,0,0,0.3)' }]}
@@ -473,18 +494,6 @@ const EventDetailScreen = ({ navigation, route }) => {
     </View>
   );
 
-  const renderReviews = () => (
-    <View style={[styles.reviewsSection, { backgroundColor: colors.background.secondary }]}>
-      <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Reviews</Text>
-      <View style={[styles.emptyState, { backgroundColor: colors.background.tertiary }]}>
-        <Feather name="message-square" size={48} color={colors.text.tertiary} />
-        <Text style={[styles.emptyStateTitle, { color: colors.text.primary }]}>No Reviews Yet</Text>
-        <Text style={[styles.emptyStateSubtitle, { color: colors.text.secondary }]}>
-          Be the first to share your experience about this event
-        </Text>
-            </View>
-            </View>
-  );
 
   const renderBookingStatus = () => {
     if (!userBooking) return null;
@@ -522,32 +531,6 @@ const EventDetailScreen = ({ navigation, route }) => {
   );
   };
 
-  const renderRelatedEvents = () => (
-    <View style={[styles.relatedSection, { backgroundColor: colors.background.secondary }]}>
-      <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>You Might Also Like</Text>
-      {relatedEvents.length > 0 ? (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {relatedEvents.map((relatedEvent) => (
-          <TouchableOpacity key={relatedEvent.id} style={styles.relatedEventCard}>
-            <View style={styles.relatedEventImage}>
-              <Text style={styles.relatedEventEmoji}>🎪</Text>
-            </View>
-            <Text style={styles.relatedEventName}>{relatedEvent.name}</Text>
-            <Text style={styles.relatedEventPrice}>{relatedEvent.price}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-      ) : (
-        <View style={styles.emptyState}>
-          <Feather name="calendar" size={48} color={Colors.text.tertiary} />
-          <Text style={styles.emptyStateTitle}>No Related Events</Text>
-          <Text style={styles.emptyStateSubtitle}>
-            Check back later for similar events
-          </Text>
-        </View>
-      )}
-    </View>
-  );
 
   return (
     <>
@@ -586,19 +569,45 @@ const EventDetailScreen = ({ navigation, route }) => {
                 <Text style={[styles.organizerName, { color: colors.text.primary }]}>
                   {event.organizerName || 'Event Organizer'}
                 </Text>
-                <Text style={[styles.organizerStats, { color: colors.text.secondary }]}>
-                  {event.organizerEmail || 'Contact organizer for details'}
-                </Text>
+                {event.organizerEmail && (
+                  <Text style={[styles.organizerStats, { color: colors.text.secondary }]}>
+                    ✉️ {event.organizerEmail}
+                  </Text>
+                )}
+                {event.organizerPhone && (
+                  <Text style={[styles.organizerPhone, { color: colors.text.secondary }]}>
+                    📞 {event.organizerPhone}
+                  </Text>
+                )}
               </View>
-              <TouchableOpacity style={[styles.contactButton, { backgroundColor: colors.primary[500] }]}>
-                <Feather name="message-circle" size={16} color={colors.white} />
-                <Text style={[styles.contactButtonText, { color: colors.white }]}>Contact</Text>
-              </TouchableOpacity>
+              <View style={styles.contactButtons}>
+                {event.organizerPhone && (
+                  <TouchableOpacity 
+                    style={[styles.contactButton, { backgroundColor: colors.primary[500] }]}
+                    onPress={() => {
+                      const phoneNumber = event.organizerPhone.replace(/\s/g, ''); // Remove spaces
+                      Linking.openURL(`tel:${phoneNumber}`);
+                    }}
+                  >
+                    <Feather name="phone" size={16} color={colors.white} />
+                    <Text style={[styles.contactButtonText, { color: colors.white }]}>Call</Text>
+                  </TouchableOpacity>
+                )}
+                {event.organizerEmail && (
+                  <TouchableOpacity 
+                    style={[styles.contactButton, { backgroundColor: colors.success[500], marginLeft: 8 }]}
+                    onPress={() => {
+                      Linking.openURL(`mailto:${event.organizerEmail}`);
+                    }}
+                  >
+                    <Feather name="mail" size={16} color={colors.white} />
+                    <Text style={[styles.contactButtonText, { color: colors.white }]}>Email</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
 
-          {renderReviews()}
-          {renderRelatedEvents()}
 
           <View style={[styles.ticketSection, { backgroundColor: colors.background.secondary }]}>
             <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
@@ -950,6 +959,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '500',
   },
+  organizerPhone: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  contactButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -963,27 +982,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
-  },
-  reviewsSection: {
-    marginBottom: 32,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-  },
-  emptyStateTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text.primary,
-    marginTop: Spacing[3],
-    marginBottom: Spacing[2],
-  },
-  emptyStateSubtitle: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 20,
   },
   bookingStatusBanner: {
     backgroundColor: Colors.success[50],
@@ -1030,48 +1028,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     color: Colors.error[500],
     fontWeight: Typography.fontWeight.semibold,
-  },
-  relatedSection: {
-    marginBottom: 32,
-  },
-  relatedEventCard: {
-    width: 140,
-    marginRight: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  relatedEventImage: {
-    height: 80,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  relatedEventEmoji: {
-    fontSize: 32,
-  },
-  relatedEventName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  relatedEventPrice: {
-    fontSize: 14,
-    color: '#10B981',
-    fontWeight: '600',
   },
   ticketSection: {
     marginBottom: 32,

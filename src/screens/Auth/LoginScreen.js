@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
-import { authService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
@@ -25,7 +24,7 @@ const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
 
-  const { createUserProfile } = useAuth();
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -36,12 +35,12 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     
     try {
-      const user = await authService.login(email.trim(), password);
+      const user = await login(email.trim(), password);
       
       // Navigation will be handled by AuthContext state change
       console.log('Login successful:', user.email);
     } catch (error) {
-      Alert.alert('Login Failed', authService.getErrorMessage(error));
+      Alert.alert('Login Failed', error.message || 'An error occurred during login. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -159,6 +158,7 @@ const LoginScreen = ({ navigation }) => {
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeIcon}
+                activeOpacity={0.7}
               >
                 <Feather 
                   name={showPassword ? 'eye-off' : 'eye'} 

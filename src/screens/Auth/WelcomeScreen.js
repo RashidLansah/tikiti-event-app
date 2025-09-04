@@ -100,7 +100,7 @@ const WelcomeScreen = ({ navigation }) => {
   }, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: '#000000' }]}>
+    <View style={styles.container}>
       {/* Logo and Branding */}
       <View style={styles.logoContainer}>
         <Animated.View
@@ -176,7 +176,7 @@ const WelcomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: '#000000',
     paddingHorizontal: Spacing[6],
   },
   logoContainer: {
@@ -204,7 +204,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: Spacing[4],
     letterSpacing: 2,
-    backgroundColor: 'rgba(255, 0, 0, 0.1)', // Temporary red background for debugging
   },
   buttonContainer: {
     paddingBottom: Spacing[12],
@@ -222,7 +221,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-    backgroundColor: 'rgba(0, 255, 0, 0.1)', // Temporary green background for debugging
   },
   secondaryButton: {
     borderWidth: 2,
@@ -236,7 +234,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FF6B35', // Orange brand color
-    backgroundColor: 'rgba(0, 0, 255, 0.1)', // Temporary blue background for debugging
   },
 });
 

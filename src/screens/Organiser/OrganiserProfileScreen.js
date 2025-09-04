@@ -227,7 +227,7 @@ Thank you!`;
             {userProfile?.organisationName && (
               <View style={[styles.menuItem, { borderBottomColor: colors.border.light }]}>
                 <View style={styles.menuIcon}>
-                  <Feather name="building" size={20} color={getSubtleIconColor(colors.primary[500])} />
+                  <Feather name="briefcase" size={20} color={getSubtleIconColor(colors.primary[500])} />
                 </View>
                 <View style={styles.menuContent}>
                   <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Organisation Name</Text>

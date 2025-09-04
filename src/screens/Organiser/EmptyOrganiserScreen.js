@@ -23,7 +23,7 @@ const EmptyOrganiserScreen = ({ navigation }) => {
       {/* Empty State */}
       <View style={styles.emptyContainer}>
         <View style={[styles.emptyIcon, { backgroundColor: colors.primary[50] }]}>
-          <Feather name="calendar-plus" size={48} color={colors.primary[500]} />
+          <Feather name="calendar" size={48} color={colors.primary[500]} />
         </View>
         
         <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>

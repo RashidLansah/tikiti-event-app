@@ -40,7 +40,10 @@ const EventDetailScreen = ({ navigation, route }) => {
 
   // Fetch real-time attendee count
   const fetchAttendeeCount = async () => {
-    if (!event?.id) return;
+    if (!event?.id) {
+      console.log('⚠️ Skipping attendee fetch: no event ID');
+      return;
+    }
     
     try {
       setLoadingAttendees(true);
@@ -48,6 +51,7 @@ const EventDetailScreen = ({ navigation, route }) => {
       setAttendeeCount(attendees?.length || 0);
     } catch (error) {
       console.error('Error fetching attendee count:', error);
+      // Don't show error to user, just set count to 0
       setAttendeeCount(0);
     } finally {
       setLoadingAttendees(false);

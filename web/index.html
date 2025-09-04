@@ -564,9 +564,32 @@
             try {
                 console.log('📝 Submitting RSVP:', rsvpData);
                 
-                // Add RSVP to Firestore (using bookings collection)
-                const docRef = await addDoc(collection(db, 'bookings'), rsvpData);
-                console.log('✅ RSVP submitted successfully with ID:', docRef.id);
+                // Use the createRSVP function with proper validation
+                const rsvpPayload = {
+                    eventId: rsvpData.eventId,
+                    userEmail: rsvpData.email,
+                    userName: rsvpData.name,
+                    userPhone: rsvpData.phone,
+                    quantity: 1,
+                    source: 'web'
+                };
+                
+                // Call the createRSVP API endpoint
+                const response = await fetch('/api/create-rsvp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(rsvpPayload)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to submit RSVP');
+                }
+                
+                const result = await response.json();
+                console.log('✅ RSVP submitted successfully:', result);
                 
                 // Show success
                 document.getElementById('event-content').style.display = 'none';

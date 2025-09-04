@@ -16,7 +16,7 @@ import {
   increment,
   setDoc 
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
 import { emailService } from '../config/emailService';
 
 // Collection names
@@ -83,6 +83,16 @@ export const eventService = {
   // Create event
   create: async (eventData, organizerId) => {
     try {
+      // Check if image is too large before creating
+      if (eventData.imageBase64) {
+        const sizeInBytes = Math.ceil((eventData.imageBase64.length * 3) / 4);
+        const sizeInMB = sizeInBytes / (1024 * 1024);
+        
+        if (sizeInMB > 1) {
+          throw new Error(`Image is too large (${sizeInMB.toFixed(2)} MB). Please choose a smaller image under 1MB.`);
+        }
+      }
+      
       const eventsRef = collection(db, COLLECTIONS.EVENTS);
       const docRef = await addDoc(eventsRef, {
         ...eventData,
@@ -90,13 +100,22 @@ export const eventService = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         isActive: true,
+        status: 'active', // Ensure new events are active by default
         soldTickets: 0,
         availableTickets: eventData.totalTickets || 0,
       });
       return docRef;
     } catch (error) {
       console.error('Error creating event:', error);
-      throw error;
+      
+      // Provide more specific error messages
+      if (error.message.includes('longer than 1048487 bytes')) {
+        throw new Error('Image is too large. Please choose a smaller image under 1MB.');
+      } else if (error.message.includes('Missing or insufficient permissions')) {
+        throw new Error('Permission denied. Please make sure you are logged in and have organizer permissions.');
+      } else {
+        throw error;
+      }
     }
   },
 
@@ -439,6 +458,29 @@ export const eventService = {
 export const bookingService = {
   create: async (bookingData) => {
     try {
+      // Check if event has available spots before creating booking
+      if (bookingData.eventId) {
+        const eventRef = doc(db, COLLECTIONS.EVENTS, bookingData.eventId);
+        const eventSnap = await getDoc(eventRef);
+        
+        if (!eventSnap.exists()) {
+          throw new Error('Event not found');
+        }
+        
+        const eventData = eventSnap.data();
+        const requestedQuantity = bookingData.quantity || 1;
+        
+        // Check if event is active
+        if (eventData.status !== 'active' && eventData.isActive !== true) {
+          throw new Error('This event is no longer accepting bookings');
+        }
+        
+        // Check if there are enough available tickets
+        if (eventData.availableTickets < requestedQuantity) {
+          throw new Error(`Only ${eventData.availableTickets} spots remaining. Cannot book ${requestedQuantity} tickets.`);
+        }
+      }
+      
       const bookingsRef = collection(db, COLLECTIONS.BOOKINGS);
       const docRef = await addDoc(bookingsRef, {
         ...bookingData,
@@ -506,6 +548,12 @@ export const bookingService = {
   // Get all attendees/bookings for an event (for organizers)
   getEventAttendees: async (eventId) => {
     try {
+      // Check if user is authenticated
+      if (!auth.currentUser) {
+        console.log('⚠️ User not authenticated, returning empty attendees list');
+        return [];
+      }
+      
       const bookingsRef = collection(db, COLLECTIONS.BOOKINGS);
       const q = query(bookingsRef, where('eventId', '==', eventId));
       const querySnapshot = await getDocs(q);
@@ -518,6 +566,14 @@ export const bookingService = {
       return attendees;
     } catch (error) {
       console.error('Error getting event attendees:', error);
+      
+      // Handle specific error types
+      if (error.code === 'permission-denied') {
+        console.log('⚠️ Permission denied for attendee fetch, returning empty list');
+        return [];
+      }
+      
+      // For other errors, still throw to be handled by calling component
       throw error;
     }
   },
@@ -542,6 +598,72 @@ export const bookingService = {
       return null;
     } catch (error) {
       console.error('Error checking user booking:', error);
+      throw error;
+    }
+  },
+
+  // Create RSVP (for web users without accounts)
+  createRSVP: async (rsvpData) => {
+    try {
+      // Check for duplicate email for this event
+      if (rsvpData.userEmail && rsvpData.eventId) {
+        const rsvpsRef = collection(db, COLLECTIONS.RSVPS);
+        const q = query(
+          rsvpsRef, 
+          where('eventId', '==', rsvpData.eventId),
+          where('userEmail', '==', rsvpData.userEmail)
+        );
+        const existingRSVPs = await getDocs(q);
+        
+        if (!existingRSVPs.empty) {
+          throw new Error('You have already registered for this event with this email address.');
+        }
+      }
+      
+      // Check if event has available spots before creating RSVP
+      if (rsvpData.eventId) {
+        const eventRef = doc(db, COLLECTIONS.EVENTS, rsvpData.eventId);
+        const eventSnap = await getDoc(eventRef);
+        
+        if (!eventSnap.exists()) {
+          throw new Error('Event not found');
+        }
+        
+        const eventData = eventSnap.data();
+        const requestedQuantity = rsvpData.quantity || 1;
+        
+        // Check if event is active
+        if (eventData.status !== 'active' && eventData.isActive !== true) {
+          throw new Error('This event is no longer accepting registrations');
+        }
+        
+        // Check if there are enough available tickets
+        if (eventData.availableTickets < requestedQuantity) {
+          throw new Error(`Only ${eventData.availableTickets} spots remaining. Cannot register for ${requestedQuantity} tickets.`);
+        }
+      }
+      
+      const rsvpsRef = collection(db, COLLECTIONS.RSVPS);
+      const docRef = await addDoc(rsvpsRef, {
+        ...rsvpData,
+        status: 'confirmed',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        rsvpReference: `RSVP-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+      });
+
+      // Update event ticket count
+      if (rsvpData.eventId) {
+        const eventRef = doc(db, COLLECTIONS.EVENTS, rsvpData.eventId);
+        await updateDoc(eventRef, {
+          soldTickets: increment(rsvpData.quantity),
+          availableTickets: increment(-rsvpData.quantity),
+        });
+      }
+
+      return docRef;
+    } catch (error) {
+      console.error('Error creating RSVP:', error);
       throw error;
     }
   },

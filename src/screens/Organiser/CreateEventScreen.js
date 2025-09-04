@@ -151,7 +151,28 @@ const CreateEventScreen = ({ navigation, route }) => {
         if (base64Image) {
           const sizeWarning = imageOptimization.getSizeWarning(base64Image);
           if (sizeWarning) {
-            Alert.alert('Image Size Warning', sizeWarning, [{ text: 'OK' }]);
+            if (sizeWarning.type === 'error') {
+              Alert.alert(
+                sizeWarning.title,
+                sizeWarning.message,
+                [
+                  { text: 'Choose Different Image', onPress: () => setImageUri(null) },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+              setLoading(false);
+              return;
+            } else {
+              // Show warning but allow proceeding
+              Alert.alert(
+                sizeWarning.title,
+                sizeWarning.message,
+                [
+                  { text: 'Use This Image', onPress: () => {} },
+                  { text: 'Choose Different', onPress: () => setImageUri(null) }
+                ]
+              );
+            }
           }
         }
       } else if (isEdit && existingEvent?.imageBase64) {
@@ -178,6 +199,7 @@ const CreateEventScreen = ({ navigation, route }) => {
         imageUrl: null, // Keep for future Firebase Storage implementation
         organizerName: userProfile?.displayName || user?.displayName || 'Event Organizer',
         organizerEmail: user?.email || '',
+        organizerPhone: userProfile?.organisationPhone || '',
       };
 
       if (isEdit && existingEvent?.id) {
@@ -216,11 +238,26 @@ const CreateEventScreen = ({ navigation, route }) => {
       
     } catch (error) {
       console.error(`Error ${isEdit ? 'updating' : 'creating'} event:`, error);
-      Alert.alert(
-        'Error',
-        `Failed to ${isEdit ? 'update' : 'create'} event. Please try again.`,
-        [{ text: 'OK' }]
-      );
+      
+      // Show specific error messages
+      if (error.message.includes('Image is too large')) {
+        Alert.alert(
+          'Image Too Large',
+          error.message,
+          [
+            { text: 'Choose Different Image', onPress: () => setImageUri(null) },
+            { text: 'OK' }
+          ]
+        );
+      } else if (error.message.includes('Permission denied')) {
+        Alert.alert('Permission Error', error.message);
+      } else {
+        Alert.alert(
+          'Error',
+          error.message || `Failed to ${isEdit ? 'update' : 'create'} event. Please try again.`,
+          [{ text: 'OK' }]
+        );
+      }
     } finally {
       setLoading(false);
     }

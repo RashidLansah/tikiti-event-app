@@ -22,7 +22,7 @@ const DashboardStack = () => (
       headerShown: false,
     }}
   >
-    <Stack.Screen name="Dashboard" component={DashboardScreen} />
+    <Stack.Screen name="DashboardHome" component={DashboardScreen} />
     <Stack.Screen name="CreateEvent" component={CreateEventFlow} />
     <Stack.Screen name="EventDetail" component={EventDetailScreen} />
     <Stack.Screen name="EventAttendees" component={EventAttendeesScreen} />
@@ -78,7 +78,7 @@ const OrganiserTabNavigator = () => {
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             // Reset the stack to the root screen when tab is pressed
-            navigation.navigate('Dashboard', { screen: 'Dashboard' });
+            navigation.navigate('Dashboard', { screen: 'DashboardHome' });
           },
         })}
       />
