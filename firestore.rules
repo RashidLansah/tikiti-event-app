@@ -41,6 +41,10 @@ service cloud.firestore {
       // Only the event organizer can update/delete their events
       allow update, delete: if isOrganizer() && 
         request.auth.uid == resource.data.organizerId;
+      
+      // Allow authenticated users to update ticket counts when booking
+      allow update: if isAuthenticated() && 
+        request.resource.data.keys().hasAll(['soldTickets', 'availableTickets']);
     }
     
     // Tickets collection - ticket purchases
@@ -74,7 +78,7 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
         request.auth.uid == resource.data.userId;
       
-      // Users can create bookings (purchase/RSVP)
+      // Users can create bookings (purchase/RSVP) - mobile app
       allow create: if isAuthenticated() && 
         request.auth.uid == request.resource.data.userId;
       

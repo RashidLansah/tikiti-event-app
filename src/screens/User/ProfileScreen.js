@@ -17,6 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import { bookingService, userService } from '../../services/firestoreService';
+import { authService } from '../../services/authService';
 
 
 const ProfileScreen = ({ navigation }) => {
@@ -159,6 +160,43 @@ const ProfileScreen = ({ navigation }) => {
     });
   };
 
+  const handleResetPassword = async () => {
+    if (!user?.email) {
+      Alert.alert('Error', 'No email address found for this account.');
+      return;
+    }
+
+    Alert.alert(
+      'Reset Password',
+      `Open password reset page in your browser for ${user.email}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open Browser',
+          onPress: async () => {
+            try {
+              // Open the web version of the app for password reset
+              const webUrl = 'https://tikiti-45ac4.web.app/reset-password';
+              const success = await Linking.openURL(webUrl);
+              
+              if (!success) {
+                Alert.alert(
+                  'Error',
+                  'Could not open browser. Please visit tikiti-45ac4.web.app/reset-password manually.'
+                );
+              }
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                'Could not open browser. Please visit tikiti-45ac4.web.app/reset-password manually.'
+              );
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleHelpSupport = () => {
     const email = 'gettikiti@gmail.com';
     const subject = 'Tikiti App Support Request';
@@ -209,10 +247,6 @@ Thank you!`;
             <Text style={[styles.joinDate, { color: colors.text.tertiary }]}>{getJoinDate()}</Text>
           </View>
 
-          <TouchableOpacity style={styles.editButton}>
-            <Feather name="edit-2" size={16} color="#FFFFFF" />
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Account Type Badge */}
@@ -252,7 +286,7 @@ Thank you!`;
           
           <TouchableOpacity 
             style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}
-            onPress={() => navigation.navigate('BrowseEvents')}
+            onPress={() => navigation.navigate('Events')}
           >
             <View style={styles.menuIcon}>
               <Feather name="search" size={20} color={getSubtleIconColor(colors.primary[400])} />
@@ -266,7 +300,7 @@ Thank you!`;
 
           <TouchableOpacity 
             style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}
-            onPress={() => navigation.navigate('MyTickets')}
+            onPress={() => navigation.navigate('My Tickets')}
           >
             <View style={styles.menuIcon}>
               <Feather name="tag" size={20} color={getSubtleIconColor(colors.success[500])} />
@@ -344,6 +378,20 @@ Thank you!`;
               thumbColor={notificationsEnabled ? colors.primary[500] : colors.gray[400]}
             />
           </View>
+
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: 'transparent' }]}
+            onPress={handleResetPassword}
+          >
+            <View style={styles.menuIcon}>
+              <Feather name="key" size={20} color={getSubtleIconColor(colors.primary[500])} />
+            </View>
+            <View style={styles.menuContent}>
+              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Reset Password</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>Change your password</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
+          </TouchableOpacity>
 
 
         </View>
@@ -488,21 +536,6 @@ const styles = StyleSheet.create({
   joinDate: {
     fontSize: Typography.fontSize.sm,
     color: Colors.text.tertiary,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primary[500],
-    paddingVertical: Spacing[3],
-    paddingHorizontal: Spacing[6],
-    borderRadius: BorderRadius.lg,
-    ...Shadows.sm,
-  },
-  editButtonText: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.white,
-    marginLeft: Spacing[2],
   },
   accountTypeContainer: {
     paddingHorizontal: 20,

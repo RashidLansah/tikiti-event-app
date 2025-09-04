@@ -11,6 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Keyboard,
+  Linking,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
@@ -52,15 +53,35 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
 
-    try {
-      await authService.resetPassword(email.trim());
-      Alert.alert(
-        'Password Reset',
-        'A password reset link has been sent to your email address.'
-      );
-    } catch (error) {
-      Alert.alert('Error', authService.getErrorMessage(error));
-    }
+    Alert.alert(
+      'Reset Password',
+      `Open password reset page in your browser for ${email.trim()}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open Browser',
+          onPress: async () => {
+            try {
+              // Open the web version of the app for password reset
+              const webUrl = 'https://tikiti-45ac4.web.app/reset-password';
+              const success = await Linking.openURL(webUrl);
+              
+              if (!success) {
+                Alert.alert(
+                  'Error',
+                  'Could not open browser. Please visit tikiti-45ac4.web.app/reset-password manually.'
+                );
+              }
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                'Could not open browser. Please visit tikiti-45ac4.web.app/reset-password manually.'
+              );
+            }
+          }
+        }
+      ]
+    );
   };
 
     return (
