@@ -2,7 +2,7 @@ export default {
   expo: {
     name: "Tikiti",
     slug: "tikiti",
-    version: "1.0.1",
+    version: "1.4.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -19,11 +19,10 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.tikiti.eventapp",
-      buildNumber: "2",
+      buildNumber: "3",
       infoPlist: {
         NSCameraUsageDescription: "Tikiti needs camera access to scan QR codes for event tickets and to upload event photos.",
         NSPhotoLibraryUsageDescription: "Tikiti needs photo library access to select and upload event images.",
-        NSUserTrackingUsageDescription: "This identifier will be used to deliver personalized ads to you."
       },
       config: {
         usesNonExemptEncryption: false
@@ -35,7 +34,7 @@ export default {
         backgroundColor: "#0EA5E9"
       },
       package: "com.tikiti.eventapp",
-      versionCode: 2,
+      versionCode: 3,
       permissions: [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -49,7 +48,8 @@ export default {
     },
     plugins: [
       "expo-camera",
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-font"
     ],
     scheme: "tikiti",
     intentFilters: [
