@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
+import { View, Text } from 'react-native';
 import { Colors, Typography, Spacing, Shadows } from '../styles/designSystem';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import notificationService from '../services/notificationService';
 
 // Fallback design tokens in case imports fail
 const defaultColors = {
@@ -59,12 +62,34 @@ const MyTicketsStack = () => (
 
 const UserTabNavigator = () => {
   const { colors, isDarkMode } = useTheme();
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
   
   // Safe access to design system values
   const safeColors = colors || defaultColors;
   const safeTypography = Typography || defaultTypography;
   const safeSpacing = Spacing || defaultSpacing;
   const safeShadows = Shadows || defaultShadows;
+
+  // Load unread count
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      if (user?.uid) {
+        try {
+          const count = await notificationService.getUnreadCount(user.uid);
+          setUnreadCount(count);
+        } catch (error) {
+          console.error('Error loading unread count:', error);
+        }
+      }
+    };
+
+    loadUnreadCount();
+    
+    // Refresh count every 30 seconds
+    const interval = setInterval(loadUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [user?.uid]);
 
   return (
     <Tab.Navigator
@@ -80,6 +105,8 @@ const UserTabNavigator = () => {
               iconName = 'calendar';
             } else if (routeName === 'My Tickets') {
               iconName = 'bookmark';
+            } else if (routeName === 'Notifications') {
+              iconName = 'bell';
             } else if (routeName === 'Profile') {
               iconName = 'user';
             }
@@ -129,6 +156,49 @@ const UserTabNavigator = () => {
           tabPress: (e) => {
             // Reset the stack to the root screen when tab is pressed
             navigation.navigate('My Tickets', { screen: 'MyTicketsList' });
+          },
+        })}
+      />
+      <Tab.Screen
+        name="Notifications"
+        component={NotificationCenterScreen}
+        options={{
+          tabBarLabel: 'Notifications',
+          tabBarIcon: ({ focused, color, size }) => (
+            <View style={{ position: 'relative' }}>
+              <Feather name="bell" size={size} color={color} />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -6,
+                  backgroundColor: safeColors.error?.[500] || '#FF3B30',
+                  borderRadius: 8,
+                  minWidth: 16,
+                  height: 16,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{
+                    color: 'white',
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                  }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ),
+        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            // Mark all notifications as read when viewing
+            if (user?.uid && unreadCount > 0) {
+              notificationService.markAllAsRead(user.uid).then(() => {
+                setUnreadCount(0);
+              });
+            }
           },
         })}
       />

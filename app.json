@@ -2,7 +2,7 @@
   "expo": {
     "name": "Tikiti",
     "slug": "tikiti-event-app",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tikiti.eventapp",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "NSCameraUsageDescription": "Tikiti needs camera access to scan QR codes for event tickets and to upload event photos.",
         "NSPhotoLibraryUsageDescription": "Tikiti needs photo library access to select and upload event images."
@@ -50,17 +50,13 @@
     },
     "plugins": [
       "expo-camera",
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-font"
     ],
     "extra": {
       "eas": {
         "projectId": "4a3d499a-fee7-465b-b0c6-3c9ba76073bc"
       }
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/favicon.png"
     }
   }
 }

@@ -293,7 +293,7 @@ const EventDetailScreen = ({ navigation, route }) => {
           console.warn('Failed to send RSVP confirmation notification:', error);
         });
         // Schedule event reminder notification (non-blocking)
-        notificationService.scheduleEventReminder(user.uid, event.name, event.id, event.date).catch(error => {
+        notificationService.scheduleEventReminder(user.uid, event.name, event.id, event.date, event.time).catch(error => {
           console.warn('Failed to schedule event reminder notification:', error);
         });
       }

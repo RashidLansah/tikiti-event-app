@@ -1,0 +1,37 @@
+[33mcommit 7b46b418834cfb6b32ab40dc921cb3d9bbb938d4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Rash <rash@tikiti.com>
+Date:   Thu Sep 4 14:42:47 2025 +0000
+
+    feat: Complete event management and UX improvements
+    
+    - Add event capacity management with FULL badges
+    - Implement duplicate email prevention for web RSVPs
+    - Set new events to active status by default
+    - Fix mobile RSVP success flow (non-blocking notifications)
+    - Add organizer phone number display and contact functionality
+    - Enhance error handling and user feedback
+    - Update image validation with proper size limits
+    - Fix Feather icon warnings (building -> briefcase)
+    - Improve event creation with better error messages
+    - Add contact buttons for calling/emailing organizers
+
+api/create-rsvp.js
+src/navigation/OrganiserTabNavigator.js
+src/screens/Auth/CreateAccountFlow.js
+src/screens/Auth/LoginScreen.js
+src/screens/Auth/OrganiserUpgradeFlow.js
+src/screens/Auth/RegisterScreen.js
+src/screens/Auth/SignInScreen.js
+src/screens/Auth/WelcomeScreen.js
+src/screens/Organiser/CreateEventFlow.js
+src/screens/Organiser/CreateEventScreen.js
+src/screens/Organiser/DashboardScreen.js
+src/screens/Organiser/EmptyOrganiserScreen.js
+src/screens/Organiser/EventAttendeesScreen.js
+src/screens/Organiser/EventDetailScreen.js
+src/screens/Organiser/OrganiserProfileScreen.js
+src/screens/User/EventDetailScreen.js
+src/screens/User/EventListScreen.js
+src/services/firestoreService.js
+src/utils/imageOptimization.js
+web/index.html

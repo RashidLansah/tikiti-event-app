@@ -137,14 +137,63 @@ class NotificationService {
       const notificationRef = doc(db, 'notifications', notificationId);
       await updateDoc(notificationRef, {
         read: true,
+        readAt: new Date(),
       });
+      console.log('✅ Notification marked as read:', notificationId);
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
   }
 
-  // Get unread count
+  // Mark all notifications as read for a user
+  async markAllAsRead(userId) {
+    try {
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(
+        notificationsRef,
+        where('userId', '==', userId),
+        where('read', '==', false)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      
+      querySnapshot.forEach((doc) => {
+        batch.update(doc.ref, {
+          read: true,
+          readAt: new Date(),
+        });
+      });
+      
+      await batch.commit();
+      console.log('✅ All notifications marked as read for user:', userId);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  }
+
+  // Get unread notification count
   async getUnreadCount(userId) {
+    try {
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(
+        notificationsRef,
+        where('userId', '==', userId),
+        where('read', '==', false)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const unreadCount = querySnapshot.size;
+      console.log('📊 Unread notification count:', unreadCount);
+      return unreadCount;
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      return 0;
+    }
+  }
+
+  // Get unread count (legacy method - keeping for compatibility)
+  async getUnreadCountLegacy(userId) {
     try {
       const q = query(
         collection(db, 'notifications'),
@@ -176,24 +225,55 @@ class NotificationService {
   }
 
   // Event Reminder Notification
-  async scheduleEventReminder(userId, eventName, eventId, eventDate) {
-    const reminderTime = new Date(eventDate);
-    reminderTime.setHours(reminderTime.getHours() - 1); // 1 hour before
-    
-    // Only schedule if reminder time is in the future
-    if (reminderTime > new Date()) {
-      const title = 'Event Reminder ⏰';
-      const body = `"${eventName}" starts in 1 hour. Don't forget to attend!`;
+  async scheduleEventReminder(userId, eventName, eventId, eventDate, eventTime) {
+    try {
+      // Parse the event date and time properly
+      let eventDateTime;
       
-      // Save to Firestore
-      await this.saveNotification(userId, 'event_reminder', title, body, {
-        eventId,
-        eventName,
-        scheduledFor: reminderTime,
-      });
+      if (typeof eventDate === 'string') {
+        // If eventDate is a string, combine it with eventTime
+        const dateStr = eventDate.includes('T') ? eventDate : `${eventDate}T${eventTime || '12:00'}`;
+        eventDateTime = new Date(dateStr);
+      } else {
+        // If eventDate is already a Date object
+        eventDateTime = new Date(eventDate);
+        if (eventTime) {
+          // Set the time if provided
+          const [hours, minutes] = eventTime.split(':');
+          eventDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        }
+      }
       
-      // Schedule local notification
-      await this.scheduleNotification(title, body, reminderTime, { eventId });
+      // Calculate reminder time (1 hour before event)
+      const reminderTime = new Date(eventDateTime);
+      reminderTime.setHours(reminderTime.getHours() - 1);
+      
+      console.log('📅 Event scheduled for:', eventDateTime.toISOString());
+      console.log('⏰ Reminder scheduled for:', reminderTime.toISOString());
+      console.log('🕐 Current time:', new Date().toISOString());
+      
+      // Only schedule if reminder time is in the future
+      if (reminderTime > new Date()) {
+        const title = 'Event Reminder ⏰';
+        const body = `"${eventName}" starts in 1 hour. Don't forget to attend!`;
+        
+        // Save to Firestore
+        await this.saveNotification(userId, 'event_reminder', title, body, {
+          eventId,
+          eventName,
+          scheduledFor: reminderTime,
+          eventDateTime: eventDateTime,
+        });
+        
+        // Schedule local notification
+        await this.scheduleNotification(title, body, reminderTime, { eventId });
+        
+        console.log('✅ Event reminder scheduled successfully');
+      } else {
+        console.log('⚠️ Event reminder time is in the past, skipping scheduling');
+      }
+    } catch (error) {
+      console.error('❌ Error scheduling event reminder:', error);
     }
   }
 
