@@ -2,12 +2,12 @@ import React from 'react';
 import { TouchableOpacity, Alert, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { generateEventLink } from '../utils/deepLinking';
+import { generateEventShareUrl } from '../utils/sharingUtils';
 
 const CopyLinkButton = ({ event, style, iconSize = 24, iconColor = '#6366F1' }) => {
   const handleCopyLink = async () => {
     try {
-      const eventUrl = generateEventLink(event.id);
+      const eventUrl = generateEventShareUrl(event.id, event.name);
       
       if (Platform.OS === 'web') {
         // Web platform - use clipboard API

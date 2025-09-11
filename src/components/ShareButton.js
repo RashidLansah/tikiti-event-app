@@ -1,13 +1,13 @@
 import React from 'react';
 import { TouchableOpacity, Alert, Platform, Share } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { generateEventLink } from '../utils/deepLinking';
+import { generateEventShareUrl } from '../utils/sharingUtils';
 
 const ShareButton = ({ event, style, iconSize = 24, iconColor = '#6366F1' }) => {
   const handleShare = async () => {
     try {
-      // Use the same simple URL generation as CopyLinkButton
-      const eventUrl = generateEventLink(event.id);
+      // Use the proper sharing utility for consistent URL generation
+      const eventUrl = generateEventShareUrl(event.id, event.name);
       
       // Create event description with details
       let locationText = 'Location TBA';

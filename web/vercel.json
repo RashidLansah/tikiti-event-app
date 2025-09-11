@@ -10,11 +10,19 @@
       "use": "@vercel/static"
     },
     {
+      "src": "event.html",
+      "use": "@vercel/static"
+    },
+    {
       "src": "assets/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/events/(.*)",
+      "dest": "/event.html"
+    },
     {
       "src": "/",
       "dest": "/index.html"

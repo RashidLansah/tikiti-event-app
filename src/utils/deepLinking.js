@@ -91,8 +91,10 @@ export const handleDeepLink = (url, navigation) => {
 
 // Generate shareable event link
 export const generateEventLink = (eventId, eventName = null) => {
-  // Use custom domain
-  const domain = 'https://gettikiti.com';
+  // Use environment-based domain for consistency
+  const domain = __DEV__ 
+    ? 'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app'
+    : 'https://gettikiti.com';
   
   if (eventName) {
     // Create SEO-friendly URL slug
