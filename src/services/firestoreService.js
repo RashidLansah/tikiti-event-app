@@ -555,7 +555,11 @@ export const bookingService = {
       }
       
       const bookingsRef = collection(db, COLLECTIONS.BOOKINGS);
-      const q = query(bookingsRef, where('eventId', '==', eventId));
+      const q = query(
+        bookingsRef, 
+        where('eventId', '==', eventId),
+        orderBy('createdAt', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       
       const attendees = [];

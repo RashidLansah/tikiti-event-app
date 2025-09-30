@@ -10,11 +10,14 @@ import {
   SafeAreaView,
   StatusBar,
   TextInput,
+  Alert,
+  Linking,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { bookingService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import pdfExportService from '../../services/pdfExportService';
 
 const EventAttendeesScreen = ({ navigation, route }) => {
   console.log('🚀 EventAttendeesScreen component mounting...');
@@ -48,6 +51,7 @@ const EventAttendeesScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,6 +93,55 @@ const EventAttendeesScreen = ({ navigation, route }) => {
     setRefreshing(true);
     await fetchAttendees();
     setRefreshing(false);
+  };
+
+  const handleExportAttendees = async () => {
+    if (!attendees || attendees.length === 0) {
+      Alert.alert('No Data', 'There are no attendees to export.');
+      return;
+    }
+
+    setExporting(true);
+    try {
+      console.log('📄 Starting PDF export...');
+      await pdfExportService.exportAndShareAttendees(attendees, event);
+      console.log('✅ PDF export completed successfully');
+    } catch (error) {
+      console.error('❌ PDF export failed:', error);
+      Alert.alert(
+        'Export Failed', 
+        `Failed to export attendees: ${error.message}`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleCallAttendee = (phoneNumber) => {
+    if (!phoneNumber) {
+      Alert.alert('No Phone Number', 'This attendee has not provided a phone number.');
+      return;
+    }
+
+    const phoneUrl = `tel:${phoneNumber}`;
+    Linking.openURL(phoneUrl).catch(err => {
+      console.error('Error opening phone app:', err);
+      Alert.alert('Error', 'Unable to open phone app. Please try calling manually.');
+    });
+  };
+
+  const handleMessageAttendee = (phoneNumber) => {
+    if (!phoneNumber) {
+      Alert.alert('No Phone Number', 'This attendee has not provided a phone number.');
+      return;
+    }
+
+    const messageUrl = `sms:${phoneNumber}`;
+    Linking.openURL(messageUrl).catch(err => {
+      console.error('Error opening message app:', err);
+      Alert.alert('Error', 'Unable to open message app. Please try messaging manually.');
+    });
   };
 
   useEffect(() => {
@@ -158,6 +211,20 @@ const EventAttendeesScreen = ({ navigation, route }) => {
                 <View style={styles.infoItem}>
                   <Feather name="phone" size={12} color={Colors.text.tertiary} />
                   <Text style={styles.infoText}>{item.phoneNumber}</Text>
+                  <View style={styles.contactButtons}>
+                    <TouchableOpacity 
+                      style={styles.contactButton}
+                      onPress={() => handleCallAttendee(item.phoneNumber)}
+                    >
+                      <Feather name="phone" size={14} color={Colors.primary[500]} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.contactButton}
+                      onPress={() => handleMessageAttendee(item.phoneNumber)}
+                    >
+                      <Feather name="message-circle" size={14} color={Colors.primary[500]} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
               {item?.gender && (
@@ -193,7 +260,8 @@ const EventAttendeesScreen = ({ navigation, route }) => {
             </Text>
             <Text style={styles.dateText}>
               {item?.createdAt?.toDate ? 
-                item.createdAt.toDate().toLocaleDateString() : 
+                item.createdAt.toDate().toLocaleDateString() + ' ' + 
+                item.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
                 'Recent'
               }
             </Text>
@@ -314,8 +382,16 @@ const EventAttendeesScreen = ({ navigation, route }) => {
             }
           </Text>
         </View>
-        <TouchableOpacity style={styles.exportButton}>
-          <Feather name="download" size={20} color={Colors.primary[500]} />
+        <TouchableOpacity 
+          style={[styles.exportButton, exporting && styles.exportButtonDisabled]}
+          onPress={handleExportAttendees}
+          disabled={exporting || attendees.length === 0}
+        >
+          {exporting ? (
+            <ActivityIndicator size="small" color={Colors.primary[500]} />
+          ) : (
+            <Feather name="file-text" size={20} color={Colors.primary[500]} />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -479,6 +555,9 @@ const styles = StyleSheet.create({
     padding: Spacing[2],
     borderRadius: BorderRadius.lg,
     backgroundColor: Colors.background.tertiary,
+  },
+  exportButtonDisabled: {
+    opacity: 0.5,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -666,6 +745,20 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     textAlign: 'center',
     padding: Spacing[4],
+  },
+  
+  // Contact button styles
+  contactButtons: {
+    flexDirection: 'row',
+    marginLeft: Spacing[2],
+    gap: Spacing[1],
+  },
+  contactButton: {
+    backgroundColor: Colors.primary[50],
+    padding: Spacing[1],
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary[200],
   },
   
   // Search and Filter styles
