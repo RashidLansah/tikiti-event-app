@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event - Tikiti</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+    <script>
+        // Ensure QRCode library is loaded
+        window.qrCodeLoaded = false;
+        
+        // Check if QRCode is available after page load
+        window.addEventListener('load', function() {
+            if (typeof QRCode !== 'undefined') {
+                window.qrCodeLoaded = true;
+                console.log('✅ QRCode library loaded successfully');
+            } else {
+                console.warn('⚠️ QRCode library not loaded, will try to load dynamically');
+            }
+        });
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            min-height: calc(100vh - 80px);
+        }
+        
+        .event-banner {
+            position: relative;
+            height: 250px;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        
+        .event-banner img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .status-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #10B981;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .event-content {
+            padding: 2rem;
+        }
+        
+        .event-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #1a1a1a;
+        }
+        
+        .event-category {
+            color: #667eea;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+        
+        .event-details {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .detail-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .detail-icon {
+            width: 20px;
+            height: 20px;
+            color: #667eea;
+        }
+        
+        .description {
+            margin: 2rem 0;
+            color: #555;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+        
+        .info-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        
+        .organizer-section {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+        
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+        
+        .bottom-action {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            padding: 1rem;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .action-content {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .share-button {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .share-button:hover {
+            background: #e9ecef;
+        }
+        
+        .rsvp-button, .download-button {
+            flex: 1;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 16px;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .rsvp-button:hover {
+            background: #5a67d8;
+        }
+        
+        .download-button {
+            background: #10B981;
+        }
+        
+        .download-button:hover {
+            background: #059669;
+        }
+        
+        .success-section {
+            text-align: center;
+            padding: 2rem;
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+        
+        .success-title {
+            color: #22543d;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .success-subtitle {
+            color: #2f855a;
+            margin-bottom: 2rem;
+        }
+
+        .status-message {
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+            color: #92400E;
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .status-message.full {
+            background: #FEE2E2;
+            border-color: #F87171;
+            color: #991B1B;
+        }
+        
+        .rsvp-section {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+            border: 1px solid #e9ecef;
+        }
+        
+
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .gender-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .gender-option {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .gender-option.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+
+        
+        .btn-primary {
+            flex: 1;
+            padding: 0.75rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        @media (max-width: 768px) {
+            .event-title {
+                font-size: 1.5rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .action-content {
+                padding: 0 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">Tikiti</div>
+        <div>Event Registration</div>
+    </div>
+    
+    <div class="container">
+        <div class="event-banner" id="eventBanner">
+            <div>Event Image</div>
+        </div>
+        
+        <div class="event-content">
+            <h1 class="event-title" id="eventTitle">Loading...</h1>
+            <div class="event-category" id="eventCategory">Event</div>
+            <div class="status-message hidden" id="eventStatusMessage"></div>
+
+            <div class="event-details">
+                <div class="detail-row">
+                    <svg class="detail-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span id="eventDate">Loading...</span>
+                </div>
+                
+                <div class="detail-row">
+                    <svg class="detail-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span id="eventTime">Loading...</span>
+                </div>
+                
+                <div class="detail-row">
+                    <svg class="detail-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span id="eventLocation">Loading...</span>
+                </div>
+                
+                <div class="detail-row">
+                    <svg class="detail-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                    <span id="eventPrice">Loading...</span>
+                </div>
+            </div>
+            
+            <div class="description">
+                <p id="eventDescription">Loading event description...</p>
+            </div>
+            
+
+            
+            <!-- Inline RSVP Form -->
+            <div class="rsvp-section" id="rsvpSection">
+                <h3 class="section-title">Register for this Event</h3>
+                <p style="color: #666; margin-bottom: 2rem;">Please provide your details to complete your registration</p>
+                
+                <form id="rsvpForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">First Name *</label>
+                            <input type="text" class="form-input" id="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Last Name *</label>
+                            <input type="text" class="form-input" id="lastName" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email Address *</label>
+                        <input type="email" class="form-input" id="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Phone Number *</label>
+                        <input type="tel" class="form-input" id="phoneNumber" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Gender *</label>
+                        <div class="gender-options">
+                            <div class="gender-option" onclick="selectGender('Male')">Male</div>
+                            <div class="gender-option" onclick="selectGender('Female')">Female</div>
+                            <div class="gender-option" onclick="selectGender('Other')">Other</div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary" id="submitButton" style="width: 100%; margin-top: 1rem;">Complete Registration</button>
+                </form>
+            </div>
+
+            <!-- Success Section (hidden by default) -->
+            <div class="success-section hidden" id="successSection">
+                <div class="success-title">Registration Confirmed!</div>
+                <div class="success-subtitle">You're all set for this event</div>
+            </div>
+            
+            <div style="height: 120px;"></div> <!-- Spacer for fixed bottom -->
+        </div>
+    </div>
+    
+    <!-- Bottom Action Bar -->
+    <div class="bottom-action">
+        <div class="action-content">
+            <button class="share-button" onclick="shareEvent()">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                </svg>
+            </button>
+            
+
+            
+            <button class="download-button hidden" id="downloadButton" onclick="downloadTicket()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Download Ticket
+            </button>
+        </div>
+    </div>
+    
+
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: 'AIzaSyBxY-IGHevGAi7tvOGZ9V4VwFhU28zCKQc',
+            authDomain: 'tikiti-45ac4.firebaseapp.com',
+            projectId: 'tikiti-45ac4',
+            storageBucket: 'tikiti-45ac4.firebasestorage.app',
+            messagingSenderId: '843705368074',
+            appId: '1:843705368074:ios:15f123d0e423a5a0b069f3'
+        };
+
+        // Global variables
+        let currentEvent = null;
+        let userBooking = null;
+        let selectedGender = '';
+
+        // Get event ID from URL
+        function getEventId() {
+            // First check for query parameter ?eventId=
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryEventId = urlParams.get('eventId');
+            if (queryEventId) {
+                console.log('✅ Event ID from query parameter:', queryEventId);
+                return queryEventId;
+            }
+
+            const path = window.location.pathname;
+            console.log('🔍 Current path:', path);
+
+            // Handle both formats: /events/event-name-abc123 and /events/abc123
+            const eventMatch = path.match(/^\/events\/(.+)$/);
+            if (eventMatch) {
+                const pathPart = eventMatch[1];
+                console.log('🔍 Path part:', pathPart);
+                console.log('🔍 Path part length:', pathPart.length);
+                
+                // Firestore document IDs are typically 20 characters, alphanumeric
+                // Strategy 1: Look for a 20-character alphanumeric string at the end (most reliable)
+                const firestoreIdPattern = /([a-zA-Z0-9]{20})$/;
+                const firestoreIdMatch = pathPart.match(firestoreIdPattern);
+                console.log('🔍 20-char pattern match result:', firestoreIdMatch);
+                if (firestoreIdMatch && firestoreIdMatch[1]) {
+                    const eventId = firestoreIdMatch[1];
+                    console.log('✅ Firestore ID pattern matched, Event ID:', eventId);
+                    console.log('✅ Event ID length:', eventId.length);
+                    return eventId;
+                }
+                
+                // Strategy 2: If path contains hyphens, extract ID after last hyphen
+                if (pathPart.includes('-')) {
+                    console.log('🔍 Path contains hyphens, trying hyphen-based extraction...');
+                    const parts = pathPart.split('-');
+                    console.log('🔍 Split parts:', parts);
+                    const lastPart = parts[parts.length - 1];
+                    console.log('🔍 Last part:', lastPart, 'Length:', lastPart.length);
+                    
+                    // If last part looks like a Firestore ID (alphanumeric, 15-25 chars)
+                    if (/^[a-zA-Z0-9]{15,25}$/.test(lastPart)) {
+                        console.log('✅ Extracted from last hyphen segment, Event ID:', lastPart);
+                        return lastPart;
+                    }
+                    
+                    // Fallback: try regex match for ID after last hyphen
+                    const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]{15,25})$/);
+                    console.log('🔍 Hyphen regex match result:', eventIdMatch);
+                    if (eventIdMatch && eventIdMatch[1]) {
+                        const eventId = eventIdMatch[1];
+                        console.log('✅ Regex match after last hyphen, Event ID:', eventId);
+                        return eventId;
+                    }
+                }
+                
+                // Strategy 3: If no hyphens or no match, check if entire path is a valid ID
+                if (/^[a-zA-Z0-9]{15,25}$/.test(pathPart)) {
+                    console.log('✅ Using entire path as Event ID (looks valid):', pathPart);
+                    return pathPart;
+                }
+                
+                // Strategy 4: Last resort - try to extract any alphanumeric sequence at the end
+                const anyIdMatch = pathPart.match(/([a-zA-Z0-9]{15,25})$/);
+                if (anyIdMatch && anyIdMatch[1]) {
+                    console.log('✅ Extracted ID from end (fallback):', anyIdMatch[1]);
+                    return anyIdMatch[1];
+                }
+                
+                // Last resort - return the path part anyway
+                console.log('⚠️ Could not extract clean ID, using path part:', pathPart);
+                return pathPart;
+            }
+            console.log('❌ No event match in path');
+            return null;
+        }
+
+        // Load Firebase
+        async function loadFirebase() {
+            console.log('🔧 Loading Firebase scripts...');
+            
+            if (!window.firebase) {
+                console.log('📦 Firebase not loaded, loading scripts...');
+                
+                // Load Firebase App
+                const appScript = document.createElement('script');
+                appScript.src = 'https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js';
+                document.head.appendChild(appScript);
+                
+                await new Promise((resolve, reject) => {
+                    appScript.onload = resolve;
+                    appScript.onerror = reject;
+                });
+                
+                // Load Firebase Firestore
+                const firestoreScript = document.createElement('script');
+                firestoreScript.src = 'https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js';
+                document.head.appendChild(firestoreScript);
+                
+                await new Promise((resolve, reject) => {
+                    firestoreScript.onload = resolve;
+                    firestoreScript.onerror = reject;
+                });
+                
+                console.log('✅ Firebase scripts loaded');
+            }
+            
+            if (!firebase.apps.length) {
+                console.log('🔧 Initializing Firebase app...');
+                firebase.initializeApp(firebaseConfig);
+                console.log('✅ Firebase app initialized');
+            }
+            
+            const db = firebase.firestore();
+            console.log('🗄️ Firestore instance created');
+            return db;
+        }
+
+        // Load event data with retry logic
+        async function loadEvent(retryCount = 0) {
+            const eventId = getEventId();
+            console.log('🔍 Loading event with ID:', eventId, 'Retry:', retryCount);
+            
+            if (!eventId) {
+                console.error('❌ No event ID found in URL');
+                document.getElementById('eventTitle').textContent = 'Event not found';
+                document.getElementById('eventDescription').textContent = 'Invalid event URL. Please check the link and try again.';
+                return;
+            }
+
+            try {
+                console.log('🔄 Initializing Firebase...');
+                const db = await loadFirebase();
+                console.log('✅ Firebase initialized, fetching event...');
+                console.log('🔍 Looking for event with ID:', eventId);
+                console.log('🔍 Event ID length:', eventId.length);
+                console.log('🔍 Event ID type:', typeof eventId);
+                
+                // Try direct document fetch first
+                const eventDoc = await db.collection('events').doc(eventId).get();
+                console.log('📄 Event document fetched:', eventDoc.exists);
+                console.log('📄 Event document ID returned:', eventDoc.id);
+                
+                if (!eventDoc.exists) {
+                    console.error('❌ Event document does not exist for ID:', eventId);
+                    console.error('❌ Attempted to fetch from collection: events');
+                    console.error('❌ Document path: events/' + eventId);
+                    
+                    // Log the exact ID being searched for debugging
+                    console.log('🔍 Please verify in Firebase Console:');
+                    console.log('   1. Go to Firestore Database → events collection');
+                    console.log('   2. Find the event document');
+                    console.log('   3. Check if the Document ID matches:', eventId);
+                    console.log('   4. If they don\'t match, the URL extraction is wrong');
+                    
+                    // Retry once after a short delay in case of propagation delay
+                    if (retryCount === 0) {
+                        console.log('🔄 Retrying after 1 second...');
+                        setTimeout(() => loadEvent(1), 1000);
+                        return;
+                    }
+                    
+                    // Show helpful error message
+                    document.getElementById('eventTitle').textContent = 'Event not found';
+                    document.getElementById('eventDescription').innerHTML = `
+                        <p>The event you are looking for does not exist or has been removed.</p>
+                        <p><strong>Event ID being searched:</strong> ${eventId}</p>
+                        <p><strong>Event ID length:</strong> ${eventId.length} characters</p>
+                        <p>If you just reactivated this event, please:</p>
+                        <ol>
+                            <li>Wait 2-3 seconds for the update to propagate</li>
+                            <li>Refresh this page</li>
+                            <li>Check the browser console (F12) for more details</li>
+                            <li>Verify the event ID in Firebase Console matches: <code>${eventId}</code></li>
+                        </ol>
+                        <p>If the problem persists, the event may have been permanently deleted or the link may be incorrect.</p>
+                    `;
+                    return;
+                }
+
+                const eventData = eventDoc.data();
+                console.log('📋 Event data:', eventData);
+                console.log('📋 Event status:', eventData.status, 'isActive:', eventData.isActive);
+                console.log('📋 Event name:', eventData.name);
+                
+                // Verify we have essential event data
+                if (!eventData) {
+                    console.error('❌ Event data is empty');
+                    document.getElementById('eventTitle').textContent = 'Event data error';
+                    document.getElementById('eventDescription').textContent = 'The event exists but has no data. Please contact the organizer.';
+                    return;
+                }
+                
+                currentEvent = { id: eventDoc.id, ...eventData };
+                displayEvent(currentEvent);
+                console.log('✅ Event displayed successfully');
+            } catch (error) {
+                console.error('❌ Error loading event:', error);
+                console.error('❌ Error details:', error.message, error.code);
+                
+                // Retry once on network errors
+                if (retryCount === 0 && (error.code === 'unavailable' || error.code === 'deadline-exceeded')) {
+                    console.log('🔄 Retrying after network error...');
+                    setTimeout(() => loadEvent(1), 2000);
+                    return;
+                }
+                
+                document.getElementById('eventTitle').textContent = `Error: ${error.message || 'Failed to load event'}`;
+                document.getElementById('eventDescription').textContent = 'Please check your internet connection and try again. If the problem persists, the event may have been removed.';
+            }
+        }
+
+        // Display event data
+        function displayEvent(event) {
+            document.getElementById('eventTitle').textContent = event.name || 'Untitled Event';
+            document.getElementById('eventCategory').textContent = event.category || 'Event';
+            document.getElementById('eventDate').textContent = event.date || 'Date TBA';
+            document.getElementById('eventTime').textContent = event.time || event.startTime || 'Time TBA';
+            
+            // Handle location object properly
+            let locationText = 'Location TBA';
+            if (event.location) {
+                if (typeof event.location === 'object') {
+                    locationText = event.location.name || event.location.address || 'Location TBA';
+                } else {
+                    locationText = event.location;
+                }
+            } else if (event.address) {
+                locationText = event.address;
+            }
+            document.getElementById('eventLocation').textContent = locationText;
+            
+            document.getElementById('eventPrice').textContent = event.type === 'free' ? 'Free Event' : (event.price || 'Price TBA');
+            document.getElementById('eventDescription').textContent = event.description || 'No description available.';
+            
+            // These elements were removed, so we don't need to update them
+            
+            const statusMessageEl = document.getElementById('eventStatusMessage');
+            statusMessageEl.classList.add('hidden');
+            statusMessageEl.classList.remove('full');
+
+            // Event is active if status is 'published' or 'active' and isActive flag is true
+            const eventStatus = event.status || 'active';
+            const isActive = (eventStatus === 'published' || eventStatus === 'active') && event.isActive !== false;
+            const isFull = typeof event.availableTickets === 'number' ? event.availableTickets <= 0 : false;
+
+            if (!isActive || isFull) {
+                const message = !isActive
+                    ? 'This event is no longer accepting registrations.'
+                    : 'This event is fully booked.';
+                statusMessageEl.textContent = message;
+                if (!isActive) {
+                    statusMessageEl.classList.remove('full');
+                } else {
+                    statusMessageEl.classList.add('full');
+                }
+                statusMessageEl.classList.remove('hidden');
+                document.getElementById('rsvpSection').classList.add('hidden');
+            } else {
+                document.getElementById('rsvpSection').classList.remove('hidden');
+            }
+
+            // Update page title
+            document.title = `${event.name || 'Event'} - Tikiti`;
+            
+            // Show event image if available
+            if (event.imageBase64) {
+                const banner = document.getElementById('eventBanner');
+                const img = document.createElement('img');
+                img.src = event.imageBase64.startsWith('data:') ? event.imageBase64 : `data:image/jpeg;base64,${event.imageBase64}`;
+                banner.innerHTML = '';
+                banner.appendChild(img);
+            }
+        }
+
+        // Share event
+        function shareEvent() {
+            const url = window.location.href;
+            
+            // Handle location object properly for sharing
+            let locationText = 'Location TBA';
+            if (currentEvent?.location) {
+                if (typeof currentEvent.location === 'object') {
+                    locationText = currentEvent.location.name || currentEvent.location.address || 'Location TBA';
+                } else {
+                    locationText = currentEvent.location;
+                }
+            } else if (currentEvent?.address) {
+                locationText = currentEvent.address;
+            }
+            
+            const text = `🎉 ${currentEvent?.name || 'Event'}\n\n📅 ${currentEvent?.date || 'Date TBA'}\n📍 ${locationText}\n${currentEvent?.type === 'free' ? '🎟️ Free Event' : '💰 ' + (currentEvent?.price || 'Paid Event')}\n\n${currentEvent?.description || 'Join us for this amazing event!'}\n\n🔗 Register here:`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: currentEvent?.name || 'Event',
+                    text: `${text} ${url}`
+                });
+            } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(`${text} ${url}`);
+                alert('Event details copied to clipboard!');
+            } else {
+                alert(`Share this link: ${url}`);
+            }
+        }
+
+        // These functions are no longer needed with inline form
+        function openRSVPForm() {
+            // Form is already visible inline
+        }
+
+        function closeRSVPForm() {
+            // Not needed for inline form
+        }
+
+        // Select gender
+        function selectGender(gender) {
+            selectedGender = gender;
+            document.querySelectorAll('.gender-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('rsvpForm').reset();
+            selectedGender = '';
+            document.querySelectorAll('.gender-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+        }
+
+        // Submit RSVP
+        async function submitRSVP(event) {
+            event.preventDefault();
+
+            // Event is active if status is 'published' or 'active' and isActive flag is true
+            const eventStatus = currentEvent?.status || 'active';
+            const isActive = (eventStatus === 'published' || eventStatus === 'active') && currentEvent?.isActive !== false;
+            const isFull = typeof currentEvent?.availableTickets === 'number' ? currentEvent.availableTickets <= 0 : false;
+
+            if (!isActive) {
+                alert('This event is no longer accepting registrations.');
+                return;
+            }
+
+            if (isFull) {
+                alert('This event is fully booked and cannot accept new registrations.');
+                return;
+            }
+            
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            let phoneNumber = document.getElementById('phoneNumber').value.trim();
+            
+            if (!firstName || !lastName || !email || !phoneNumber || !selectedGender) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            // Normalize phone number format for storage
+            // Remove spaces, dashes, and plus signs
+            phoneNumber = phoneNumber.replace(/[\s\-+]/g, '');
+            
+            // If starts with 0, convert to Ghana format (233...)
+            if (phoneNumber.startsWith('0')) {
+                phoneNumber = '233' + phoneNumber.substring(1);
+            } else if (!phoneNumber.startsWith('233')) {
+                // If no country code, assume Ghana and add 233
+                phoneNumber = '233' + phoneNumber;
+            }
+            
+            // Validate phone number length (should be 12 digits: 233 + 9 digits)
+            if (phoneNumber.length < 12 || phoneNumber.length > 15) {
+                alert('Please enter a valid phone number (e.g., 0244123456 or +233244123456)');
+                return;
+            }
+
+            const submitButton = document.getElementById('submitButton');
+            submitButton.textContent = 'Submitting...';
+            submitButton.disabled = true;
+
+            try {
+                const db = await loadFirebase();
+                const bookingReference = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+                
+                const bookingData = {
+                    eventId: currentEvent.id,
+                    userId: `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    quantity: 1,
+                    totalPrice: 0,
+                    status: 'confirmed',
+                    createdAt: new Date(),
+                    userEmail: email,
+                    userName: `${firstName} ${lastName}`,
+                    registrationType: 'rsvp',
+                    bookingReference: bookingReference,
+                    firstName: firstName,
+                    lastName: lastName,
+                    phoneNumber: phoneNumber,
+                    gender: selectedGender,
+                    source: 'web',
+                    eventName: currentEvent.name,
+                    eventDate: currentEvent.date,
+                    eventTime: currentEvent.startTime || currentEvent.time,
+                    eventLocation: currentEvent.location || currentEvent.address
+                };
+
+                const bookingResult = await db.collection('bookings').add(bookingData);
+                
+                // Store the actual Firestore document ID for QR code compatibility
+                const firestoreDocId = bookingResult.id;
+                
+                userBooking = {
+                    ...bookingData,
+                    id: firestoreDocId, // Store the actual Firestore document ID
+                    bookingReference: bookingReference
+                };
+                
+                console.log('✅ RSVP successful, updating UI...');
+                
+                // Send confirmation email via serverless function
+                try {
+                    const emailResponse = await fetch('/api/send-email', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            userEmail: email,
+                            userName: `${firstName} ${lastName}`,
+                            eventName: currentEvent.name,
+                            eventDate: currentEvent.date,
+                            eventTime: currentEvent.startTime || currentEvent.time,
+                            eventLocation: currentEvent.location || currentEvent.address,
+                            quantity: 1,
+                            bookingReference: bookingReference,
+                            bookingId: firestoreDocId,
+                            eventId: currentEvent.id,
+                            userId: userBooking.userId
+                        })
+                    });
+
+                    const emailResult = await emailResponse.json();
+                    if (emailResult.success) {
+                        console.log('✅ Confirmation email sent successfully');
+                    } else {
+                        console.error('❌ Failed to send email:', emailResult.error);
+                    }
+                } catch (emailError) {
+                    console.error('❌ Email error:', emailError);
+                }
+                
+                // Show success state
+                document.getElementById('rsvpSection').classList.add('hidden');
+                document.getElementById('successSection').classList.remove('hidden');
+                document.getElementById('downloadButton').classList.remove('hidden');
+
+                if (typeof currentEvent.availableTickets === 'number') {
+                    currentEvent.availableTickets = Math.max(currentEvent.availableTickets - 1, 0);
+                    if (currentEvent.availableTickets === 0) {
+                        const statusMessageEl = document.getElementById('eventStatusMessage');
+                        statusMessageEl.textContent = 'This event is fully booked.';
+                        statusMessageEl.classList.add('full');
+                        statusMessageEl.classList.remove('hidden');
+                    }
+                }
+                
+                console.log('🎉 UI updated, showing success message');
+                alert(`Thank you ${firstName}! You have successfully registered for ${currentEvent.name}. A confirmation email has been sent to ${email}. You can also download your ticket below.`);
+                
+            } catch (error) {
+                console.error('Error submitting RSVP:', error);
+                alert('There was an error processing your RSVP. Please try again.');
+            } finally {
+                submitButton.textContent = 'Complete RSVP';
+                submitButton.disabled = false;
+            }
+        }
+
+        // Download ticket
+        async function downloadTicket() {
+            console.log('🎫 Starting ticket download...');
+            
+            if (!userBooking) {
+                console.error('❌ No user booking found');
+                alert('No booking information found. Please complete your RSVP first.');
+                return;
+            }
+            
+            console.log('📋 User booking:', userBooking);
+            console.log('🎪 Current event:', currentEvent);
+
+            try {
+                console.log('🔧 Generating ticket data...');
+                const qrData = JSON.stringify({
+                    bookingId: userBooking.bookingReference,
+                    bookingReference: userBooking.bookingReference,
+                    purchaseId: userBooking.id, // Use actual Firestore document ID for app compatibility
+                    eventId: currentEvent.id,
+                    eventName: currentEvent.name,
+                    attendeeName: userBooking.userName,
+                    attendeeEmail: userBooking.userEmail,
+                    eventDate: currentEvent.date,
+                    eventTime: currentEvent.time,
+                    eventLocation: currentEvent.location,
+                    ticketType: 'RSVP',
+                    status: 'confirmed'
+                });
+                
+                console.log('📱 Ticket data:', qrData);
+                
+                // Try to generate QR code, fallback to QR API if libraries fail
+                let qrCodeDataURL = '';
+                
+                try {
+                    // First try external QR API and convert to base64 for offline viewing
+                    console.log('🌐 Generating QR code via API...');
+                    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
+                    
+                    // Fetch the QR code image and convert to base64
+                    const response = await fetch(qrApiUrl);
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const reader = new FileReader();
+                        
+                        qrCodeDataURL = await new Promise((resolve, reject) => {
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(blob);
+                        });
+                        
+                        console.log('✅ QR code generated and converted to base64 for offline viewing');
+                    } else {
+                        throw new Error('QR API not accessible');
+                    }
+                } catch (apiError) {
+                    console.warn('⚠️ QR API failed, trying local library...', apiError.message);
+                    
+                    // Fallback to local QRCode library if available
+                    if (typeof QRCode !== 'undefined') {
+                        try {
+                            qrCodeDataURL = await QRCode.toDataURL(qrData, {
+                                width: 200,
+                                margin: 2,
+                                color: { dark: '#000000', light: '#FFFFFF' }
+                            });
+                            console.log('✅ QR code generated via local library');
+                        } catch (libError) {
+                            console.warn('⚠️ Local QR library failed:', libError.message);
+                        }
+                    }
+                    
+                    // If both fail, create ticket without QR code
+                    if (!qrCodeDataURL) {
+                        console.warn('⚠️ QR code generation failed, creating ticket without QR code');
+                        qrCodeDataURL = 'data:image/svg+xml;base64,' + btoa(`
+                            <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="200" height="200" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+                                <text x="100" y="90" text-anchor="middle" font-family="Arial" font-size="14" fill="#666">QR Code</text>
+                                <text x="100" y="110" text-anchor="middle" font-family="Arial" font-size="14" fill="#666">Unavailable</text>
+                                <text x="100" y="140" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">Use booking reference</text>
+                                <text x="100" y="155" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">for entry verification</text>
+                            </svg>
+                        `);
+                    }
+                }
+
+                const ticketHTML = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Event Ticket - ${currentEvent.name}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+                            .ticket { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+                            .ticket-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+                            .ticket-title { font-size: 28px; font-weight: bold; margin: 0 0 10px 0; }
+                            .ticket-body { padding: 30px; }
+                            .info-row { display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px 0; border-bottom: 1px solid #eee; }
+                            .qr-section { text-align: center; background: #f9f9f9; padding: 30px; margin: 20px 0; border-radius: 8px; }
+                            .booking-ref { font-family: monospace; font-size: 18px; font-weight: bold; color: #667eea; margin: 15px 0; }
+                            .instructions { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0; }
+                            .footer { text-align: center; color: #666; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+                            @media print { body { background: white; } .ticket { box-shadow: none; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="ticket">
+                            <div class="ticket-header">
+                                <div class="ticket-title">${currentEvent.name}</div>
+                                <div>Event Ticket</div>
+                            </div>
+                            <div class="ticket-body">
+                                <div class="info-row"><span><strong>Attendee:</strong></span><span>${userBooking.userName}</span></div>
+                                <div class="info-row"><span><strong>Email:</strong></span><span>${userBooking.userEmail}</span></div>
+                                <div class="info-row"><span><strong>Date:</strong></span><span>${currentEvent.date}</span></div>
+                                <div class="info-row"><span><strong>Time:</strong></span><span>${currentEvent.time}</span></div>
+                                <div class="info-row"><span><strong>Location:</strong></span><span>${currentEvent.location}</span></div>
+                                <div class="info-row"><span><strong>Type:</strong></span><span>FREE RSVP</span></div>
+                                
+                                <div class="qr-section">
+                                    <h3>Entry QR Code</h3>
+                                    <img src="${qrCodeDataURL}" alt="QR Code" />
+                                    <div class="booking-ref">Booking: ${userBooking.bookingReference}</div>
+                                    <p>Present this QR code at the event entrance</p>
+                                </div>
+                                
+                                <div class="instructions">
+                                    <h4>Important Instructions:</h4>
+                                    <ul>
+                                        <li>Please arrive 15 minutes before the event starts</li>
+                                        <li>Present this ticket (digital or printed) at the entrance</li>
+                                        <li>Keep your booking reference safe: <strong>${userBooking.bookingReference}</strong></li>
+                                        <li>Contact the organizer if you have any questions</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="footer">
+                                    <p>Generated on ${new Date().toLocaleString()}</p>
+                                    <p>Powered by Tikiti</p>
+                                </div>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                `;
+
+                console.log('💾 Creating downloadable ticket file...');
+                const blob = new Blob([ticketHTML], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Tikiti-Ticket-${userBooking.bookingReference}.html`;
+                document.body.appendChild(link);
+                
+                console.log('🔽 Triggering download...');
+                link.click();
+                
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                console.log('✅ Ticket download completed');
+                
+                // Show success message after a brief delay to ensure download started
+                setTimeout(() => {
+                    alert('Your ticket has been downloaded successfully. You can open it in any browser or print it for the event.');
+                }, 500);
+
+            } catch (error) {
+                console.error('Error generating ticket:', error);
+                alert('There was an error generating your ticket. Please try again.');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('rsvpForm').addEventListener('submit', submitRSVP);
+
+        // Debug function to test event ID extraction
+        window.testEventId = function(testUrl) {
+            const testPath = testUrl || window.location.pathname;
+            console.log('🧪 Testing event ID extraction for:', testPath);
+            const testId = getEventId();
+            console.log('🧪 Extracted ID:', testId);
+            return testId;
+        };
+
+        // Load event when page loads
+        window.addEventListener('load', loadEvent);
+    </script>
+</body>
+</html>

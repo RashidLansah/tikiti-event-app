@@ -1,0 +1,142 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { eventService, Event } from '@/lib/services/eventService';
+import { ProgramBuilder } from '@/components/program/ProgramBuilder';
+import { Program } from '@/types/program';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+
+export default function EventProgramPage() {
+  const params = useParams();
+  const router = useRouter();
+  const { toast, toasts } = useToast();
+  const { user, currentOrganization } = useAuth();
+  const eventId = params.id as string;
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadEvent();
+  }, [eventId]);
+
+  const loadEvent = async () => {
+    setLoading(true);
+    try {
+      const eventData = await eventService.getById(eventId);
+      setEvent(eventData);
+    } catch (error) {
+      console.error('Error loading event:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load event',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProgram = async (program: Program) => {
+    if (!event) return;
+
+    try {
+      await eventService.update(eventId, {
+        program: program,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Program saved successfully',
+      });
+
+      // Go back to event detail page
+      setTimeout(() => {
+        router.push(`/dashboard/events/${eventId}`);
+      }, 1000);
+    } catch (error: any) {
+      console.error('Error saving program:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save program',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-lg font-semibold">Event not found</p>
+          <Link href="/dashboard/events">
+            <Button variant="outline" className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Events
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Link href={`/dashboard/events/${eventId}`}>
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold">Event Program</h1>
+          <p className="text-gray-600 mt-1">{event.name}</p>
+        </div>
+      </div>
+
+      <ProgramBuilder
+        initialProgram={event.program}
+        eventId={eventId}
+        eventName={event.name}
+        eventDate={event.date}
+        organizationId={currentOrganization?.id}
+        organizationName={currentOrganization?.name}
+        userId={user?.uid}
+        onSave={handleSaveProgram}
+        onCancel={() => router.push(`/dashboard/events/${eventId}`)}
+      />
+
+      {/* Toast Notifications */}
+      <div className="fixed bottom-4 right-4 z-50 space-y-2">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`p-4 rounded-lg shadow-lg max-w-sm ${
+              t.variant === 'destructive'
+                ? 'bg-red-50 text-red-900 border border-red-200'
+                : 'bg-green-50 text-green-900 border border-green-200'
+            }`}
+          >
+            {t.title && <p className="font-semibold">{t.title}</p>}
+            {t.description && <p className="text-sm">{t.description}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

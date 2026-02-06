@@ -79,7 +79,21 @@ const DarkColors = {
     800: '#FEE2E2',
     900: '#FEF2F2',
   },
-  
+
+  // Info Blue (optimized for dark backgrounds)
+  info: {
+    50: '#1E3A8A',
+    100: '#1E40AF',
+    200: '#1D4ED8',
+    300: '#2563EB',
+    400: '#3B82F6',
+    500: '#60A5FA',
+    600: '#93C5FD',
+    700: '#BFDBFE',
+    800: '#DBEAFE',
+    900: '#EFF6FF',
+  },
+
   // Rich Dark Grays (like reference image)
   gray: {
     50: '#0A0A0A',   // Almost black

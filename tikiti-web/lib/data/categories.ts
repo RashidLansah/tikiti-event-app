@@ -1,0 +1,18 @@
+export const eventCategories = [
+  { id: 'music', name: 'Music & Entertainment', icon: 'music' },
+  { id: 'technology', name: 'Technology & Innovation', icon: 'smartphone' },
+  { id: 'business', name: 'Business & Professional', icon: 'briefcase' },
+  { id: 'education', name: 'Education & Training', icon: 'book' },
+  { id: 'sports', name: 'Sports & Fitness', icon: 'activity' },
+  { id: 'arts', name: 'Arts & Culture', icon: 'palette' },
+  { id: 'food', name: 'Food & Drink', icon: 'coffee' },
+  { id: 'health', name: 'Health & Wellness', icon: 'heart' },
+  { id: 'community', name: 'Community & Social', icon: 'users' },
+  { id: 'fashion', name: 'Fashion & Beauty', icon: 'scissors' },
+  { id: 'travel', name: 'Travel & Adventure', icon: 'map-pin' },
+  { id: 'charity', name: 'Charity & Fundraising', icon: 'gift' },
+  { id: 'conference', name: 'Conference & Seminar', icon: 'mic' },
+  { id: 'workshop', name: 'Workshop & Training', icon: 'tool' },
+  { id: 'exhibition', name: 'Exhibition & Trade Show', icon: 'image' },
+  { id: 'other', name: 'Other', icon: 'more-horizontal' },
+];
