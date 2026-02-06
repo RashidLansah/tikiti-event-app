@@ -25,6 +25,7 @@ const COLLECTIONS = {
 export interface Attendee {
   id: string;
   odh?: string;
+  userId?: string;
   userName?: string;
   userEmail: string;
   firstName?: string;

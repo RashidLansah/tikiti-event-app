@@ -112,7 +112,7 @@ export default function CreateEventPage() {
     totalTickets: 100,
     status: 'draft',
     isActive: true,
-    imageBase64: null,
+    imageBase64: undefined,
   });
 
   // Auto-focus input on step change

@@ -28,7 +28,7 @@ export interface ProgramSession {
   type: 'session' | 'break' | 'keynote' | 'workshop' | 'networking' | 'panel';
 }
 
-export { SpeakerRole };
+export type { SpeakerRole };
 
 export interface Program {
   sessions: ProgramSession[];

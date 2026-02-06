@@ -156,9 +156,9 @@ export function ReportExporter({
       }
     });
 
-    if (currentSection) {
-      currentSection.content = currentContent.join('\n').trim();
-      parsedSections.push(currentSection);
+    if (currentSection !== null) {
+      (currentSection as ReportSection).content = currentContent.join('\n').trim();
+      parsedSections.push(currentSection as ReportSection);
     }
 
     return parsedSections.length > 0 ? parsedSections : [{

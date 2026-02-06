@@ -420,11 +420,11 @@ export default function SettingsPage() {
                     onChange={(e) => setOrgData({
                       ...orgData,
                       settings: {
-                        ...orgData.settings,
                         branding: {
                           ...orgData.settings?.branding,
                           primaryColor: e.target.value
-                        }
+                        },
+                        notifications: orgData.settings?.notifications ?? { emailNotifications: true, pushNotifications: true, smsNotifications: false }
                       }
                     })}
                     className="w-12 h-12 rounded-[12px] border-black/10 p-1"
@@ -436,11 +436,11 @@ export default function SettingsPage() {
                     onChange={(e) => setOrgData({
                       ...orgData,
                       settings: {
-                        ...orgData.settings,
                         branding: {
                           ...orgData.settings?.branding,
                           primaryColor: e.target.value
-                        }
+                        },
+                        notifications: orgData.settings?.notifications ?? { emailNotifications: true, pushNotifications: true, smsNotifications: false }
                       }
                     })}
                     placeholder="#333333"
@@ -460,11 +460,11 @@ export default function SettingsPage() {
                     onChange={(e) => setOrgData({
                       ...orgData,
                       settings: {
-                        ...orgData.settings,
                         branding: {
                           ...orgData.settings?.branding,
                           secondaryColor: e.target.value
-                        }
+                        },
+                        notifications: orgData.settings?.notifications ?? { emailNotifications: true, pushNotifications: true, smsNotifications: false }
                       }
                     })}
                     className="w-12 h-12 rounded-[12px] border-black/10 p-1"
@@ -476,11 +476,11 @@ export default function SettingsPage() {
                     onChange={(e) => setOrgData({
                       ...orgData,
                       settings: {
-                        ...orgData.settings,
                         branding: {
                           ...orgData.settings?.branding,
                           secondaryColor: e.target.value
-                        }
+                        },
+                        notifications: orgData.settings?.notifications ?? { emailNotifications: true, pushNotifications: true, smsNotifications: false }
                       }
                     })}
                     placeholder="#f0f0f0"
@@ -530,10 +530,11 @@ export default function SettingsPage() {
                   onChange={(e) => setOrgData({
                     ...orgData,
                     settings: {
-                      ...orgData.settings,
+                      branding: orgData.settings?.branding ?? { logo: null, primaryColor: null, secondaryColor: null },
                       notifications: {
-                        ...orgData.settings?.notifications,
-                        emailNotifications: e.target.checked
+                        emailNotifications: e.target.checked,
+                        pushNotifications: orgData.settings?.notifications?.pushNotifications ?? true,
+                        smsNotifications: orgData.settings?.notifications?.smsNotifications ?? false
                       }
                     }
                   })}
@@ -556,10 +557,11 @@ export default function SettingsPage() {
                   onChange={(e) => setOrgData({
                     ...orgData,
                     settings: {
-                      ...orgData.settings,
+                      branding: orgData.settings?.branding ?? { logo: null, primaryColor: null, secondaryColor: null },
                       notifications: {
-                        ...orgData.settings?.notifications,
-                        pushNotifications: e.target.checked
+                        emailNotifications: orgData.settings?.notifications?.emailNotifications ?? true,
+                        pushNotifications: e.target.checked,
+                        smsNotifications: orgData.settings?.notifications?.smsNotifications ?? false
                       }
                     }
                   })}
@@ -582,9 +584,10 @@ export default function SettingsPage() {
                   onChange={(e) => setOrgData({
                     ...orgData,
                     settings: {
-                      ...orgData.settings,
+                      branding: orgData.settings?.branding ?? { logo: null, primaryColor: null, secondaryColor: null },
                       notifications: {
-                        ...orgData.settings?.notifications,
+                        emailNotifications: orgData.settings?.notifications?.emailNotifications ?? true,
+                        pushNotifications: orgData.settings?.notifications?.pushNotifications ?? true,
                         smsNotifications: e.target.checked
                       }
                     }

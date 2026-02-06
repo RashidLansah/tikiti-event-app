@@ -9,7 +9,7 @@ import { speakerService } from '@/lib/services/speakerService';
 import { speakerInvitationService } from '@/lib/services/speakerInvitationService';
 import { Speaker } from '@/types/speaker';
 import { SpeakerInvitation } from '@/types/speakerInvitation';
-import { Event } from '@/types/event';
+import { Event } from '@/lib/services/eventService';
 import SpeakerInviteModal from '@/components/speakers/SpeakerInviteModal';
 import SpeakerEditModal from '@/components/speakers/SpeakerEditModal';
 import SpeakerCard from '@/components/speakers/SpeakerCard';
@@ -308,14 +308,14 @@ export default function EventSpeakersPage() {
       </div>
 
       {/* Invite Modal */}
-      {showInviteModal && event && currentOrganization && (
+      {showInviteModal && event && currentOrganization?.id && (
         <SpeakerInviteModal
           eventId={eventId}
           eventName={event.name}
           organizationId={currentOrganization.id}
           organizationName={currentOrganization.name}
           inviterName={user?.displayName || user?.email || 'Event Organizer'}
-          inviterId={user?.uid || ''}
+          inviterId={user?.uid ?? ''}
           onClose={() => setShowInviteModal(false)}
           onInviteSent={handleInviteSent}
         />

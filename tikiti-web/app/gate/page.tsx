@@ -71,9 +71,9 @@ export default function GateStaffPortal() {
     setLoadingEvents(true);
     try {
       const orgEvents = await eventService.getByOrganization(currentOrganization.id);
-      // Filter to only show active/published events
+      // Filter to only show published events
       const activeEvents = orgEvents.filter(
-        (e) => e.status === 'published' || e.status === 'active'
+        (e) => e.status === 'published'
       );
       setEvents(activeEvents);
 
@@ -432,12 +432,8 @@ export default function GateStaffPortal() {
                   >
                     <p className="font-semibold text-white">{event.name}</p>
                     <p className="text-xs text-white/60">
-                      {event.dateTime
-                        ? new Date(
-                            event.dateTime.seconds
-                              ? event.dateTime.seconds * 1000
-                              : event.dateTime
-                          ).toLocaleDateString()
+                      {event.date
+                        ? new Date(event.date).toLocaleDateString()
                         : 'Date TBD'}
                     </p>
                   </button>

@@ -78,7 +78,7 @@ export const speakerInvitationService = {
 
       const docRef = await addDoc(collection(db, COLLECTION), invitationData);
 
-      return { id: docRef.id, ...invitationData };
+      return { id: docRef.id, ...invitationData } as SpeakerInvitation;
     } catch (error) {
       console.error('Error creating speaker invitation:', error);
       throw error;

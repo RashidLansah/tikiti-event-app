@@ -363,9 +363,9 @@ export const eventService = {
       await updateDoc(eventRef, cleanUpdates);
 
       // Detect status changes and create announcements
-      if (updates.status && updates.status !== currentEvent.status) {
+      if (currentEvent && updates.status && updates.status !== currentEvent.status) {
         const eventName = updates.name || currentEvent.name;
-        
+
         // Handle cancellation
         if (updates.status === 'cancelled') {
           await eventUpdateService.createCancellationUpdate(
@@ -374,7 +374,7 @@ export const eventService = {
             (updates as any).cancellationReason,
             (updates as any).updatedBy
           );
-          
+
           // Trigger notification sending (non-blocking)
           fetch('/api/notify-event-change', {
             method: 'POST',
@@ -387,35 +387,10 @@ export const eventService = {
             }),
           }).catch(err => console.error('Error sending notifications:', err));
         }
-        
-        // Handle postponement (status is 'postponed')
-        if (updates.status === 'postponed') {
-          const newDate = updates.date || currentEvent.date;
-          await eventUpdateService.createPostponementUpdate(
-            eventId,
-            eventName,
-            newDate,
-            (updates as any).postponementReason,
-            (updates as any).updatedBy
-          );
-          
-          // Trigger notification sending (non-blocking)
-          fetch('/api/notify-event-change', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              eventId,
-              changeType: 'postponed',
-              eventName,
-              newDate,
-              reason: (updates as any).postponementReason,
-            }),
-          }).catch(err => console.error('Error sending notifications:', err));
-        }
       }
-      
-      // Detect date changes (separate from status change to avoid duplicate updates)
-      if (updates.date && updates.date !== currentEvent.date && updates.status !== 'postponed') {
+
+      // Detect date changes
+      if (currentEvent && updates.date && updates.date !== currentEvent.date) {
         await eventUpdateService.createDateChangeUpdate(
           eventId,
           updates.name || currentEvent.name,
@@ -424,17 +399,17 @@ export const eventService = {
           (updates as any).updatedBy
         );
       }
-      
+
       // Detect location changes
-      if (updates.location) {
+      if (currentEvent && updates.location) {
         // Handle both string and object locations
-        const oldLocationStr = typeof currentEvent.location === 'object' 
+        const oldLocationStr = typeof currentEvent.location === 'object'
           ? (currentEvent.location as any)?.name || (currentEvent.location as any)?.address || String(currentEvent.location)
           : currentEvent.location || '';
         const newLocationStr = typeof updates.location === 'object'
           ? (updates.location as any)?.name || (updates.location as any)?.address || String(updates.location)
           : updates.location;
-        
+
         if (oldLocationStr !== newLocationStr) {
           await eventUpdateService.createLocationChangeUpdate(
             eventId,
