@@ -463,7 +463,7 @@ export default function EditEventPage() {
                         id="location"
                         value={formData.location}
                         onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        required={formData.venueType !== 'virtual'}
+                        required
                       />
                     </div>
 
