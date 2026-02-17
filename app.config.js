@@ -11,7 +11,7 @@ export default {
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#0EA5E9"
+      backgroundColor: "#FFFFFF"
     },
     assetBundlePatterns: [
       "**/*"
@@ -31,7 +31,7 @@ export default {
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#0EA5E9"
+        backgroundColor: "#FFFFFF"
       },
       package: "com.tikiti.eventapp",
       versionCode: 4,
