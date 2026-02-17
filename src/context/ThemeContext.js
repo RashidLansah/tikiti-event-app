@@ -12,37 +12,37 @@ export const useTheme = () => {
   return context;
 };
 
-// Premium Dark mode color palette (inspired by reference image)
+// Dark mode color palette (aligned with web dashboard .dark CSS variables)
 const DarkColors = {
-  // Primary Brand Colors (enhanced for dark theme)
+  // Primary (inverted for dark mode — light on dark, matches web .dark --primary oklch(0.922 0 0))
   primary: {
-    50: '#7C2D12',
-    100: '#9A3412',
-    200: '#C2410C',
-    300: '#EA580C',
-    400: '#FB923C',
-    500: '#FF6B35', // Main brand orange
-    600: '#FB923C',
-    700: '#EA580C',
-    800: '#C2410C',
-    900: '#9A3412',
+    50: '#0a0a0a',
+    100: '#141414',
+    200: '#1a1a1a',
+    300: '#2a2a2a',
+    400: '#525252',
+    500: '#e8e8e8', // Light primary in dark mode
+    600: '#d4d4d4',
+    700: '#a3a3a3',
+    800: '#737373',
+    900: '#525252',
   },
-  
-  // Secondary Colors (refined for dark theme)
+
+  // Secondary (matches web .dark --secondary oklch(0.269 0 0))
   secondary: {
-    50: '#0F172A',
-    100: '#1E293B',
-    200: '#334155',
-    300: '#475569',
-    400: '#64748B',
-    500: '#94A3B8',
-    600: '#CBD5E1',
-    700: '#E2E8F0',
-    800: '#F1F5F9',
-    900: '#F8FAFC',
+    50: '#0a0a0a',
+    100: '#141414',
+    200: '#1a1a1a',
+    300: '#2a2a2a',
+    400: '#3a3a3a', // Matches web dark --secondary
+    500: '#525252',
+    600: '#737373',
+    700: '#a3a3a3',
+    800: '#d4d4d4',
+    900: '#e8e8e8',
   },
-  
-  // Success, Warning, Error (optimized for dark backgrounds)
+
+  // Success (optimized for dark backgrounds)
   success: {
     50: '#0F2E1D',
     100: '#166534',
@@ -94,45 +94,45 @@ const DarkColors = {
     900: '#EFF6FF',
   },
 
-  // Rich Dark Grays (like reference image)
+  // Neutral Grays
   gray: {
-    50: '#0A0A0A',   // Almost black
-    100: '#1A1A1A',  // Very dark gray
-    200: '#2A2A2A',  // Dark gray
-    300: '#3A3A3A',  // Medium dark gray
-    400: '#525252',  // Medium gray
-    500: '#737373',  // Light gray
-    600: '#A3A3A3',  // Lighter gray
-    700: '#D4D4D4',  // Very light gray
-    800: '#E5E5E5',  // Almost white gray
-    900: '#F5F5F5',  // Very light
+    50: '#0A0A0A',
+    100: '#1A1A1A',
+    200: '#2A2A2A',
+    300: '#3A3A3A',
+    400: '#525252',
+    500: '#737373',
+    600: '#A3A3A3',
+    700: '#D4D4D4',
+    800: '#E5E5E5',
+    900: '#F5F5F5',
   },
-  
+
   // Pure Colors
   white: '#FFFFFF',
   black: '#000000',
-  
-  // Premium Dark Backgrounds (matching reference)
+
+  // Dark Backgrounds (matches web .dark --background oklch(0.145 0 0))
   background: {
-    primary: '#0A0A0A',    // Deep black like reference
-    secondary: '#1A1A1A',  // Card backgrounds
-    tertiary: '#2A2A2A',   // Elevated surfaces
+    primary: '#141414',   // Matches web .dark --background
+    secondary: '#1a1a1a', // Matches web .dark --card oklch(0.205 0 0)
+    tertiary: '#2a2a2a',  // Elevated surfaces
   },
-  
-  // Optimized Dark Text Colors
+
+  // Dark Text Colors (matches web .dark --foreground oklch(0.985 0 0))
   text: {
-    primary: '#FFFFFF',     // Pure white for main text
-    secondary: '#E5E5E5',   // Light gray for secondary text
-    tertiary: '#A3A3A3',    // Medium gray for tertiary text
-    disabled: '#525252',    // Darker gray for disabled
-    inverse: '#0A0A0A',     // Dark text for light backgrounds
+    primary: '#fafafa',    // Matches web .dark --foreground
+    secondary: '#d4d4d4',
+    tertiary: '#7a7a7a',   // Matches web .dark --muted-foreground oklch(0.708 0 0)
+    disabled: '#525252',
+    inverse: '#141414',
   },
-  
-  // Refined Dark Borders
+
+  // Dark Borders (matches web .dark --border oklch(1 0 0 / 10%))
   border: {
-    light: '#2A2A2A',      // Subtle borders
-    medium: '#3A3A3A',     // Medium borders
-    dark: '#525252',       // Strong borders
+    light: 'rgba(255,255,255,0.1)',   // Matches web dark --border
+    medium: 'rgba(255,255,255,0.15)', // Matches web dark --input
+    dark: '#3a3a3a',
   },
 };
 
