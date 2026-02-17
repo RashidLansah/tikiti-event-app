@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { generateEventShareUrl } from '../utils/sharingUtils';
 
-const CopyLinkButton = ({ event, style, iconSize = 24, iconColor = '#6366F1' }) => {
+const CopyLinkButton = ({ event, style, iconSize = 24, iconColor = '#333333' }) => {
   const handleCopyLink = async () => {
     try {
       const eventUrl = generateEventShareUrl(event.id, event.name);

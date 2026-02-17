@@ -33,18 +33,38 @@ service cloud.firestore {
     match /events/{eventId} {
       // Anyone can read events (for public event listing)
       allow read: if true;
-      
+
       // Only organizers can create events
-      allow create: if isOrganizer() && 
+      allow create: if isOrganizer() &&
         request.auth.uid == request.resource.data.organizerId;
-      
+
       // Only the event organizer can update/delete their events
-      allow update, delete: if isOrganizer() && 
+      allow update, delete: if isOrganizer() &&
         request.auth.uid == resource.data.organizerId;
-      
+
       // Allow authenticated users to update ticket counts when booking
-      allow update: if isAuthenticated() && 
+      allow update: if isAuthenticated() &&
         request.resource.data.keys().hasAll(['soldTickets', 'availableTickets']);
+
+      // Event updates subcollection — anyone can read, organizer can write
+      match /updates/{updateId} {
+        allow read: if true;
+        allow write: if isOrganizer() &&
+          request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.organizerId;
+      }
+
+      // Event surveys subcollection — anyone can read, organizer can write
+      match /surveys/{surveyId} {
+        allow read: if true;
+        allow write: if isOrganizer() &&
+          request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.organizerId;
+
+        // Survey responses — authenticated users can read/write their own
+        match /responses/{responseId} {
+          allow read: if isAuthenticated();
+          allow create: if isAuthenticated();
+        }
+      }
     }
     
     // Tickets collection - ticket purchases

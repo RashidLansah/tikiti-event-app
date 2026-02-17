@@ -454,6 +454,81 @@ export const eventService = {
   }
 };
 
+// Event Updates service (subcollection: events/{eventId}/updates)
+export const eventUpdateService = {
+  // Get all updates for an event
+  getByEvent: async (eventId) => {
+    try {
+      const updatesRef = collection(db, COLLECTIONS.EVENTS, eventId, 'updates');
+      const q = query(updatesRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const updates = [];
+      querySnapshot.forEach((doc) => {
+        updates.push({ id: doc.id, ...doc.data() });
+      });
+      return updates;
+    } catch (error) {
+      console.error('Error getting event updates:', error);
+      return [];
+    }
+  },
+
+  // Listen to real-time updates
+  subscribe: (eventId, callback) => {
+    try {
+      const updatesRef = collection(db, COLLECTIONS.EVENTS, eventId, 'updates');
+      const q = query(updatesRef, orderBy('createdAt', 'desc'));
+      return onSnapshot(q, (querySnapshot) => {
+        const updates = [];
+        querySnapshot.forEach((doc) => {
+          updates.push({ id: doc.id, ...doc.data() });
+        });
+        callback(updates);
+      });
+    } catch (error) {
+      console.error('Error subscribing to event updates:', error);
+      return null;
+    }
+  },
+};
+
+// Event Surveys/Feedback service (subcollection: events/{eventId}/surveys)
+export const eventSurveyService = {
+  // Get all surveys for an event
+  getByEvent: async (eventId) => {
+    try {
+      const surveysRef = collection(db, COLLECTIONS.EVENTS, eventId, 'surveys');
+      const q = query(surveysRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const surveys = [];
+      querySnapshot.forEach((doc) => {
+        surveys.push({ id: doc.id, ...doc.data() });
+      });
+      return surveys;
+    } catch (error) {
+      console.error('Error getting event surveys:', error);
+      return [];
+    }
+  },
+
+  // Submit a survey response
+  submitResponse: async (eventId, surveyId, responseData) => {
+    try {
+      const responsesRef = collection(
+        db, COLLECTIONS.EVENTS, eventId, 'surveys', surveyId, 'responses'
+      );
+      const docRef = await addDoc(responsesRef, {
+        ...responseData,
+        createdAt: serverTimestamp(),
+      });
+      return docRef;
+    } catch (error) {
+      console.error('Error submitting survey response:', error);
+      throw error;
+    }
+  },
+};
+
 // Booking service with specific functions
 export const bookingService = {
   create: async (bookingData) => {

@@ -3,7 +3,7 @@ import { TouchableOpacity, Alert, Platform, Share } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { generateEventShareUrl } from '../utils/sharingUtils';
 
-const ShareButton = ({ event, style, iconSize = 24, iconColor = '#6366F1' }) => {
+const ShareButton = ({ event, style, iconSize = 24, iconColor = '#333333' }) => {
   const handleShare = async () => {
     try {
       // Use the proper sharing utility for consistent URL generation

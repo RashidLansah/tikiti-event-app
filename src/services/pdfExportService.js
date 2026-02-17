@@ -104,11 +104,11 @@ class PDFExportService {
           .header {
             text-align: center;
             margin-bottom: 30px;
-            border-bottom: 3px solid #ff6b35;
+            border-bottom: 3px solid #333333;
             padding-bottom: 20px;
           }
           .header h1 {
-            color: #ff6b35;
+            color: #333333;
             font-size: 28px;
             margin: 0 0 10px 0;
             font-weight: bold;
@@ -124,10 +124,10 @@ class PDFExportService {
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 25px;
-            border-left: 4px solid #ff6b35;
+            border-left: 4px solid #333333;
           }
           .event-info h3 {
-            color: #ff6b35;
+            color: #333333;
             margin: 0 0 10px 0;
             font-size: 16px;
           }
@@ -175,7 +175,7 @@ class PDFExportService {
           .stat-number {
             font-size: 24px;
             font-weight: bold;
-            color: #ff6b35;
+            color: #333333;
             display: block;
           }
           .stat-label {
@@ -190,7 +190,7 @@ class PDFExportService {
             font-size: 12px;
           }
           .attendees-table th {
-            background-color: #ff6b35;
+            background-color: #333333;
             color: white;
             padding: 12px 8px;
             text-align: left;

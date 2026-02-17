@@ -114,7 +114,7 @@ class EmailService {
         .logo {
           font-size: 32px;
           font-weight: bold;
-          color: #ff6b35;
+          color: #333333;
           margin-bottom: 10px;
         }
         .tagline {
@@ -136,7 +136,7 @@ class EmailService {
           background-color: #fff3cd;
           padding: 15px;
           border-radius: 8px;
-          border-left: 4px solid #ff6b35;
+          border-left: 4px solid #333333;
           margin: 20px 0;
         }
 
@@ -160,7 +160,7 @@ class EmailService {
         }
         .signature-name {
           font-weight: bold;
-          color: #ff6b35;
+          color: #333333;
         }
         .signature-title {
           color: #666;
@@ -374,11 +374,11 @@ Thank you for choosing Tikiti. Let's create amazing memories together!
         .logo {
           font-size: 32px;
           font-weight: bold;
-          color: #ff6b35;
+          color: #333333;
           margin-bottom: 10px;
         }
         .reminder-badge {
-          background-color: #ff6b35;
+          background-color: #333333;
           color: white;
           padding: 8px 16px;
           border-radius: 20px;
@@ -404,7 +404,7 @@ Thank you for choosing Tikiti. Let's create amazing memories together!
           font-size: 16px;
         }
         .event-info strong {
-          color: #ff6b35;
+          color: #333333;
         }
 
       </style>
