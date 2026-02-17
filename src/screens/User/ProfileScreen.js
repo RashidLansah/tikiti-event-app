@@ -16,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import TikitiLoader from '../../components/TikitiLoader';
 import { bookingService, userService } from '../../services/firestoreService';
 import { authService } from '../../services/authService';
 
@@ -460,12 +461,7 @@ Thank you!`;
       {/* Switching Loading Overlay */}
       {isSwitching && (
         <View style={styles.switchingOverlay}>
-          <View style={styles.switchingModal}>
-            <ActivityIndicator size="large" color={colors.primary[500]} />
-            <Text style={[styles.switchingText, { color: colors.text.primary }]}>
-              Switching to organiser view...
-            </Text>
-          </View>
+          <TikitiLoader duration={1500} message="Switching to organiser view..." />
         </View>
       )}
     </View>
@@ -475,18 +471,19 @@ Thank you!`;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background.primary,
   },
   header: {
     paddingTop: Spacing[12],
     paddingHorizontal: Spacing[6],
     paddingBottom: Spacing[6],
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background.primary,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
   },
   title: {
     fontSize: Typography.fontSize['2xl'],
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
   },
@@ -495,7 +492,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileSection: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background.primary,
     padding: Spacing[6],
     borderBottomWidth: 1,
     borderBottomColor: Colors.border.light,
@@ -515,6 +512,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: Typography.fontSize['2xl'],
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.white,
   },
@@ -524,17 +522,20 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: Typography.fontSize.xl,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     marginBottom: Spacing[1],
   },
   userEmail: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     marginBottom: Spacing[2],
   },
   joinDate: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.tertiary,
   },
   accountTypeContainer: {
@@ -554,6 +555,7 @@ const styles = StyleSheet.create({
   },
   accountTypeText: {
     fontSize: 14,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
     color: Colors.primary[700],
     marginLeft: 6,
@@ -566,50 +568,51 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background.primary,
     padding: 20,
-    borderRadius: 12,
+    borderRadius: BorderRadius['3xl'],
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 120,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    ...Shadows.md,
   },
   statIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   statNumber: {
     fontSize: 28,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: '700',
-    color: '#000000',
+    color: Colors.text.primary,
     marginBottom: 4,
     textAlign: 'center',
   },
   statLabel: {
     fontSize: 13,
-    color: '#666666',
+    color: Colors.text.tertiary,
     textAlign: 'center',
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: '500',
     lineHeight: 16,
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background.primary,
     marginTop: 12,
     paddingVertical: 16,
   },
   sectionTitle: {
     fontSize: 18,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
-    color: '#000000',
+    color: Colors.text.primary,
     paddingHorizontal: 24,
     marginBottom: 16,
   },
@@ -625,7 +628,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -635,13 +638,15 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: '500',
-    color: '#000000',
+    color: Colors.text.primary,
     marginBottom: 4,
   },
   menuSubtitle: {
     fontSize: 14,
-    color: '#999999',
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.disabled,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -656,6 +661,7 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.error[500],
     marginLeft: Spacing[2],
@@ -666,7 +672,8 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 14,
-    color: '#999999',
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.disabled,
   },
   switchingOverlay: {
     position: 'absolute',
@@ -680,15 +687,16 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   switchingModal: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background.primary,
     padding: Spacing[8],
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius['3xl'],
     alignItems: 'center',
     minWidth: 200,
     ...Shadows.lg,
   },
   switchingText: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: Typography.fontWeight.medium,
     marginTop: Spacing[4],
     textAlign: 'center',

@@ -14,7 +14,10 @@ import {
   StatusBar,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import PillTabBar from '../../components/PillTabBar';
+import { EventListSkeleton } from '../../components/Skeleton';
+import TikitiLoader from '../../components/TikitiLoader';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { eventService, bookingService } from '../../services/firestoreService';
@@ -24,7 +27,7 @@ const EventListScreen = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
   const { userProfile, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTimeFilter, setSelectedTimeFilter] = useState('All');
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState('all');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,14 +79,14 @@ const EventListScreen = ({ navigation }) => {
 
 
 
-  // Time filter options
+  // Time filter options (PillTabBar format)
   const timeFilterOptions = [
-    { id: 'all', name: 'All', icon: 'calendar' },
-    { id: 'live', name: 'Live Now', icon: 'radio' },
-    { id: 'today', name: 'Today', icon: 'sun' },
-    { id: 'tomorrow', name: 'Tomorrow', icon: 'sunrise' },
-    { id: 'thisWeek', name: 'This Week', icon: 'calendar' },
-    { id: 'thisMonth', name: 'This Month', icon: 'calendar' },
+    { key: 'all', label: 'All', icon: 'calendar' },
+    { key: 'live', label: 'Live Now', icon: 'radio' },
+    { key: 'today', label: 'Today', icon: 'sun' },
+    { key: 'tomorrow', label: 'Tomorrow', icon: 'sunrise' },
+    { key: 'thisWeek', label: 'This Week', icon: 'calendar' },
+    { key: 'thisMonth', label: 'This Month', icon: 'calendar' },
   ];
 
   // Filter events by time
@@ -194,7 +197,7 @@ const EventListScreen = ({ navigation }) => {
 
     events.forEach(event => {
       const eventDate = new Date(event.date);
-      const eventTime = new Date(`${event.date} ${event.startTime}`);
+      const eventTime = new Date(`${event.date} ${event.startTime || event.time || '00:00'}`);
       const eventEndTime = new Date(`${event.date} ${event.endTime || '23:59'}`);
 
       // Happening now (event is currently active)
@@ -249,24 +252,6 @@ const EventListScreen = ({ navigation }) => {
   // Categorize filtered events by time
   const timeBasedEvents = categorizeEventsByTime(timeFilteredEvents);
 
-  // Get category color for modern tags
-  const getCategoryColor = (category) => {
-    const categoryColors = {
-      'Music': Colors.warning[500],
-      'Technology': Colors.primary[500],
-      'Art': Colors.error[500],
-      'Food': Colors.success[500],
-      'Entertainment': Colors.secondary[500],
-      'Sports': Colors.primary[600],
-      'Business': Colors.gray[600],
-      'Education': Colors.primary[400],
-      'Health': Colors.success[600],
-      'Fashion': Colors.error[400],
-    };
-    
-    return categoryColors[category] || Colors.primary[500];
-  };
-
   // Time-based section header component
   const TimeSection = ({ title, subtitle, icon, count, events }) => {
     if (events.length === 0) return null;
@@ -299,35 +284,43 @@ const EventListScreen = ({ navigation }) => {
     );
   };
 
-  const EventCard = ({ event, index, isCompact = false }) => {
+  // Format date for card pill (e.g., "Fri.14 May 2026")
+  const getCardFormattedDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const eventDate = new Date(dateStr);
+      const weekday = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
+      const day = eventDate.getDate();
+      const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
+      const year = eventDate.getFullYear();
+      return `${weekday}.${day} ${month} ${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Get location string from event
+  const getCardLocationString = (location) => {
+    if (!location) return 'Location TBA';
+    if (typeof location === 'object') {
+      return location.name || location.address || 'Location TBA';
+    }
+    return location;
+  };
+
+  const EventCard = ({ event, index }) => {
     const animatedValue = new Animated.Value(0);
     const [attendeeCount, setAttendeeCount] = useState(0);
-    const [loadingAttendees, setLoadingAttendees] = useState(false);
 
-    // Fetch real-time attendee count for this event
+    // Fetch attendee count
     useEffect(() => {
-      const fetchAttendeeCount = async () => {
-        if (!event?.id || !user) {
-          console.log('⚠️ Skipping attendee fetch for event list card: no event ID or user not authenticated');
-          return;
-        }
-        
-        try {
-          setLoadingAttendees(true);
-          const attendees = await bookingService.getEventAttendees(event.id);
-          setAttendeeCount(attendees?.length || 0);
-        } catch (error) {
-          console.error('Error fetching attendee count for event card:', error);
-          // Don't show error to user, just set count to 0
-          setAttendeeCount(0);
-        } finally {
-          setLoadingAttendees(false);
-        }
-      };
-
-      fetchAttendeeCount();
+      if (event?.id && user) {
+        bookingService.getEventAttendees(event.id)
+          .then(attendees => setAttendeeCount(attendees?.length || 0))
+          .catch(() => setAttendeeCount(0));
+      }
     }, [event?.id, user]);
-    
+
     React.useEffect(() => {
       Animated.timing(animatedValue, {
         toValue: 1,
@@ -349,95 +342,64 @@ const EventListScreen = ({ navigation }) => {
       ],
     };
 
+    const eventTime = event.startTime || event.time || '';
+
     return (
       <Animated.View style={cardTransform}>
         <TouchableOpacity
-          style={[styles.eventCard, { backgroundColor: colors.background.primary, borderColor: colors.border.light }]}
+          style={styles.eventCard}
           onPress={() => navigation.navigate('EventDetail', { event })}
-          activeOpacity={0.95}
+          activeOpacity={0.9}
         >
-          {/* Compact Image Section */}
+          {/* Event Image */}
           <View style={styles.eventImageContainer}>
             {event.imageBase64 ? (
               <Image
-                source={{ 
-                  uri: event.imageBase64.startsWith('data:') 
-                    ? event.imageBase64 
-                    : `data:image/jpeg;base64,${event.imageBase64}` 
+                source={{
+                  uri: event.imageBase64.startsWith('data:')
+                    ? event.imageBase64
+                    : `data:image/jpeg;base64,${event.imageBase64}`
                 }}
                 style={styles.eventImage}
                 resizeMode="cover"
               />
             ) : (
-              <View style={[styles.eventImagePlaceholder, { backgroundColor: colors.background.tertiary }]}>
-                <Feather name="image" size={20} color={colors.text.tertiary} />
+              <View style={[styles.eventImagePlaceholder, { backgroundColor: colors.primary[200] }]}>
+                <Feather name="image" size={24} color={colors.primary[400]} />
               </View>
             )}
-            
-            {/* Modern category tag */}
-            <View style={[styles.categoryTag, { backgroundColor: `${colors.background.primary}E6`, borderColor: colors.border.light }]}>
-              <View style={[styles.categoryDot, { backgroundColor: getCategoryColor(event.category) }]} />
-              <Text style={[styles.categoryText, { color: colors.text.primary }]}>{event.category}</Text>
-            </View>
-            
-            {/* Full Event Badge */}
-            {event.availableTickets <= 0 && (
-              <View style={[styles.fullEventBadge, { backgroundColor: colors.error[500] }]}>
-                <Text style={[styles.fullEventText, { color: colors.white }]}>FULL</Text>
+
+            {/* Attendee count badge on image */}
+            {attendeeCount > 0 && (
+              <View style={styles.attendeeBadge}>
+                <Feather name="users" size={12} color={Colors.text.primary} />
+                <Text style={styles.attendeeBadgeText}>{attendeeCount}</Text>
               </View>
             )}
           </View>
-          
-          {/* Content Section */}
-          <View style={styles.eventContent}>
-            <View style={styles.eventHeader}>
-              <Text style={[styles.eventName, { color: colors.text.primary }]} numberOfLines={2}>{event.name}</Text>
-              <Text style={[styles.eventPrice, { color: colors.success[500] }]}>{event.type === 'free' ? 'Free' : event.price}</Text>
-            </View>
-            
-            {/* Compact event details */}
-            <View style={styles.eventMeta}>
-              <View style={styles.metaRow}>
-                <Feather name="calendar" size={12} color={colors.text.tertiary} />
-                <Text style={[styles.metaText, { color: colors.text.tertiary }]}>{event.date}</Text>
+
+          {/* Event Title */}
+          <Text style={styles.eventName} numberOfLines={2}>{event.name}</Text>
+
+          {/* Date, Time, Location pills */}
+          <View style={styles.cardPillsContainer}>
+            <View style={styles.cardPillRow}>
+              <View style={styles.cardPill}>
+                <Text style={styles.cardPillText}>{getCardFormattedDate(event.date)}</Text>
               </View>
-              <View style={styles.metaRow}>
-                <Feather name="map-pin" size={12} color={colors.text.tertiary} />
-                <Text style={[styles.metaText, { color: colors.text.tertiary }]} numberOfLines={1}>
-                  {typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA')}
-                </Text>
-              </View>
+              {eventTime ? (
+                <View style={styles.cardPill}>
+                  <Text style={styles.cardPillText}>{eventTime}</Text>
+                </View>
+              ) : null}
             </View>
-            
-            {/* Minimal description */}
-            {event.description && (
-              <Text style={[styles.eventDescription, { color: colors.text.secondary }]} numberOfLines={2} ellipsizeMode="tail">
-                {event.description}
-              </Text>
-            )}
-            
-            {/* Organiser info */}
-            <View style={[styles.organizerInfo, { backgroundColor: colors.background.tertiary }]}>
-              <Feather name="user" size={12} color={colors.text.tertiary} />
-              <Text style={[styles.organizerText, { color: colors.text.tertiary }]} numberOfLines={1}>
-                by {event.organizerName || 'Event Organizer'}
-              </Text>
-            </View>
-            
-            {/* Event stats */}
-            <View style={[styles.eventStats, { backgroundColor: colors.background.tertiary }]}>
-              <View style={styles.statItem}>
-                <Feather name="users" size={12} color={colors.text.tertiary} />
-                <Text style={[styles.statText, { color: colors.text.tertiary }]}>
-                  {loadingAttendees ? '...' : `${attendeeCount} attending`}
-                </Text>
+            <View style={styles.cardPillRow}>
+              <View style={styles.cardPill}>
+                <Text style={styles.cardPillText}>{getCardLocationString(event.location)}</Text>
               </View>
-              {event.type === 'paid' && event.price > 0 && (
-                <View style={styles.statItem}>
-                  <Feather name="dollar-sign" size={12} color={colors.text.tertiary} />
-                  <Text style={[styles.statText, { color: colors.text.tertiary }]}>
-                    ₵{event.price}
-                  </Text>
+              {attendeeCount > 0 && (
+                <View style={styles.cardPill}>
+                  <Text style={styles.cardPillText}>{attendeeCount} going</Text>
                 </View>
               )}
             </View>
@@ -448,38 +410,25 @@ const EventListScreen = ({ navigation }) => {
   };
 
   if (loading) {
-    return (
-      <View style={[styles.container, styles.centerContent, { backgroundColor: colors.background.primary }]}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Loading events...</Text>
-      </View>
-    );
+    return <TikitiLoader duration={1500} message="Loading events..." />;
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background.primary} />
       
-      {/* Modern Header */}
+      {/* Header — matching Figma */}
       <View style={[styles.header, { backgroundColor: colors.background.primary }]}>
         <View style={styles.headerTop}>
           <View>
-              <Text style={[styles.greeting, { color: colors.text.tertiary }]}>Discover</Text>
+            <Text style={[styles.greeting, { color: colors.text.secondary }]}>Discover</Text>
             <Text style={[styles.title, { color: colors.text.primary }]}>Events near you</Text>
-            {userProfile?.organisationCountry && (
-              <View style={styles.locationIndicator}>
-                <Feather name="map-pin" size={12} color={colors.primary[500]} />
-                <Text style={[styles.locationText, { color: colors.primary[500] }]}>
-                  Showing events in {userProfile.organisationCountry}
-                </Text>
-              </View>
-            )}
           </View>
-          <TouchableOpacity 
-            style={[styles.notificationButton, { backgroundColor: colors.background.tertiary }]}
+          <TouchableOpacity
+            style={styles.notificationButton}
             onPress={() => navigation.navigate('NotificationCenter')}
           >
-            <Feather name="bell" size={20} color={colors.text.secondary} />
+            <Feather name="bell" size={24} color={Colors.text.primary} />
             {unreadNotifications > 0 && (
               <View style={[styles.notificationBadge, { backgroundColor: colors.primary[500] }]}>
                 <Text style={styles.badgeText}>
@@ -489,29 +438,26 @@ const EventListScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
         </View>
-        
-        {/* Modern Search Bar */}
-        <TouchableOpacity 
+
+        {/* Search Bar — matching Figma */}
+        <TouchableOpacity
           style={[
-            styles.searchContainer, 
-            { 
-              backgroundColor: colors.background.secondary,
-              borderColor: isSearchFocused ? colors.primary[500] : colors.border.light,
-              borderWidth: isSearchFocused ? 2 : 1,
+            styles.searchContainer,
+            {
+              borderColor: isSearchFocused ? colors.primary[500] : 'rgba(0,0,0,0.1)',
             },
-            isSearchFocused && styles.searchContainerFocused
           ]}
           activeOpacity={1}
           onPress={() => {
             searchInputRef.current?.focus();
           }}
         >
-          <Feather name="search" size={16} color={isSearchFocused ? colors.primary[500] : colors.text.tertiary} />
+          <Feather name="search" size={24} color={isSearchFocused ? colors.primary[500] : 'rgba(0,0,0,0.56)'} />
           <TextInput
             ref={searchInputRef}
             style={[styles.searchInput, { color: colors.text.primary }]}
-            placeholder="Search events..."
-            placeholderTextColor={colors.text.tertiary}
+            placeholder="Search events..,"
+            placeholderTextColor="rgba(0,0,0,0.56)"
             value={searchQuery}
             onChangeText={setSearchQuery}
             onFocus={() => setIsSearchFocused(true)}
@@ -533,37 +479,11 @@ const EventListScreen = ({ navigation }) => {
       </View>
 
       {/* Time Filter Pills */}
-      <View style={[styles.timeFilterSection, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
-        <FlatList
-          data={timeFilterOptions}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.timeFilterContainer}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.timeFilterPill,
-                { backgroundColor: colors.background.tertiary },
-                selectedTimeFilter === item.id && { backgroundColor: colors.primary[500] }
-              ]}
-              onPress={() => setSelectedTimeFilter(item.id)}
-              activeOpacity={0.7}
-            >
-              <Feather 
-                name={item.icon} 
-                size={14} 
-                color={selectedTimeFilter === item.id ? colors.white : colors.text.secondary} 
-              />
-              <Text style={[
-                styles.timeFilterPillText,
-                { color: colors.text.secondary },
-                selectedTimeFilter === item.id && { color: colors.white, fontWeight: Typography.fontWeight.semibold }
-              ]}>
-                {item.name}
-              </Text>
-            </TouchableOpacity>
-          )}
+      <View style={styles.timeFilterSection}>
+        <PillTabBar
+          tabs={timeFilterOptions}
+          activeTab={selectedTimeFilter}
+          onTabPress={setSelectedTimeFilter}
         />
       </View>
 
@@ -586,26 +506,28 @@ const EventListScreen = ({ navigation }) => {
       >
         {/* Time-based Event Sections */}
         {timeFilteredEvents.length === 0 ? (
-          <View style={[styles.noEventsContainer, { backgroundColor: colors.background.secondary }]}>
-            <Feather name="calendar" size={48} color={colors.text.tertiary} />
-            <Text style={[styles.noEventsText, { color: colors.text.secondary }]}>No events found</Text>
-            <Text style={[styles.noEventsSubtext, { color: colors.text.tertiary }]}>
-              {events.length === 0 
-                ? "No events available yet. Check back later!" 
-                : "Try adjusting your search criteria"
-              }
-            </Text>
-            <TouchableOpacity 
-              style={[styles.refreshButton, { backgroundColor: colors.primary[500] }]}
+          <View style={styles.noEventsContainer}>
+            <Feather name="calendar" size={24} color={Colors.text.tertiary} />
+            <View style={styles.noEventsTextContainer}>
+              <Text style={styles.noEventsText}>No events found</Text>
+              <Text style={styles.noEventsSubtext}>
+                {events.length === 0
+                  ? 'No events available yet. Check back later'
+                  : 'Try adjusting your search criteria'
+                }
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.refreshButton}
               onPress={onRefresh}
               disabled={refreshing}
             >
               {refreshing ? (
-                <ActivityIndicator size="small" color={colors.white} />
+                <ActivityIndicator size="small" color={Colors.white} />
               ) : (
                 <>
-                  <Feather name="refresh-cw" size={16} color={colors.white} />
-                  <Text style={[styles.refreshButtonText, { color: colors.white }]}>Refresh Events</Text>
+                  <Feather name="refresh-cw" size={18} color={Colors.white} />
+                  <Text style={styles.refreshButtonText}>Refresh Events</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -684,50 +606,36 @@ const EventListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.gray[50],
   },
-  
-  // Modern Header Styles
+
+  // ─── Header (Figma 44:237) ──────────────────────────
   header: {
-    backgroundColor: Colors.white,
-    paddingHorizontal: Spacing[5],
+    paddingHorizontal: 20,
     paddingTop: 50,
-    paddingBottom: Spacing[4],
+    paddingBottom: 16,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing[5],
+    alignItems: 'flex-end',
+    marginBottom: 16,
   },
   greeting: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.tertiary,
-    fontWeight: Typography.fontWeight.medium,
-    marginBottom: Spacing[1],
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 14,
+    color: Colors.black,
+    marginBottom: 4,
   },
   title: {
-    fontSize: Typography.fontSize['2xl'],
-    fontWeight: Typography.fontWeight.bold,
+    fontFamily: Typography.fontFamily.extrabold,
+    fontSize: 24,
     color: Colors.text.primary,
-    letterSpacing: Typography.letterSpacing.tight,
-  },
-  locationIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing[2],
-    gap: Spacing[1],
-  },
-  locationText: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.medium,
-    color: Colors.primary[500],
   },
   notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.background.secondary,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -738,7 +646,7 @@ const styles = StyleSheet.create({
     right: -2,
     minWidth: 18,
     height: 18,
-    borderRadius: BorderRadius.full,
+    borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
@@ -746,341 +654,218 @@ const styles = StyleSheet.create({
   badgeText: {
     color: Colors.white,
     fontSize: 10,
-    fontWeight: Typography.fontWeight.bold,
+    fontFamily: Typography.fontFamily.bold,
   },
-  
-  // Modern Search Styles
+
+  // ─── Search Bar (Figma) ─────────────────────────────
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background.secondary,
-    borderRadius: BorderRadius.xl,
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[2],
-    gap: Spacing[3],
-  },
-  searchContainerFocused: {
-    borderColor: Colors.primary[500],
-    borderWidth: 2,
-    shadowColor: Colors.primary[500],
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
-    borderBottomWidth: 3,
-    borderBottomColor: Colors.primary[400],
+    backgroundColor: Colors.white,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    paddingHorizontal: 17,
+    height: 60,
+    gap: 4,
   },
   searchInput: {
     flex: 1,
-    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 14,
     color: Colors.text.primary,
-    fontWeight: Typography.fontWeight.normal,
-    paddingVertical: Spacing[1],
-    minHeight: 32,
+    paddingVertical: 0,
   },
-  
-  // Time Filter
+
+  // ─── Time Filter PillTabBar ─────────────────────────
   timeFilterSection: {
-    paddingVertical: Spacing[3],
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  timeFilterContainer: {
-    paddingHorizontal: Spacing[5],
-    gap: Spacing[2],
-  },
-  timeFilterPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.full,
-    gap: Spacing[2],
-    borderWidth: 0,
-  },
-  timeFilterPillText: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.medium,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
 
-
+  // ─── Events list ────────────────────────────────────
   eventsList: {
     flex: 1,
-    backgroundColor: Colors.gray[100],
   },
   eventsListContent: {
-    paddingHorizontal: Spacing[4],
-    paddingTop: Spacing[4],
-    paddingBottom: Spacing[6],
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 100,
   },
-  
-  // Modern Event Card Styles
+
+  // ─── Event Card (Figma — gray card with pills) ─────
   eventCard: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
-    marginBottom: Spacing[4],
-    overflow: 'hidden',
-    ...Shadows.md,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    padding: 14,
+    paddingBottom: 15,
+    marginBottom: 16,
   },
-  
-  // Compact Image Container
   eventImageContainer: {
-    height: 120,
-    position: 'relative',
+    width: '100%',
+    height: 161,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 17,
   },
   eventImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 18,
   },
   eventImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: Colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  // Modern Category Tag
-  categoryTag: {
+  attendeeBadge: {
     position: 'absolute',
-    top: Spacing[3],
-    right: Spacing[3],
+    bottom: 10,
+    left: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    backdropFilter: 'blur(10px)',
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.full,
-    gap: Spacing[2],
-    ...Shadows.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  categoryDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    // backgroundColor is set dynamically via getCategoryColor
-  },
-  categoryText: {
-    color: Colors.text.primary,
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-    letterSpacing: Typography.letterSpacing.wide,
-  },
-  
-  // Full Event Badge
-  fullEventBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
+    backgroundColor: Colors.white,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: Colors.error[500],
+    borderRadius: 4,
+    gap: 4,
   },
-  fullEventText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.white,
-    letterSpacing: 0.5,
-  },
-  
-  // Compact Content Area
-  eventContent: {
-    padding: Spacing[4],
-  },
-  eventHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing[2],
+  attendeeBadgeText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 12,
+    color: Colors.text.primary,
   },
   eventName: {
-    flex: 1,
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
-    marginRight: Spacing[2],
-    lineHeight: Typography.lineHeight.tight * Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 24,
+    color: Colors.black,
+    marginBottom: 17,
   },
-  eventPrice: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.success[600],
+  cardPillsContainer: {
+    gap: 8,
   },
-  
-  // Compact Meta Information
-  eventMeta: {
-    gap: Spacing[1],
-    marginBottom: Spacing[2],
-  },
-  metaRow: {
+  cardPillRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[2],
+    gap: 7,
   },
-  metaText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.text.tertiary,
-    fontWeight: Typography.fontWeight.medium,
-    flex: 1,
-  },
-  
-  // Minimal Description
-  eventDescription: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
-    lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.normal,
-    marginBottom: Spacing[2],
-  },
-  
-  // Organiser Info
-  organizerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing[1],
-  },
-  organizerText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.medium,
-    marginLeft: Spacing[1],
-  },
-  
-  // Event Stats
-  eventStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing[1],
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[1],
-  },
-  statText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.medium,
-  },
-  // Modern Empty State
-  noEventsContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing[16],
-    paddingHorizontal: Spacing[6],
+  cardPill: {
     backgroundColor: Colors.white,
-    marginHorizontal: Spacing[4],
-    marginVertical: Spacing[8],
-    borderRadius: BorderRadius.xl,
-    ...Shadows.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  cardPillText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 16,
+    color: Colors.black,
+  },
+
+  // ─── Empty State (Figma) ────────────────────────────
+  noEventsContainer: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    paddingHorizontal: 62,
+    paddingVertical: 64,
+    alignItems: 'center',
+    gap: 40,
+  },
+  noEventsTextContainer: {
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
   },
   noEventsText: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.secondary,
-    marginTop: Spacing[4],
-    marginBottom: Spacing[2],
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 16,
+    color: Colors.text.primary,
+    textAlign: 'center',
   },
   noEventsSubtext: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.tertiary,
-    fontWeight: Typography.fontWeight.normal,
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 12,
+    color: Colors.text.primary,
     textAlign: 'center',
-    lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.base,
-    marginBottom: Spacing[6],
   },
   refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary[500],
-    paddingHorizontal: Spacing[5],
-    paddingVertical: Spacing[3],
-    borderRadius: BorderRadius.full,
-    gap: Spacing[2],
-    ...Shadows.sm,
+    justifyContent: 'center',
+    backgroundColor: '#060606',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 30,
+    gap: 9,
+    width: 167,
   },
   refreshButtonText: {
-    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
     color: Colors.white,
-    fontWeight: Typography.fontWeight.semibold,
   },
-  
-  // Loading State
+
+  // ─── Loading ────────────────────────────────────────
   centerContent: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 14,
     color: Colors.text.secondary,
-    marginTop: Spacing[4],
+    marginTop: 16,
     textAlign: 'center',
-    fontWeight: Typography.fontWeight.medium,
   },
 
-  // Time-based Section Styles
+  // ─── Time-based Section ─────────────────────────────
   timeSection: {
-    marginBottom: Spacing[6],
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing[5],
-    marginBottom: Spacing[4],
+    marginBottom: 16,
   },
   sectionTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[3],
+    gap: 12,
   },
   sectionIcon: {
     width: 32,
     height: 32,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.primary[100],
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: 18,
     color: Colors.text.primary,
     marginBottom: 2,
   },
   sectionSubtitle: {
-    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 12,
     color: Colors.text.secondary,
-    fontWeight: Typography.fontWeight.medium,
   },
   eventCount: {
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[1],
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.primary[50],
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 30,
+    backgroundColor: '#f0f0f0',
   },
   eventCountText: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary[600],
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: 14,
+    color: Colors.text.primary,
   },
   sectionEvents: {
-    paddingHorizontal: Spacing[5],
-    gap: Spacing[4],
+    gap: 0,
   },
-
 });
 
 export default EventListScreen;

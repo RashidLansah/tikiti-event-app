@@ -15,15 +15,19 @@ import {
   Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import QRCode from 'react-native-qrcode-svg';
 import ShareButton from '../../components/ShareButton';
 import CopyLinkButton from '../../components/CopyLinkButton';
-import { eventService, bookingService } from '../../services/firestoreService';
+import PillTabBar from '../../components/PillTabBar';
+import { eventService, bookingService, eventUpdateService, eventSurveyService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
 import notificationService from '../../services/notificationService';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import { useTheme } from '../../context/ThemeContext';
+import { EventDetailSkeleton } from '../../components/Skeleton';
 
-const { width, height } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const EventDetailScreen = ({ navigation, route }) => {
   const { event: eventParam } = route.params;
@@ -35,10 +39,73 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [userBooking, setUserBooking] = useState(null);
-  const [checkingBooking, setCheckingBooking] = useState(false);
+  const [checkingBooking, setCheckingBooking] = useState(true);
   const [attendeeCount, setAttendeeCount] = useState(0);
   const [loadingAttendees, setLoadingAttendees] = useState(false);
-  
+  const [activeEventTab, setActiveEventTab] = useState('ticket');
+  const [eventUpdates, setEventUpdates] = useState([]);
+  const [eventSurveys, setEventSurveys] = useState([]);
+  const [loadingUpdates, setLoadingUpdates] = useState(false);
+  const [loadingSurveys, setLoadingSurveys] = useState(false);
+
+  // Tabs for the registered/post-RSVP view
+  const eventTabs = [
+    { key: 'ticket', label: 'Ticket', icon: 'tag' },
+    { key: 'program', label: 'Program', icon: 'menu' },
+    { key: 'updates', label: 'Updates', icon: 'bell' },
+    { key: 'messages', label: 'Messages', icon: 'message-square' },
+    { key: 'feedback', label: 'Feedback', icon: 'message-circle' },
+  ];
+
+  // Per-tab empty state content
+  const tabEmptyStates = {
+    program: {
+      icon: 'calendar',
+      title: 'No program yet',
+      subtitle: 'The event program hasn\'t been published yet. Check back closer to the event date.',
+    },
+    updates: {
+      icon: 'bell',
+      title: 'No updates yet',
+      subtitle: 'The organizer hasn\'t posted any updates. You\'ll be notified when they do.',
+    },
+    messages: {
+      icon: 'message-square',
+      title: 'No messages yet',
+      subtitle: 'No messages from the organizer or other attendees yet.',
+    },
+    feedback: {
+      icon: 'message-circle',
+      title: 'Feedback not available',
+      subtitle: 'Feedback will be available after the event ends. Share your experience then!',
+    },
+  };
+
+  // Calculate days left until event
+  const getDaysLeft = () => {
+    if (!event.date) return null;
+    try {
+      const eventDate = new Date(event.date);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      const diffTime = eventDay - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch {
+      return null;
+    }
+  };
+
+  const getDaysLeftLabel = () => {
+    const daysLeft = getDaysLeft();
+    if (daysLeft === null) return '';
+    if (daysLeft < 0) return 'Event has passed';
+    if (daysLeft === 0) return 'Today!';
+    if (daysLeft === 1) return 'Tomorrow';
+    return `${daysLeft} days left`;
+  };
+
   // Note: RSVP form removed - app users use their existing profile data
 
   // Fetch real-time attendee count
@@ -170,6 +237,29 @@ const EventDetailScreen = ({ navigation, route }) => {
     checkUserBooking();
   }, [user, event?.id]);
 
+  // Load event updates (subcollection) when registered
+  useEffect(() => {
+    if (userBooking && event?.id) {
+      setLoadingUpdates(true);
+      const unsubscribe = eventUpdateService.subscribe(event.id, (updates) => {
+        setEventUpdates(updates);
+        setLoadingUpdates(false);
+      });
+      return () => { if (unsubscribe) unsubscribe(); };
+    }
+  }, [userBooking, event?.id]);
+
+  // Load event surveys (subcollection) when registered
+  useEffect(() => {
+    if (userBooking && event?.id) {
+      setLoadingSurveys(true);
+      eventSurveyService.getByEvent(event.id).then((surveys) => {
+        setEventSurveys(surveys);
+        setLoadingSurveys(false);
+      }).catch(() => setLoadingSurveys(false));
+    }
+  }, [userBooking, event?.id]);
+
   const handleCancelBooking = async () => {
     if (!userBooking) return;
 
@@ -300,7 +390,7 @@ const EventDetailScreen = ({ navigation, route }) => {
       
       // Send new RSVP notification to organizer (non-blocking)
       if (event.organizerId) {
-        const attendeeName = userProfile?.displayName || userProfile?.email || 'Someone';
+        const attendeeName = user?.displayName || user?.email || 'Someone';
         notificationService.sendNewRSVPNotification(event.organizerId, event.name, attendeeName, event.id).catch(error => {
           console.warn('Failed to send new RSVP notification to organizer:', error);
         });
@@ -386,698 +476,924 @@ const EventDetailScreen = ({ navigation, route }) => {
     }
   };
 
-  const renderHeader = () => (
-    <View style={[styles.header, { backgroundColor: 'transparent' }]}>
-      <TouchableOpacity 
-        style={[styles.headerButton, { backgroundColor: 'rgba(0,0,0,0.3)' }]}
-        onPress={() => navigation.goBack()}
-      >
-        <Feather name="arrow-left" size={24} color="#FFFFFF" />
-      </TouchableOpacity>
-      
-      <View style={styles.headerActions}>
-        <CopyLinkButton
-          event={event}
-          style={[styles.headerButton, { backgroundColor: 'rgba(0,0,0,0.3)' }]}
-          iconSize={24}
-          iconColor="#FFFFFF"
-        />
-        
-        <ShareButton
-          event={event}
-          style={[styles.headerButton, { backgroundColor: 'rgba(0,0,0,0.3)' }]}
-          iconSize={24}
-          iconColor="#FFFFFF"
-        />
-      </View>
-    </View>
-  );
-
-  const renderImageGallery = () => (
-    <View style={styles.imageContainer}>
-      {event.imageBase64 ? (
-        <Image
-          source={{ 
-            uri: event.imageBase64.startsWith('data:') 
-              ? event.imageBase64 
-              : `data:image/jpeg;base64,${event.imageBase64}` 
-          }}
-          style={styles.eventImage}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={[styles.imagePlaceholder, { backgroundColor: colors.background.secondary }]}>
-          <Feather name="image" size={48} color={colors.text.tertiary} />
-          <Text style={[styles.imageText, { color: colors.text.tertiary }]}>No image available</Text>
-      </View>
-      )}
-      
-      <View style={[styles.categoryBadge, { backgroundColor: `${colors.primary[500]}E6` }]}>
-        <Text style={[styles.categoryText, { color: colors.white }]}>{event.category}</Text>
-      </View>
-    </View>
-  );
-
-  const renderEventInfo = () => (
-    <View style={styles.infoSection}>
-      <View style={[styles.infoCard, { backgroundColor: colors.background.secondary, borderColor: colors.border.light }]}>
-        <View style={[styles.iconContainer, { backgroundColor: colors.primary[100] }]}>
-          <Feather name="calendar" size={20} color={colors.primary[500]} />
-        </View>
-        <View style={styles.infoContent}>
-          <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Date & Time</Text>
-          <Text style={[styles.infoValue, { color: colors.text.primary }]}>{event.date}</Text>
-          <Text style={[styles.infoSubValue, { color: colors.text.tertiary }]}>{event.startTime || event.time} - {event.endTime}</Text>
-        </View>
-      </View>
-
-      <View style={[styles.infoCard, { backgroundColor: colors.background.secondary, borderColor: colors.border.light }]}>
-        <View style={[styles.iconContainer, { backgroundColor: colors.success[100] }]}>
-          <Feather name="map-pin" size={20} color={colors.success[500]} />
-        </View>
-        <View style={styles.infoContent}>
-          <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Location</Text>
-          <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-            {typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA')}
-          </Text>
-          <TouchableOpacity 
-            onPress={handleGetDirections}
-            activeOpacity={0.7}
-            style={styles.directionsTouchable}
-          >
-            <View style={styles.directionsButton}>
-              <Feather name="navigation" size={16} color={colors.primary[500]} />
-              <Text style={[styles.mapLink, { color: colors.primary[500] }]}>Get Directions</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={[styles.infoCard, { backgroundColor: colors.background.secondary, borderColor: colors.border.light }]}>
-        <View style={[styles.iconContainer, { backgroundColor: colors.warning[100] }]}>
-          <Feather name="users" size={20} color={colors.warning[500]} />
-        </View>
-        <View style={styles.infoContent}>
-          <Text style={[styles.infoLabel, { color: colors.text.secondary }]}>Attendees</Text>
-          <Text style={[styles.infoValue, { color: colors.text.primary }]}>
-            {loadingAttendees ? (
-              <ActivityIndicator size="small" color={colors.text.primary} />
-            ) : (
-              `${attendeeCount} going`
-            )}
-          </Text>
-          <Text style={[styles.infoSubValue, { color: colors.text.tertiary }]}>
-            {(event.totalTickets || 0) - attendeeCount} spots left
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
-
-  const renderBookingStatus = () => {
-    if (!userBooking) return null;
-
-    const isRSVP = userBooking.registrationType === 'rsvp';
-    const statusText = isRSVP ? 'You have RSVP\'d for this event' : 'You have booked tickets for this event';
-    const iconName = isRSVP ? 'user-check' : 'check-circle';
-    
-    return (
-      <View style={[styles.bookingStatusBanner, { backgroundColor: colors.success[50], borderColor: colors.success[200] }]}>
-        <View style={styles.statusContent}>
-          <Feather name={iconName} size={24} color={colors.success[500]} />
-          <View style={styles.statusText}>
-            <Text style={[styles.statusTitle, { color: colors.success[700] }]}>Registration Confirmed</Text>
-            <Text style={[styles.statusSubtitle, { color: colors.success[600] }]}>{statusText}</Text>
-          </View>
-        </View>
-        <TouchableOpacity 
-          style={[styles.cancelButton, { backgroundColor: colors.error[50], borderColor: colors.error[200] }]}
-          onPress={handleCancelBooking}
-          disabled={booking}
-        >
-          {booking ? (
-            <ActivityIndicator size="small" color={colors.error[500]} />
-          ) : (
-            <>
-              <Feather name="x" size={16} color={colors.error[500]} />
-              <Text style={[styles.cancelButtonText, { color: colors.error[600] }]}>
-                {isRSVP ? 'Withdraw' : 'Cancel'}
-              </Text>
-            </>
-          )}
-      </TouchableOpacity>
-    </View>
-  );
+  // Format event date/time for display
+  const getFormattedDateTime = () => {
+    if (!event.date) return '';
+    try {
+      const eventDate = new Date(event.date);
+      const now = new Date();
+      const isToday = eventDate.toDateString() === now.toDateString();
+      const time = event.startTime || event.time || '';
+      if (isToday && time) return `${time} Today`;
+      if (time) return `${time} · ${eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      return eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch {
+      return event.date;
+    }
   };
 
+  // Format date for the registered card view (e.g., "Fri.14 May 2026")
+  const getFormattedDate = () => {
+    if (!event.date) return '';
+    try {
+      const eventDate = new Date(event.date);
+      const weekday = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
+      const day = eventDate.getDate();
+      const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
+      const year = eventDate.getFullYear();
+      return `${weekday}.${day} ${month} ${year}`;
+    } catch {
+      return event.date;
+    }
+  };
 
-  return (
-    <>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background.primary} />
-      {renderHeader()}
-      
-      <ScrollView style={[styles.container, { backgroundColor: colors.background.primary }]} showsVerticalScrollIndicator={false}>
-        {renderImageGallery()}
+  // Format time for the registered card view (e.g., "6 PM")
+  const getFormattedTime = () => {
+    return event.startTime || event.time || '';
+  };
 
-        <View style={[styles.contentContainer, { backgroundColor: colors.background.primary }]}>
-          {renderBookingStatus()}
-          
-          <Text style={[styles.eventName, { color: colors.text.primary }]}>{event.name}</Text>
-          <Text style={[styles.eventPrice, { color: colors.success[500] }]}>
-            {event.type === 'free' ? 'Free' : `From ₵${event.price}`}
-          </Text>
+  // Get location string
+  const getLocationString = () => {
+    if (!event.location) return 'Location TBA';
+    if (typeof event.location === 'object') {
+      return event.location.name || event.location.address || 'Location TBA';
+    }
+    return event.location;
+  };
 
-          {renderEventInfo()}
+  // Generate QR code data for the ticket tab
+  const generateQRData = () => {
+    const ticketData = {
+      ticketId: userBooking?.qrCode || `TKT${(userBooking?.id || '').slice(-8).toUpperCase()}`,
+      eventId: event?.id || 'unknown-event',
+      eventName: event?.name || 'Unknown Event',
+      userId: user?.uid || 'unknown-user',
+      userName: user?.displayName || user?.email || 'Unknown User',
+      purchaseId: userBooking?.id || `booking-${Date.now()}`,
+      quantity: userBooking?.quantity || 1,
+      status: 'confirmed',
+      timestamp: Date.now(),
+    };
+    return JSON.stringify(ticketData);
+  };
 
-          <View style={[styles.descriptionSection, { backgroundColor: colors.background.secondary }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>About This Event</Text>
-            <Text style={[styles.description, { color: colors.text.secondary }]}>
-              {event.description || 'No description available for this event.'}
-            </Text>
-          </View>
+  // Render the QR code / Ticket tab content
+  const renderTicketTabContent = () => {
+    const daysLeft = getDaysLeft();
+    const daysLeftLabel = getDaysLeftLabel();
+    const ticketId = userBooking?.qrCode || `TKT${(userBooking?.id || '').slice(-8).toUpperCase()}`;
 
-          <View style={[styles.organizerSection, { backgroundColor: colors.background.secondary }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>Organizer</Text>
-            <View style={[styles.organizerCard, { backgroundColor: colors.background.tertiary, borderColor: colors.border.light }]}>
-              <View style={[styles.organizerAvatar, { backgroundColor: colors.primary[500] }]}>
-                <Text style={[styles.organizerAvatarText, { color: colors.white }]}>
-                  {event.organizerName?.[0]?.toUpperCase() || 'O'}
-                </Text>
-              </View>
-              <View style={styles.organizerInfo}>
-                <Text style={[styles.organizerName, { color: colors.text.primary }]}>
-                  {event.organizerName || 'Event Organizer'}
-                </Text>
-                {event.organizerEmail && (
-                  <Text style={[styles.organizerStats, { color: colors.text.secondary }]}>
-                    ✉️ {event.organizerEmail}
-                  </Text>
-                )}
-                {event.organizerPhone && (
-                  <Text style={[styles.organizerPhone, { color: colors.text.secondary }]}>
-                    📞 {event.organizerPhone}
-                  </Text>
-                )}
-              </View>
-              <View style={styles.contactButtons}>
-                {event.organizerPhone && (
-                  <TouchableOpacity 
-                    style={[styles.contactButton, { backgroundColor: colors.primary[500] }]}
-                    onPress={() => {
-                      const phoneNumber = event.organizerPhone.replace(/\s/g, ''); // Remove spaces
-                      Linking.openURL(`tel:${phoneNumber}`);
-                    }}
-                  >
-                    <Feather name="phone" size={16} color={colors.white} />
-                    <Text style={[styles.contactButtonText, { color: colors.white }]}>Call</Text>
-                  </TouchableOpacity>
-                )}
-                {event.organizerEmail && (
-                  <TouchableOpacity 
-                    style={[styles.contactButton, { backgroundColor: colors.success[500], marginLeft: 8 }]}
-                    onPress={() => {
-                      Linking.openURL(`mailto:${event.organizerEmail}`);
-                    }}
-                  >
-                    <Feather name="mail" size={16} color={colors.white} />
-                    <Text style={[styles.contactButtonText, { color: colors.white }]}>Email</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+    return (
+      <View style={registeredStyles.ticketTabContainer}>
+        {/* Days left counter */}
+        {daysLeft !== null && daysLeft >= 0 && (
+          <View style={registeredStyles.daysLeftCard}>
+            <View style={registeredStyles.daysLeftIconContainer}>
+              <Feather name="clock" size={20} color={Colors.primary[500]} />
             </View>
-          </View>
-
-
-          <View style={[styles.ticketSection, { backgroundColor: colors.background.secondary }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
-              {event.type === 'free' ? 'Registration' : 'Select Tickets'}
-            </Text>
-            <View style={[styles.ticketCard, { backgroundColor: colors.background.tertiary, borderColor: colors.border.light }]}>
-              <View style={styles.ticketInfo}>
-                <View>
-                  <Text style={[styles.ticketType, { color: colors.text.primary }]}>
-                    {event.type === 'free' ? 'Free Registration' : 'General Admission'}
-                  </Text>
-                  <Text style={[styles.ticketDescription, { color: colors.text.secondary }]}>
-                    {event.type === 'free' ? 'Reserve your spot' : 'Full event access'}
-                  </Text>
-                </View>
-                <Text style={[styles.ticketPrice, { color: colors.success[500] }]}>
-                  {event.type === 'free' ? 'Free' : `₵${event.price}`}
-                </Text>
-              </View>
-              
-              {event.type !== 'free' && (
-              <View style={styles.quantitySelector}>
-                  <Text style={[styles.quantityLabel, { color: colors.text.secondary }]}>Quantity</Text>
-                <View style={styles.quantityControls}>
-                  <TouchableOpacity
-                    style={[
-                      styles.quantityButton,
-                      { backgroundColor: colors.primary[500] },
-                      ticketQuantity <= 1 && { backgroundColor: colors.gray[300] }
-                    ]}
-                    onPress={() => adjustQuantity(-1)}
-                    disabled={ticketQuantity <= 1}
-                  >
-                    <Feather name="minus" size={16} color={colors.white} />
-                  </TouchableOpacity>
-                  
-                  <Text style={[styles.quantityValue, { color: colors.text.primary }]}>{ticketQuantity}</Text>
-                  
-                  <TouchableOpacity
-                    style={[
-                      styles.quantityButton,
-                      { backgroundColor: colors.primary[500] },
-                      ticketQuantity >= 10 && { backgroundColor: colors.gray[300] }
-                    ]}
-                    onPress={() => adjustQuantity(1)}
-                    disabled={ticketQuantity >= 10}
-                  >
-                    <Feather name="plus" size={16} color={colors.white} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              )}
-            </View>
-          </View>
-
-          <View style={styles.bottomSpacing} />
-        </View>
-      </ScrollView>
-
-      {!userBooking && (
-        <View style={[styles.purchaseContainer, { backgroundColor: colors.background.secondary, borderTopColor: colors.border.light }]}>
-        <View style={styles.totalSection}>
-          <View>
-            <Text style={[styles.totalLabel, { color: colors.text.primary }]}>
-              {event.type === 'free' ? 'Registration' : 'Total'}
-            </Text>
-            <Text style={[styles.totalSubLabel, { color: colors.text.secondary }]}>
-              {event.type === 'free' ? '1 spot reserved' : `${ticketQuantity} ticket${ticketQuantity > 1 ? 's' : ''}`}
-            </Text>
-          </View>
-          <Text style={[styles.totalAmount, { color: colors.success[500] }]}>
-            {event.type === 'free' ? 'Free Event' : `₵${(event.price * ticketQuantity).toFixed(2)}`}
-          </Text>
-        </View>
-        
-        <TouchableOpacity 
-          style={[
-            styles.buyButton, 
-            { backgroundColor: colors.primary[500] },
-            booking && { backgroundColor: colors.gray[400] }
-          ]} 
-          onPress={handleBookTicket}
-          disabled={booking}
-        >
-          {booking ? (
-            <ActivityIndicator color={colors.white} size="small" />
-          ) : (
-            <>
-              <Feather 
-                name={event.type === 'free' ? 'user-plus' : 'credit-card'} 
-                size={20} 
-                color={colors.white} 
-              />
-              <Text style={[styles.buyButtonText, { color: colors.white }]}>
-                {event.type === 'free' ? 'RSVP Now' : 'Buy Tickets'}
+            <View style={registeredStyles.daysLeftContent}>
+              <Text style={registeredStyles.daysLeftValue}>
+                {daysLeft === 0 ? 'Today' : daysLeft === 1 ? '1 day' : `${daysLeft} days`}
               </Text>
-            </>
-          )}
+              <Text style={registeredStyles.daysLeftLabel}>
+                {daysLeft === 0 ? 'Event is happening today!' : 'until the event'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* QR Code Section */}
+        <View style={registeredStyles.qrSection}>
+          <Text style={registeredStyles.qrSectionTitle}>Your Ticket</Text>
+          <Text style={registeredStyles.qrSectionSubtitle}>Show this QR code at the venue entrance</Text>
+
+          <View style={registeredStyles.qrCodeWrapper}>
+            <QRCode
+              value={generateQRData()}
+              size={200}
+              color="black"
+              backgroundColor="white"
+              logoBackgroundColor="transparent"
+            />
+          </View>
+
+          <View style={registeredStyles.qrLabelContainer}>
+            <Feather name="camera" size={16} color={Colors.text.tertiary} style={{ marginRight: 8 }} />
+            <Text style={registeredStyles.qrLabel}>Scan at venue entrance</Text>
+          </View>
+
+          {/* Ticket ID */}
+          <View style={registeredStyles.ticketIdContainer}>
+            <Feather name="hash" size={12} color={Colors.text.tertiary} style={{ marginRight: 4 }} />
+            <Text style={registeredStyles.ticketIdText}>{ticketId}</Text>
+          </View>
+        </View>
+
+        {/* Ticket details */}
+        <View style={registeredStyles.ticketDetails}>
+          <View style={registeredStyles.ticketDetailRow}>
+            <Text style={registeredStyles.ticketDetailLabel}>Attendee</Text>
+            <Text style={registeredStyles.ticketDetailValue}>
+              {user?.displayName || user?.email || 'Attendee'}
+            </Text>
+          </View>
+          <View style={registeredStyles.ticketDetailRow}>
+            <Text style={registeredStyles.ticketDetailLabel}>Quantity</Text>
+            <Text style={registeredStyles.ticketDetailValue}>
+              {userBooking?.quantity || 1} ticket{(userBooking?.quantity || 1) > 1 ? 's' : ''}
+            </Text>
+          </View>
+          <View style={registeredStyles.ticketDetailRow}>
+            <Text style={registeredStyles.ticketDetailLabel}>Type</Text>
+            <Text style={registeredStyles.ticketDetailValue}>
+              {userBooking?.registrationType === 'rsvp' ? 'Free RSVP' : 'Paid Ticket'}
+            </Text>
+          </View>
+          <View style={registeredStyles.ticketDetailRow}>
+            <Text style={registeredStyles.ticketDetailLabel}>Status</Text>
+            <Text style={[registeredStyles.ticketDetailValue, { color: Colors.success[500] }]}>
+              Confirmed
+            </Text>
+          </View>
+        </View>
+
+        {/* Share ticket button */}
+        <TouchableOpacity
+          style={registeredStyles.shareTicketButton}
+          onPress={() => {
+            Share.share({
+              message: `🎫 ${event.name}\n📅 ${event.date}\n⏰ ${event.startTime || event.time || 'TBA'}\n📍 ${getLocationString()}\n🎟️ Ticket: ${ticketId}\n\nGenerated by Tikiti App`,
+              title: `${event.name} Ticket`,
+            });
+          }}
+        >
+          <Feather name="share-2" size={18} color={Colors.white} />
+          <Text style={registeredStyles.shareTicketButtonText}>Share Ticket</Text>
         </TouchableOpacity>
       </View>
-      )}
+    );
+  };
 
-      {/* RSVP Form Modal removed - app users RSVP directly */}
-    </>
+  // ──── Program Tab Content ────────────────────────────
+  const renderProgramContent = () => {
+    const program = event?.program;
+    if (!program || !program.sessions || program.sessions.length === 0) {
+      return renderEmptyState('program');
+    }
+
+    // Group sessions by date
+    const sessionsByDate = {};
+    program.sessions.forEach((session) => {
+      const dateKey = session.date || event.date || 'Schedule';
+      if (!sessionsByDate[dateKey]) sessionsByDate[dateKey] = [];
+      sessionsByDate[dateKey].push(session);
+    });
+
+    // Sort sessions within each date by startTime
+    Object.keys(sessionsByDate).forEach((dateKey) => {
+      sessionsByDate[dateKey].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    });
+
+    return (
+      <View style={registeredStyles.programContainer}>
+        {Object.entries(sessionsByDate).map(([dateKey, sessions]) => (
+          <View key={dateKey}>
+            <Text style={registeredStyles.programDateHeader}>{dateKey}</Text>
+            {sessions.map((session, index) => (
+              <View key={session.id || index} style={registeredStyles.sessionCard}>
+                {/* Time column */}
+                <View style={registeredStyles.sessionTimeColumn}>
+                  <Text style={registeredStyles.sessionTime}>
+                    {session.startTime || 'TBA'}
+                  </Text>
+                  {session.endTime && (
+                    <Text style={registeredStyles.sessionEndTime}>
+                      {session.endTime}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Session details */}
+                <View style={registeredStyles.sessionContent}>
+                  {/* Type badge */}
+                  {session.type && session.type !== 'session' && (
+                    <View style={registeredStyles.sessionTypeBadge}>
+                      <Text style={registeredStyles.sessionTypeBadgeText}>
+                        {session.type.charAt(0).toUpperCase() + session.type.slice(1)}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={registeredStyles.sessionTitle}>{session.title}</Text>
+                  {session.description ? (
+                    <Text style={registeredStyles.sessionDescription} numberOfLines={2}>
+                      {session.description}
+                    </Text>
+                  ) : null}
+                  {/* Speaker info */}
+                  {session.speaker?.name && (
+                    <View style={registeredStyles.sessionSpeaker}>
+                      <Feather name="user" size={12} color={Colors.text.tertiary} />
+                      <Text style={registeredStyles.sessionSpeakerText}>
+                        {session.speaker.name}
+                      </Text>
+                    </View>
+                  )}
+                  {/* Location */}
+                  {session.location?.name && (
+                    <View style={registeredStyles.sessionSpeaker}>
+                      <Feather name="map-pin" size={12} color={Colors.text.tertiary} />
+                      <Text style={registeredStyles.sessionSpeakerText}>
+                        {session.location.name}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  // ──── Updates Tab Content ──────────────────────────────
+  const renderUpdatesContent = () => {
+    if (loadingUpdates) {
+      return (
+        <View style={registeredStyles.emptyState}>
+          <ActivityIndicator size="small" color={Colors.primary[500]} />
+          <Text style={registeredStyles.emptyStateTitle}>Loading updates...</Text>
+        </View>
+      );
+    }
+
+    if (!eventUpdates || eventUpdates.length === 0) {
+      return renderEmptyState('updates');
+    }
+
+    return (
+      <View style={registeredStyles.updatesContainer}>
+        {eventUpdates.map((update) => {
+          const createdAt = update.createdAt?.toDate?.() || (update.createdAt ? new Date(update.createdAt) : null);
+          const timeAgo = createdAt ? getTimeAgo(createdAt) : '';
+
+          return (
+            <View key={update.id} style={registeredStyles.updateCard}>
+              <View style={registeredStyles.updateHeader}>
+                <View style={registeredStyles.updateIconCircle}>
+                  <Feather
+                    name={update.type === 'important' ? 'alert-circle' : 'bell'}
+                    size={14}
+                    color={update.type === 'important' ? Colors.error[500] : Colors.primary[500]}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={registeredStyles.updateTitle}>{update.title}</Text>
+                  {timeAgo ? <Text style={registeredStyles.updateTime}>{timeAgo}</Text> : null}
+                </View>
+              </View>
+              {update.content ? (
+                <Text style={registeredStyles.updateContent}>{update.content}</Text>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
+  // Helper: time ago
+  const getTimeAgo = (date) => {
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  // ──── Feedback Tab Content ─────────────────────────────
+  const renderFeedbackContent = () => {
+    const daysLeft = getDaysLeft();
+
+    // If event hasn't passed, show "coming soon" state
+    if (daysLeft !== null && daysLeft > 0) {
+      return (
+        <View style={registeredStyles.emptyState}>
+          <Feather name="message-circle" size={24} color={Colors.text.tertiary} />
+          <View style={registeredStyles.emptyStateText}>
+            <Text style={registeredStyles.emptyStateTitle}>Feedback opens after the event</Text>
+            <Text style={registeredStyles.emptyStateSubtitle}>
+              You'll be able to share your experience once the event has concluded.
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (loadingSurveys) {
+      return (
+        <View style={registeredStyles.emptyState}>
+          <ActivityIndicator size="small" color={Colors.primary[500]} />
+          <Text style={registeredStyles.emptyStateTitle}>Loading feedback...</Text>
+        </View>
+      );
+    }
+
+    if (!eventSurveys || eventSurveys.length === 0) {
+      return (
+        <View style={registeredStyles.emptyState}>
+          <Feather name="message-circle" size={24} color={Colors.text.tertiary} />
+          <View style={registeredStyles.emptyStateText}>
+            <Text style={registeredStyles.emptyStateTitle}>No feedback forms</Text>
+            <Text style={registeredStyles.emptyStateSubtitle}>
+              The organizer hasn't created any feedback surveys for this event yet.
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={registeredStyles.updatesContainer}>
+        {eventSurveys.map((survey) => (
+          <TouchableOpacity key={survey.id} style={registeredStyles.surveyCard}>
+            <View style={registeredStyles.surveyHeader}>
+              <Feather name="clipboard" size={18} color={Colors.primary[500]} />
+              <View style={{ flex: 1 }}>
+                <Text style={registeredStyles.surveyTitle}>{survey.title || 'Event Feedback'}</Text>
+                <Text style={registeredStyles.surveySubtitle}>
+                  {survey.questions?.length || 0} questions
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={Colors.text.tertiary} />
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+
+  // ──── Empty state helper ──────────────────────────────
+  const renderEmptyState = (tabKey) => {
+    const emptyState = tabEmptyStates[tabKey] || tabEmptyStates.program;
+    return (
+      <View style={registeredStyles.emptyState}>
+        <Feather name={emptyState.icon} size={24} color={Colors.text.tertiary} />
+        <View style={registeredStyles.emptyStateText}>
+          <Text style={registeredStyles.emptyStateTitle}>{emptyState.title}</Text>
+          <Text style={registeredStyles.emptyStateSubtitle}>{emptyState.subtitle}</Text>
+        </View>
+        <TouchableOpacity
+          style={registeredStyles.refreshButton}
+          onPress={() => {
+            if (event?.id) {
+              eventService.getById(event.id).then(updatedEvent => {
+                if (updatedEvent) setEvent(updatedEvent);
+              });
+            }
+          }}
+        >
+          <Feather name="refresh-cw" size={18} color={Colors.white} />
+          <Text style={registeredStyles.refreshButtonText}>Refresh</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // ──── Main tab content router ──────────────────────────
+  const renderTabContent = () => {
+    switch (activeEventTab) {
+      case 'ticket':
+        return renderTicketTabContent();
+      case 'program':
+        return renderProgramContent();
+      case 'updates':
+        return renderUpdatesContent();
+      case 'feedback':
+        return renderFeedbackContent();
+      case 'messages':
+        // Messages are sent via email/SMS from dashboard — no persistent storage
+        return renderEmptyState('messages');
+      default:
+        return renderEmptyState('program');
+    }
+  };
+
+  // ──────────────────────────────────────────────────────
+  // LOADING STATE — Show skeleton while checking booking
+  // ──────────────────────────────────────────────────────
+  if (checkingBooking) {
+    return <EventDetailSkeleton />;
+  }
+
+  // ──────────────────────────────────────────────────────
+  // REGISTERED VIEW — Card layout matching Figma 45:584
+  // ──────────────────────────────────────────────────────
+  if (userBooking) {
+    return (
+      <View style={[registeredStyles.container, { backgroundColor: colors.background.primary }]}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background.primary} />
+
+        {/* Header */}
+        <View style={registeredStyles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={registeredStyles.backButton}>
+            <Feather name="arrow-left" size={24} color={Colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={registeredStyles.headerTitle}>Events details</Text>
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={registeredStyles.scrollContent}
+        >
+          {/* Event Card */}
+          <View style={registeredStyles.eventCard}>
+            {/* Event Image */}
+            <View style={registeredStyles.imageContainer}>
+              {event.imageBase64 ? (
+                <Image
+                  source={{
+                    uri: event.imageBase64.startsWith('data:')
+                      ? event.imageBase64
+                      : `data:image/jpeg;base64,${event.imageBase64}`,
+                  }}
+                  style={registeredStyles.eventImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[registeredStyles.eventImage, { backgroundColor: colors.primary[200], justifyContent: 'center', alignItems: 'center' }]}>
+                  <Feather name="image" size={32} color={colors.primary[400]} />
+                </View>
+              )}
+
+              {/* Going badge */}
+              <View style={registeredStyles.goingBadge}>
+                <Text style={registeredStyles.goingBadgeText}>Going</Text>
+              </View>
+            </View>
+
+            {/* Event Title */}
+            <Text style={registeredStyles.eventTitle}>{event.name}</Text>
+
+            {/* Date, Time, Location pills */}
+            <View style={registeredStyles.pillsContainer}>
+              <View style={registeredStyles.pillRow}>
+                <View style={registeredStyles.pill}>
+                  <Text style={registeredStyles.pillText}>{getFormattedDate()}</Text>
+                </View>
+                <View style={registeredStyles.pill}>
+                  <Text style={registeredStyles.pillText}>{getFormattedTime()}</Text>
+                </View>
+              </View>
+              <View style={registeredStyles.pill}>
+                <Text style={registeredStyles.pillText}>{getLocationString()}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Meeting link for virtual/hybrid events */}
+          {(event.venueType === 'virtual' || event.venueType === 'hybrid') && (
+            <View style={registeredStyles.meetingLinkCard}>
+              <View style={registeredStyles.meetingLinkHeader}>
+                <Feather name="video" size={18} color={Colors.primary[500]} />
+                <Text style={registeredStyles.meetingLinkTitle}>
+                  {event.venueType === 'hybrid' ? 'Join Online (Hybrid)' : 'Join Virtual Event'}
+                </Text>
+              </View>
+              <Text style={registeredStyles.meetingPlatform}>
+                {event.meetingPlatform === 'google_meet' ? 'Google Meet' :
+                 event.meetingPlatform === 'zoom' ? 'Zoom' :
+                 event.meetingPlatform === 'teams' ? 'Microsoft Teams' :
+                 event.meetingPlatform || 'Online Meeting'}
+              </Text>
+              {event.meetingLink ? (
+                <TouchableOpacity
+                  style={registeredStyles.joinMeetingButton}
+                  onPress={() => Linking.openURL(event.meetingLink)}
+                >
+                  <Feather name="external-link" size={16} color={Colors.white} />
+                  <Text style={registeredStyles.joinMeetingButtonText}>Join Meeting</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={registeredStyles.meetingLinkPending}>
+                  Meeting link will be shared by the organizer
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Days left indicator */}
+          {getDaysLeft() !== null && getDaysLeft() >= 0 && (
+            <View style={registeredStyles.daysLeftPill}>
+              <Feather name="clock" size={14} color={Colors.primary[500]} />
+              <Text style={registeredStyles.daysLeftPillText}>{getDaysLeftLabel()}</Text>
+            </View>
+          )}
+
+          {/* PillTabBar — Ticket, Program, Updates, Messages, Feedback */}
+          <View style={registeredStyles.tabBarContainer}>
+            <PillTabBar
+              tabs={eventTabs}
+              activeTab={activeEventTab}
+              onTabPress={setActiveEventTab}
+            />
+          </View>
+
+          {/* Tab content area */}
+          {renderTabContent()}
+
+          {/* Cancel registration option */}
+          <TouchableOpacity
+            style={registeredStyles.cancelRegistration}
+            onPress={handleCancelBooking}
+            disabled={booking}
+          >
+            {booking ? (
+              <ActivityIndicator size="small" color={colors.error[500]} />
+            ) : (
+              <>
+                <Feather name="x-circle" size={16} color={colors.error[500]} />
+                <Text style={[registeredStyles.cancelRegistrationText, { color: colors.error[500] }]}>
+                  {userBooking.registrationType === 'rsvp' ? 'Withdraw RSVP' : 'Cancel Booking'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ──────────────────────────────────────────────────────
+  // UNREGISTERED VIEW — Hero layout (pre-registration)
+  // ──────────────────────────────────────────────────────
+  return (
+    <View style={styles.modalContainer}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* Hero Image Section — Full bleed with gradient overlay */}
+        <View style={styles.heroSection}>
+          {event.imageBase64 ? (
+            <Image
+              source={{
+                uri: event.imageBase64.startsWith('data:')
+                  ? event.imageBase64
+                  : `data:image/jpeg;base64,${event.imageBase64}`,
+              }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.heroImage, { backgroundColor: colors.primary[700] }]}>
+              <Feather name="image" size={48} color="rgba(255,255,255,0.3)" />
+            </View>
+          )}
+
+          {/* Gradient overlay */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.85)']}
+            locations={[0.35, 0.85]}
+            style={styles.heroGradient}
+          />
+
+          {/* Close button */}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Feather name="x" size={16} color={Colors.black} />
+          </TouchableOpacity>
+
+          {/* Content overlaid on hero */}
+          <View style={styles.heroContent}>
+            {/* Live badge */}
+            {event.category && (
+              <View style={styles.liveBadge}>
+                <Feather name="video" size={16} color={Colors.black} />
+                <Text style={styles.liveBadgeText}>{event.category}</Text>
+              </View>
+            )}
+
+            {/* Event title */}
+            <Text style={styles.heroTitle}>{event.name}</Text>
+
+            {/* Date/time */}
+            <Text style={styles.heroDateTime}>{getFormattedDateTime()}</Text>
+          </View>
+        </View>
+
+        {/* Bottom white content section */}
+        <View style={[styles.contentSection, { backgroundColor: colors.background.primary }]}>
+          {/* Description */}
+          <Text style={[styles.descriptionTitle, { color: colors.text.primary }]}>
+            {event.description?.substring(0, 80) || 'No description available.'}
+          </Text>
+          <Text style={[styles.descriptionBody, { color: colors.text.secondary }]}>
+            {event.description?.substring(80) || ''}
+          </Text>
+
+          {/* Attendee count */}
+          <View style={styles.attendeeRow}>
+            <Feather name="users" size={16} color={colors.text.tertiary} />
+            <Text style={[styles.attendeeText, { color: colors.text.tertiary }]}>
+              {loadingAttendees ? '...' : `${attendeeCount} attending`}
+            </Text>
+          </View>
+
+          {/* Action buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.registerButton, booking && { opacity: 0.6 }]}
+              onPress={handleBookTicket}
+              disabled={booking}
+            >
+              {booking ? (
+                <ActivityIndicator color={Colors.white} size="small" />
+              ) : (
+                <Text style={styles.registerButtonText}>
+                  {event.type === 'free' ? 'Register' : `Buy · ₵${event.price}`}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.shareButton}
+              onPress={() => {
+                Share.share({
+                  message: `Check out ${event.name}!`,
+                  title: event.name,
+                });
+              }}
+            >
+              <Feather name="share" size={20} color={Colors.black} />
+              <Text style={styles.shareButtonText}>Share</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Ticket quantity for paid events */}
+          {event.type !== 'free' && (
+            <View style={[styles.quantitySection, { borderColor: colors.border.light }]}>
+              <Text style={[styles.quantityLabel, { color: colors.text.secondary }]}>Quantity</Text>
+              <View style={styles.quantityControls}>
+                <TouchableOpacity
+                  style={[styles.quantityButton, ticketQuantity <= 1 && { backgroundColor: colors.gray[300] }]}
+                  onPress={() => adjustQuantity(-1)}
+                  disabled={ticketQuantity <= 1}
+                >
+                  <Feather name="minus" size={16} color={Colors.white} />
+                </TouchableOpacity>
+                <Text style={[styles.quantityValue, { color: colors.text.primary }]}>{ticketQuantity}</Text>
+                <TouchableOpacity
+                  style={[styles.quantityButton, ticketQuantity >= 10 && { backgroundColor: colors.gray[300] }]}
+                  onPress={() => adjustQuantity(1)}
+                  disabled={ticketQuantity >= 10}
+                >
+                  <Feather name="plus" size={16} color={Colors.white} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Event details cards */}
+          <View style={styles.detailCards}>
+            <View style={[styles.detailCard, { borderColor: colors.border.light }]}>
+              <Feather name="calendar" size={18} color={colors.primary[500]} />
+              <View style={styles.detailCardContent}>
+                <Text style={[styles.detailCardLabel, { color: colors.text.tertiary }]}>Date & Time</Text>
+                <Text style={[styles.detailCardValue, { color: colors.text.primary }]}>{event.date}</Text>
+                <Text style={[styles.detailCardSub, { color: colors.text.tertiary }]}>
+                  {event.startTime || event.time || 'Time TBA'}{event.endTime ? ` - ${event.endTime}` : ''}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.detailCard, { borderColor: colors.border.light }]}>
+              <Feather name="map-pin" size={18} color={colors.success[500]} />
+              <View style={styles.detailCardContent}>
+                <Text style={[styles.detailCardLabel, { color: colors.text.tertiary }]}>Location</Text>
+                <Text style={[styles.detailCardValue, { color: colors.text.primary }]}>
+                  {typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA')}
+                </Text>
+                <TouchableOpacity onPress={handleGetDirections} style={styles.directionsLink}>
+                  <Feather name="navigation" size={14} color={colors.primary[500]} />
+                  <Text style={[styles.directionsText, { color: colors.primary[500] }]}>Get Directions</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Meeting link for virtual/hybrid events */}
+            {(event.venueType === 'virtual' || event.venueType === 'hybrid') && (
+              <View style={[styles.detailCard, { borderColor: colors.border.light }]}>
+                <Feather name="video" size={18} color={colors.info[500]} />
+                <View style={styles.detailCardContent}>
+                  <Text style={[styles.detailCardLabel, { color: colors.text.tertiary }]}>
+                    {event.venueType === 'hybrid' ? 'Online (Hybrid)' : 'Virtual Event'}
+                  </Text>
+                  <Text style={[styles.detailCardValue, { color: colors.text.primary }]}>
+                    {event.meetingPlatform === 'google_meet' ? 'Google Meet' :
+                     event.meetingPlatform === 'zoom' ? 'Zoom' :
+                     event.meetingPlatform === 'teams' ? 'Microsoft Teams' :
+                     event.meetingPlatform || 'Online Meeting'}
+                  </Text>
+                  {event.meetingLink ? (
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL(event.meetingLink)}
+                      style={styles.directionsLink}
+                    >
+                      <Feather name="external-link" size={14} color={colors.primary[500]} />
+                      <Text style={[styles.directionsText, { color: colors.primary[500] }]}>Join Meeting</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={[styles.detailCardSub, { color: colors.text.tertiary }]}>
+                      Link will be shared after registration
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            <View style={[styles.detailCard, { borderColor: colors.border.light }]}>
+              <Feather name="user" size={18} color={colors.primary[500]} />
+              <View style={styles.detailCardContent}>
+                <Text style={[styles.detailCardLabel, { color: colors.text.tertiary }]}>Organizer</Text>
+                <Text style={[styles.detailCardValue, { color: colors.text.primary }]}>{event.organizerName || 'Event Organizer'}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={{ height: 60 }} />
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  // ─── Modal container ─────────────────────────────────
+  modalContainer: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: Colors.black,
   },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-    zIndex: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  scrollView: {
+    flex: 1,
   },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  imageContainer: {
+
+  // ─── Hero section ────────────────────────────────────
+  heroSection: {
+    height: SCREEN_HEIGHT * 0.72,
     position: 'relative',
-    height: 320,
+    justifyContent: 'flex-end',
   },
-  eventImage: {
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-  },
-  imagePlaceholder: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing[3],
   },
-  imageText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.tertiary,
-    fontWeight: Typography.fontWeight.medium,
-    textAlign: 'center',
+  heroGradient: {
+    ...StyleSheet.absoluteFillObject,
   },
-  imageIndicators: {
+  closeButton: {
     position: 'absolute',
-    bottom: 16,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
+    top: 34,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
-    gap: 8,
+    alignItems: 'center',
+    zIndex: 10,
   },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  heroContent: {
+    paddingHorizontal: 33,
+    paddingBottom: 26,
+    gap: 16,
   },
-  activeIndicator: {
-    backgroundColor: '#FFFFFF',
-    width: 24,
-  },
-  categoryBadge: {
-    position: 'absolute',
-    top: 80,
-    right: 24,
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#6366F1',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  categoryText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  contentContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    marginTop: -32,
-    paddingTop: 32,
-    paddingHorizontal: 24,
-    flex: 1,
-  },
-  eventName: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#1F2937',
-    marginBottom: 8,
-    letterSpacing: -0.8,
-  },
-  eventPrice: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#10B981',
-    marginBottom: 32,
-  },
-  infoSection: {
-    marginBottom: 32,
-  },
-  infoCard: {
+  liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  infoSubValue: {
-    fontSize: 15,
-    color: '#6B7280',
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  mapLink: {
-    fontSize: 14,
-    color: '#6366F1',
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  directionsTouchable: {
     alignSelf: 'flex-start',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    gap: 10,
   },
-  directionsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
+  liveBadgeText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 16,
+    color: Colors.black,
   },
-  descriptionSection: {
-    marginBottom: 32,
+  heroTitle: {
+    fontFamily: Typography.fontFamily.extrabold,
+    fontSize: 40,
+    color: Colors.white,
+    lineHeight: 44,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#1F2937',
+  heroDateTime: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 20,
+    color: Colors.white,
+  },
+
+  // ─── Content section ─────────────────────────────────
+  contentSection: {
+    paddingHorizontal: 33,
+    paddingTop: 26,
+  },
+  descriptionTitle: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 20,
+    color: Colors.text.primary,
     marginBottom: 16,
-    letterSpacing: -0.5,
-  },
-  description: {
-    fontSize: 16,
     lineHeight: 26,
-    color: '#4B5563',
-    fontWeight: '400',
   },
-  organizerSection: {
-    marginBottom: 32,
-  },
-  organizerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  organizerAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  organizerAvatarText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  organizerInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  organizerName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  organizerStats: {
+  descriptionBody: {
+    fontFamily: Typography.fontFamily.regular,
     fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
-    fontWeight: '500',
+    color: Colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: 20,
   },
-  organizerPhone: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  contactButtons: {
+  attendeeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  contactButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#6366F1',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 6,
-  },
-  contactButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  bookingStatusBanner: {
-    backgroundColor: Colors.success[50],
-    borderColor: Colors.success[200],
-    borderWidth: 1,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing[4],
-    marginBottom: Spacing[6],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statusContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  statusText: {
-    marginLeft: Spacing[3],
-    flex: 1,
-  },
-  statusTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.success[700],
-    marginBottom: Spacing[1],
-  },
-  statusSubtitle: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.success[600],
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.error[50],
-    borderColor: Colors.error[200],
-    borderWidth: 1,
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.lg,
-    gap: Spacing[1],
-  },
-  cancelButtonText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.error[500],
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  ticketSection: {
-    marginBottom: 32,
-  },
-  ticketCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 24,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 5,
-  },
-  ticketInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    gap: 10,
     marginBottom: 24,
   },
-  ticketType: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  ticketDescription: {
+  attendeeText: {
+    fontFamily: Typography.fontFamily.regular,
     fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-    fontWeight: '500',
+    color: Colors.text.tertiary,
   },
-  ticketPrice: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#10B981',
+
+  // ─── Action buttons (Figma: two side-by-side) ───────
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 24,
   },
-  quantitySelector: {
+  registerButton: {
+    flex: 1,
+    backgroundColor: '#060606',
+    height: 47,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.white,
+  },
+  registerButtonText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
+    color: Colors.white,
+  },
+  shareButton: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: Colors.white,
+    height: 47,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.white,
+    gap: 9,
+  },
+  shareButtonText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
+    color: Colors.black,
+  },
+
+  // ─── Quantity section (paid events) ──────────────────
+  quantitySection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    marginBottom: 24,
   },
   quantityLabel: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontFamily: Typography.fontFamily.semibold,
+    color: Colors.text.primary,
   },
   quantityControls: {
     flexDirection: 'row',
@@ -1085,102 +1401,552 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   quantityButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#6366F1',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary[500],
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  quantityButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-    shadowOpacity: 0,
   },
   quantityValue: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#1F2937',
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
     minWidth: 30,
     textAlign: 'center',
   },
-  bottomSpacing: {
-    height: 120,
+
+  // ─── Detail cards ────────────────────────────────────
+  detailCards: {
+    gap: 12,
   },
-  purchaseContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    padding: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  totalSection: {
+  detailCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    padding: 16,
+    borderRadius: BorderRadius['3xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    gap: 14,
   },
-  totalLabel: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
+  detailCardContent: {
+    flex: 1,
   },
-  totalSubLabel: {
-    fontSize: 14,
-    color: '#6B7280',
+  detailCardLabel: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  detailCardValue: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 15,
+  },
+  detailCardSub: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 13,
     marginTop: 2,
-    fontWeight: '500',
   },
-  totalAmount: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#10B981',
+  directionsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
   },
-  buyButton: {
+  directionsText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 13,
+  },
+
+});
+
+// ════════════════════════════════════════════════════════
+// Registered / Post-RSVP styles (Figma 45:584)
+// ════════════════════════════════════════════════════════
+const registeredStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontFamily: Typography.fontFamily.extrabold,
+    fontSize: 24,
+    color: Colors.text.primary,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+
+  // ─── Event card ─────────────────────────────────────
+  eventCard: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    padding: 14,
+    paddingBottom: 15,
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 161,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 17,
+  },
+  eventImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
+  },
+  goingBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: Colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  goingBadgeText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 12,
+    color: Colors.black,
+  },
+  eventTitle: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 24,
+    color: Colors.black,
+    marginBottom: 17,
+  },
+  pillsContainer: {
+    gap: 8,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    gap: 7,
+  },
+  pill: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  pillText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 16,
+    color: Colors.black,
+  },
+
+  // ─── Tab bar ────────────────────────────────────────
+  tabBarContainer: {
+    marginTop: 20,
+    marginBottom: 16,
+  },
+
+  // ─── Empty state ────────────────────────────────────
+  emptyState: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    paddingHorizontal: 62,
+    paddingVertical: 64,
+    alignItems: 'center',
+    gap: 40,
+  },
+  emptyStateText: {
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+  },
+  emptyStateTitle: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 16,
+    color: Colors.text.primary,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 12,
+    color: Colors.text.primary,
+    textAlign: 'center',
+  },
+  refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6366F1',
-    paddingVertical: 18,
-    borderRadius: 16,
+    backgroundColor: '#060606',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 30,
+    gap: 9,
+    width: 167,
+  },
+  refreshButtonText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
+    color: Colors.white,
+  },
+
+  // ─── Meeting link card (for virtual/hybrid) ────────
+  meetingLinkCard: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    padding: 20,
+    marginTop: 16,
     gap: 8,
-    shadowColor: '#6366F1',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  buyButtonText: {
-    color: '#FFFFFF',
+  meetingLinkHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  meetingLinkTitle: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 16,
+    color: Colors.text.primary,
+  },
+  meetingPlatform: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginLeft: 28,
+  },
+  joinMeetingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#060606',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 30,
+    gap: 8,
+    marginTop: 8,
+  },
+  joinMeetingButtonText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
+    color: Colors.white,
+  },
+  meetingLinkPending: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 12,
+    color: Colors.text.tertiary,
+    marginLeft: 28,
+    fontStyle: 'italic',
+  },
+
+  // ─── Days left pill (below card, above tabs) ──────
+  daysLeftPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 30,
+    gap: 6,
+    marginTop: 16,
+  },
+  daysLeftPillText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
+    color: Colors.primary[500],
+  },
+
+  // ─── Ticket tab content ──────────────────────────────
+  ticketTabContainer: {
+    gap: 16,
+  },
+  daysLeftCard: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  daysLeftIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  daysLeftContent: {
+    flex: 1,
+  },
+  daysLeftValue: {
+    fontFamily: Typography.fontFamily.extrabold,
+    fontSize: 24,
+    color: Colors.text.primary,
+  },
+  daysLeftLabel: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginTop: 2,
+  },
+  qrSection: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+  },
+  qrSectionTitle: {
+    fontFamily: Typography.fontFamily.semibold,
     fontSize: 18,
-    fontWeight: '800',
+    color: Colors.text.primary,
+    marginBottom: 4,
   },
-  buyButtonDisabled: {
-    opacity: 0.6,
+  qrSectionSubtitle: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginBottom: 24,
   },
-  
-  // RSVP form styles removed - direct RSVP for app users
+  qrCodeWrapper: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  qrLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  qrLabel: {
+    fontSize: 13,
+    color: Colors.text.tertiary,
+    fontFamily: Typography.fontFamily.medium,
+    textAlign: 'center',
+  },
+  ticketIdContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  ticketIdText: {
+    fontSize: 11,
+    color: Colors.text.tertiary,
+    fontFamily: Typography.fontFamily.mono,
+  },
+  ticketDetails: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    padding: 20,
+    gap: 16,
+  },
+  ticketDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ticketDetailLabel: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 14,
+    color: Colors.text.tertiary,
+  },
+  ticketDetailValue: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
+    color: Colors.text.primary,
+  },
+  shareTicketButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#060606',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 30,
+    gap: 9,
+  },
+  shareTicketButtonText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
+    color: Colors.white,
+  },
+
+  // ─── Program tab ──────────────────────────────────────
+  programContainer: {
+    gap: 16,
+  },
+  programDateHeader: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
+    color: Colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  sessionCard: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 10,
+    gap: 14,
+  },
+  sessionTimeColumn: {
+    width: 52,
+    alignItems: 'center',
+    paddingTop: 2,
+  },
+  sessionTime: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: 14,
+    color: Colors.primary[500],
+  },
+  sessionEndTime: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 11,
+    color: Colors.text.tertiary,
+    marginTop: 2,
+  },
+  sessionContent: {
+    flex: 1,
+    gap: 4,
+  },
+  sessionTypeBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  sessionTypeBadgeText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 10,
+    color: Colors.primary[500],
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sessionTitle: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  sessionDescription: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 13,
+    color: Colors.text.secondary,
+    lineHeight: 18,
+  },
+  sessionSpeaker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  sessionSpeakerText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 12,
+    color: Colors.text.tertiary,
+  },
+
+  // ─── Updates tab ──────────────────────────────────────
+  updatesContainer: {
+    gap: 12,
+  },
+  updateCard: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    padding: 16,
+    gap: 8,
+  },
+  updateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  updateIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  updateTitle: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  updateTime: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 12,
+    color: Colors.text.tertiary,
+    marginTop: 2,
+  },
+  updateContent: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 14,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+    marginLeft: 42,
+  },
+
+  // ─── Surveys/Feedback tab ────────────────────────────
+  surveyCard: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    padding: 16,
+  },
+  surveyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  surveyTitle: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  surveySubtitle: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 12,
+    color: Colors.text.tertiary,
+    marginTop: 2,
+  },
+
+  // ─── Cancel registration ────────────────────────────
+  cancelRegistration: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 24,
+    paddingVertical: 12,
+  },
+  cancelRegistrationText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
+  },
 });
 
 export default EventDetailScreen;

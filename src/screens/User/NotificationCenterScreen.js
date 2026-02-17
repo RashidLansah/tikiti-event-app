@@ -240,11 +240,9 @@ const NotificationCenterScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centered, { backgroundColor: colors.background.primary }]}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>
-          Loading notifications...
-        </Text>
+      <View style={[styles.container, { backgroundColor: colors.background.primary, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.text.primary} />
+        <Text style={{ marginTop: 12, fontSize: 14, color: colors.text.secondary }}>Loading notifications...</Text>
       </View>
     );
   }
@@ -304,6 +302,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: Spacing[4],
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
   },
   header: {
     flexDirection: 'row',
@@ -319,6 +318,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
   },
   headerRight: {
@@ -355,15 +355,18 @@ const styles = StyleSheet.create({
   },
   notificationTitle: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
     marginBottom: Spacing[1],
   },
   notificationBody: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     lineHeight: 20,
     marginBottom: Spacing[2],
   },
   notificationTime: {
     fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.regular,
   },
   unreadDot: {
     width: 8,
@@ -380,12 +383,14 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     marginTop: Spacing[4],
     marginBottom: Spacing[2],
   },
   emptyStateSubtitle: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     textAlign: 'center',
     lineHeight: 22,
   },

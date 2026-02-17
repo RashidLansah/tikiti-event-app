@@ -14,6 +14,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import { useAuth } from '../../context/AuthContext';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
 const { width } = Dimensions.get('window');
 
@@ -182,12 +183,12 @@ Keep this link safe - it contains your QR code for entry!`;
           />
       </View>
       <View style={styles.qrLabelContainer}>
-        <Feather name="camera" size={16} color="#6B7280" style={{ marginRight: 8 }} />
+        <Feather name="camera" size={16} color={Colors.text.tertiary} style={{ marginRight: 8 }} />
         <Text style={styles.qrLabel}>Scan at venue entrance</Text>
       </View>
       {qrCode && (
         <View style={styles.qrCodeTextContainer}>
-          <Feather name="hash" size={12} color="#9CA3AF" style={{ marginRight: 4 }} />
+          <Feather name="hash" size={12} color={Colors.text.disabled} style={{ marginRight: 4 }} />
           <Text style={styles.qrCodeText}>{qrCode}</Text>
         </View>
       )}
@@ -201,7 +202,7 @@ Keep this link safe - it contains your QR code for entry!`;
       <View style={styles.ticketHeader}>
         <View style={styles.ticketHeaderContent}>
           <View style={styles.ticketTitleContainer}>
-            <Feather name="tag" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Feather name="tag" size={18} color={Colors.white} style={{ marginRight: 8 }} />
             <Text style={styles.ticketTitle}>EVENT TICKET</Text>
           </View>
           <View style={styles.ticketNumberContainer}>
@@ -217,7 +218,7 @@ Keep this link safe - it contains your QR code for entry!`;
         <View style={styles.ticketDetails}>
           <View style={styles.detailRow}>
             <View style={styles.detailIconContainer}>
-              <Feather name="calendar" size={16} color="#10B981" />
+              <Feather name="calendar" size={16} color={Colors.success[500]} />
             </View>
             <Text style={styles.detailLabel}>Date:</Text>
             <Text style={styles.detailValue}>{event?.date || '2025-09-15'}</Text>
@@ -225,7 +226,7 @@ Keep this link safe - it contains your QR code for entry!`;
           
           <View style={styles.detailRow}>
             <View style={styles.detailIconContainer}>
-              <Feather name="clock" size={16} color="#F59E0B" />
+              <Feather name="clock" size={16} color={Colors.warning[500]} />
             </View>
             <Text style={styles.detailLabel}>Time:</Text>
             <Text style={styles.detailValue}>{event?.time || '6:00 PM'}</Text>
@@ -233,7 +234,7 @@ Keep this link safe - it contains your QR code for entry!`;
           
           <View style={styles.detailRow}>
             <View style={styles.detailIconContainer}>
-              <Feather name="map-pin" size={16} color="#EF4444" />
+              <Feather name="map-pin" size={16} color={Colors.error[500]} />
             </View>
             <Text style={styles.detailLabel}>Venue:</Text>
             <Text style={styles.detailValue}>{event?.location || 'Sample Venue'}</Text>
@@ -241,7 +242,7 @@ Keep this link safe - it contains your QR code for entry!`;
           
           <View style={styles.detailRow}>
             <View style={styles.detailIconContainer}>
-              <Feather name="dollar-sign" size={16} color="#10B981" />
+              <Feather name="dollar-sign" size={16} color={Colors.success[500]} />
             </View>
             <Text style={styles.detailLabel}>Price:</Text>
             <Text style={styles.detailValue}>{event?.price || '₵80'}</Text>
@@ -253,12 +254,12 @@ Keep this link safe - it contains your QR code for entry!`;
                 <Feather 
                   name={status === 'confirmed' ? 'check-circle' : status === 'used' ? 'clock' : 'x-circle'} 
                   size={16} 
-                  color={status === 'confirmed' ? '#10B981' : status === 'used' ? '#6B7280' : '#EF4444'} 
+                  color={status === 'confirmed' ? Colors.success[500] : status === 'used' ? Colors.text.tertiary : Colors.error[500]}
                 />
               </View>
               <Text style={styles.detailLabel}>Status:</Text>
               <Text style={[styles.detailValue, styles.statusText, { 
-                color: status === 'confirmed' ? '#10B981' : status === 'used' ? '#6B7280' : '#EF4444' 
+                color: status === 'confirmed' ? Colors.success[500] : status === 'used' ? Colors.text.tertiary : Colors.error[500]
               }]}>
                 {status === 'confirmed' ? 'Confirmed' : status === 'used' ? 'Used' : 'Cancelled'}
               </Text>
@@ -270,17 +271,17 @@ Keep this link safe - it contains your QR code for entry!`;
 
         <View style={styles.attendeeSection}>
           <View style={styles.attendeeHeader}>
-            <Feather name="user" size={18} color="#6366F1" />
+            <Feather name="user" size={18} color={Colors.primary[500]} />
             <Text style={styles.attendeeLabel}>Attendee:</Text>
           </View>
           <View style={styles.attendeeInfo}>
-            <Feather name="user-check" size={16} color="#10B981" style={{ marginRight: 8 }} />
+            <Feather name="user-check" size={16} color={Colors.success[500]} style={{ marginRight: 8 }} />
             <Text style={styles.attendeeName}>
               {userProfile?.displayName || user?.displayName || 'Attendee'}
             </Text>
           </View>
           <View style={styles.attendeeInfo}>
-            <Feather name="mail" size={16} color="#6B7280" style={{ marginRight: 8 }} />
+            <Feather name="mail" size={16} color={Colors.text.tertiary} style={{ marginRight: 8 }} />
             <Text style={styles.attendeeEmail}>
               {user?.email || 'No email available'}
             </Text>
@@ -302,12 +303,12 @@ Keep this link safe - it contains your QR code for entry!`;
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Feather name="arrow-left" size={20} color="#6366F1" />
+          <Feather name="arrow-left" size={20} color={Colors.primary[500]} />
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         
         <View style={styles.headerTitleContainer}>
-          <Feather name="tag" size={20} color="#1F2937" style={{ marginRight: 8 }} />
+          <Feather name="tag" size={20} color={Colors.text.primary} style={{ marginRight: 8 }} />
           <Text style={styles.headerTitle}>My Ticket{quantity > 1 ? 's' : ''}</Text>
         </View>
         
@@ -319,7 +320,7 @@ Keep this link safe - it contains your QR code for entry!`;
           <Feather 
             name={sharing ? "share" : "share-2"} 
             size={20} 
-            color={sharing ? "#9CA3AF" : "#6366F1"} 
+            color={sharing ? Colors.text.disabled : Colors.primary[500]}
           />
         </TouchableOpacity>
       </View>
@@ -327,11 +328,11 @@ Keep this link safe - it contains your QR code for entry!`;
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.purchaseConfirmation}>
           <View style={styles.confirmationIconContainer}>
-            <Feather name="check-circle" size={32} color="#10B981" />
+            <Feather name="check-circle" size={32} color={Colors.success[500]} />
           </View>
           <Text style={styles.confirmationTitle}>Purchase Confirmed!</Text>
           <View style={styles.confirmationTextContainer}>
-            <Feather name="mail" size={16} color="#6B7280" style={{ marginRight: 8 }} />
+            <Feather name="mail" size={16} color={Colors.text.tertiary} style={{ marginRight: 8 }} />
             <Text style={styles.confirmationText}>
               Your ticket{quantity > 1 ? 's have' : ' has'} been sent to your email
             </Text>
@@ -344,7 +345,7 @@ Keep this link safe - it contains your QR code for entry!`;
 
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.walletButton}>
-            <Feather name="credit-card" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Feather name="credit-card" size={18} color={Colors.white} style={{ marginRight: 8 }} />
             <Text style={styles.walletButtonText}>Add to Wallet</Text>
           </TouchableOpacity>
           
@@ -355,8 +356,8 @@ Keep this link safe - it contains your QR code for entry!`;
             <Feather 
               name={showQR ? 'eye-off' : 'eye'} 
               size={18} 
-              color="#6366F1" 
-              style={{ marginRight: 8 }} 
+              color={Colors.primary[500]}
+              style={{ marginRight: 8 }}
             />
             <Text style={styles.toggleQRButtonText}>
               {showQR ? 'Hide QR' : 'Show QR'}
@@ -371,7 +372,7 @@ Keep this link safe - it contains your QR code for entry!`;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: Colors.background.secondary,
   },
   header: {
     flexDirection: 'row',
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: 'white',
+    backgroundColor: Colors.background.primary,
   },
   backButton: {
     paddingVertical: 8,
@@ -390,7 +391,8 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#6366F1',
+    color: Colors.primary[500],
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
   },
   headerTitleContainer: {
@@ -399,8 +401,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: 'bold',
-    color: '#212529',
+    color: Colors.text.primary,
   },
   shareButton: {
     paddingVertical: 8,
@@ -408,30 +411,30 @@ const styles = StyleSheet.create({
   },
   shareButtonText: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.regular,
   },
   content: {
     flex: 1,
     padding: 20,
   },
   purchaseConfirmation: {
-    backgroundColor: 'white',
-    borderRadius: 12,
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius['3xl'],
     padding: 24,
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    ...Shadows.md,
   },
   confirmationIconContainer: {
     marginBottom: 12,
   },
   confirmationTitle: {
     fontSize: 20,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: 'bold',
-    color: '#10B981',
+    color: Colors.success[500],
     marginBottom: 12,
   },
   confirmationTextContainer: {
@@ -440,24 +443,21 @@ const styles = StyleSheet.create({
   },
   confirmationText: {
     fontSize: 14,
-    color: '#6c757d',
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.tertiary,
     textAlign: 'center',
   },
   ticketCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius['3xl'],
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 8,
+    borderColor: 'rgba(0,0,0,0.1)',
+    ...Shadows.xl,
     overflow: 'hidden',
   },
   ticketHeader: {
-    backgroundColor: '#007bff',
+    backgroundColor: Colors.primary[500],
     padding: 16,
   },
   ticketHeaderContent: {
@@ -466,13 +466,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ticketTitle: {
-    color: 'white',
+    color: Colors.white,
     fontSize: 16,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: 'bold',
   },
   ticketNumber: {
     color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 12,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
   },
   ticketBody: {
@@ -480,8 +482,9 @@ const styles = StyleSheet.create({
   },
   eventName: {
     fontSize: 24,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: 'bold',
-    color: '#212529',
+    color: Colors.text.primary,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -493,7 +496,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: Colors.border.light,
   },
   detailIconContainer: {
     width: 24,
@@ -502,19 +505,22 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: Colors.text.tertiary,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
     flex: 1,
     marginLeft: 8,
   },
   detailValue: {
     fontSize: 14,
-    color: '#1F2937',
+    color: Colors.text.primary,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: '500',
     flex: 2,
     textAlign: 'right',
   },
   statusText: {
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: '700',
     textTransform: 'uppercase',
     fontSize: 12,
@@ -522,11 +528,11 @@ const styles = StyleSheet.create({
   qrSection: {
     alignItems: 'center',
     marginVertical: 24,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background.secondary,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   qrCodeWrapper: {
     alignItems: 'center',
@@ -535,16 +541,12 @@ const styles = StyleSheet.create({
   qrCode: {
     width: 160,
     height: 160,
-    backgroundColor: 'white',
+    backgroundColor: Colors.background.primary,
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Shadows.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   qrPattern: {
     flex: 1,
@@ -565,7 +567,8 @@ const styles = StyleSheet.create({
   },
   qrLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.text.tertiary,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -574,24 +577,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: Colors.background.tertiary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   qrCodeText: {
     fontSize: 11,
-    color: '#6B7280',
-    fontFamily: 'monospace',
+    color: Colors.text.tertiary,
+    fontFamily: Typography.fontFamily.mono,
     fontWeight: '600',
   },
   attendeeSection: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background.secondary,
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   attendeeHeader: {
     flexDirection: 'row',
@@ -600,7 +603,8 @@ const styles = StyleSheet.create({
   },
   attendeeLabel: {
     fontSize: 13,
-    color: '#6366F1',
+    color: Colors.primary[500],
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
     textTransform: 'uppercase',
     marginLeft: 8,
@@ -612,24 +616,27 @@ const styles = StyleSheet.create({
   },
   attendeeName: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
-    color: '#1F2937',
+    color: Colors.text.primary,
   },
   attendeeEmail: {
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.tertiary,
   },
   ticketFooter: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background.secondary,
     padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: 'rgba(0,0,0,0.1)',
   },
   footerText: {
     fontSize: 10,
-    color: '#9CA3AF',
+    color: Colors.text.disabled,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: '500',
   },
   actionButtons: {
@@ -639,32 +646,34 @@ const styles = StyleSheet.create({
   },
   walletButton: {
     flex: 1,
-    backgroundColor: '#6366F1',
+    backgroundColor: Colors.primary[500],
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
   },
   walletButtonText: {
-    color: 'white',
+    color: Colors.white,
     fontSize: 14,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
   },
   toggleQRButton: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background.secondary,
     paddingVertical: 16,
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#6366F1',
+    borderColor: Colors.primary[500],
   },
   toggleQRButtonText: {
-    color: '#6366F1',
+    color: Colors.primary[500],
     fontSize: 14,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
   },
   // New icon container styles
@@ -676,9 +685,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-
-
-
 });
 
 export default TicketScreen;

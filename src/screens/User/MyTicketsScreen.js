@@ -8,308 +8,352 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Image,
+  Animated,
+  StatusBar,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import PillTabBar from '../../components/PillTabBar';
+import { MyEventsSkeleton } from '../../components/Skeleton';
 import { useTheme } from '../../context/ThemeContext';
-import { bookingService } from '../../services/firestoreService';
+import { bookingService, eventService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
 
 const MyTicketsScreen = ({ navigation }) => {
   const { user } = useAuth();
   const { colors, isDarkMode } = useTheme();
-  const [tickets, setTickets] = useState([]);
-  const [allTickets, setAllTickets] = useState([]); // Store all tickets for filtering
+  const [registeredEvents, setRegisteredEvents] = useState([]);
+  const [allBookings, setAllBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState('active');
 
-  const loadUserTickets = async () => {
+  // Filter options (PillTabBar format)
+  const filterOptions = [
+    { key: 'active', label: 'Upcoming', icon: 'calendar' },
+    { key: 'attended', label: 'Past', icon: 'check-circle' },
+    { key: 'all', label: 'All', icon: 'list' },
+  ];
+
+  const loadRegisteredEvents = async () => {
     if (!user) return;
-    
+
     try {
-      const userTickets = await bookingService.getUserBookings(user.uid);
-      
-      // Enhance tickets with computed status
-      const enhancedTickets = userTickets.map(ticket => {
-        const eventDate = new Date(ticket.eventDate);
-        const now = new Date();
-        
-        let computedStatus = ticket.status;
-        if (ticket.status === 'confirmed' && eventDate < now) {
-          // Check if ticket was used/scanned
-          computedStatus = ticket.status === 'used' ? 'attended' : 'attended';
-        }
-        
-        return {
-          ...ticket,
-          computedStatus,
-          isActive: ticket.status === 'confirmed' && eventDate >= now,
-          isAttended: (ticket.status === 'used' || ticket.status === 'confirmed') && eventDate < now,
-          isCancelled: ticket.status === 'cancelled'
-        };
-      });
-      
-      setAllTickets(enhancedTickets);
-      applyFilter(activeFilter, enhancedTickets);
+      const userBookings = await bookingService.getUserBookings(user.uid);
+
+      // Enhance bookings with computed status and fetch event details
+      const enhancedBookings = await Promise.all(
+        userBookings.map(async (booking) => {
+          const eventDate = new Date(booking.eventDate);
+          const now = new Date();
+
+          // Try to fetch full event data for image and other details
+          let fullEvent = null;
+          try {
+            fullEvent = await eventService.getById(booking.eventId);
+          } catch (err) {
+            // Silently fail — we'll use booking data as fallback
+          }
+
+          return {
+            ...booking,
+            fullEvent,
+            isActive: booking.status === 'confirmed' && eventDate >= now,
+            isAttended:
+              (booking.status === 'used' || booking.status === 'confirmed') &&
+              eventDate < now,
+            isCancelled: booking.status === 'cancelled',
+          };
+        })
+      );
+
+      setAllBookings(enhancedBookings);
+      applyFilter(activeFilter, enhancedBookings);
     } catch (error) {
-      console.error('Error loading tickets:', error);
-      Alert.alert('Error', 'Failed to load your tickets');
+      console.error('Error loading registered events:', error);
+      Alert.alert('Error', 'Failed to load your registered events');
     }
   };
 
-  const applyFilter = (filter, ticketsToFilter = allTickets) => {
-    let filteredTickets = [];
-    
+  const applyFilter = (filter, bookingsToFilter = allBookings) => {
+    let filtered = [];
+
     switch (filter) {
       case 'active':
-        filteredTickets = ticketsToFilter.filter(ticket => ticket.isActive);
+        filtered = bookingsToFilter.filter((b) => b.isActive);
         break;
       case 'attended':
-        filteredTickets = ticketsToFilter.filter(ticket => ticket.isAttended);
-        break;
-      case 'cancelled':
-        filteredTickets = ticketsToFilter.filter(ticket => ticket.isCancelled);
+        filtered = bookingsToFilter.filter((b) => b.isAttended);
         break;
       case 'all':
-        filteredTickets = ticketsToFilter;
+        filtered = bookingsToFilter.filter((b) => !b.isCancelled);
         break;
       default:
-        filteredTickets = ticketsToFilter.filter(ticket => ticket.isActive);
+        filtered = bookingsToFilter.filter((b) => b.isActive);
     }
-    
-    setTickets(filteredTickets);
+
+    setRegisteredEvents(filtered);
     setActiveFilter(filter);
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadUserTickets();
+    await loadRegisteredEvents();
     setRefreshing(false);
   };
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      await loadUserTickets();
+      await loadRegisteredEvents();
       setLoading(false);
     };
     fetchData();
   }, [user]);
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
+  // Reapply filter when activeFilter changes
+  useEffect(() => {
+    if (allBookings.length > 0) {
+      applyFilter(activeFilter, allBookings);
+    }
+  }, [activeFilter]);
+
+  // Format date for card pill (e.g., "Fri.14 May 2026")
+  const getCardFormattedDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const eventDate = new Date(dateStr);
+      const weekday = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
+      const day = eventDate.getDate();
+      const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
+      const year = eventDate.getFullYear();
+      return `${weekday}.${day} ${month} ${year}`;
+    } catch {
+      return dateStr;
+    }
   };
 
-  const getStatusColor = (ticket) => {
-    if (ticket.isActive) return Colors.success[500];
-    if (ticket.isAttended) return Colors.primary[500];
-    if (ticket.isCancelled) return Colors.error[500];
-    return Colors.warning[500];
+  // Calculate days left until event
+  const getDaysLeft = (dateStr) => {
+    if (!dateStr) return null;
+    try {
+      const eventDate = new Date(dateStr);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      const diffTime = eventDay - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    } catch {
+      return null;
+    }
   };
 
-  const getStatusIcon = (ticket) => {
-    if (ticket.isActive) return 'check-circle';
-    if (ticket.isAttended) return 'calendar-check';
-    if (ticket.isCancelled) return 'x-circle';
-    return 'clock';
+  // Get location string
+  const getLocationString = (location) => {
+    if (!location) return 'Location TBA';
+    if (typeof location === 'object') {
+      return location.name || location.address || 'Location TBA';
+    }
+    return location;
   };
 
-  const getStatusLabel = (ticket) => {
-    if (ticket.isActive) return 'Active';
-    if (ticket.isAttended) return 'Attended';
-    if (ticket.isCancelled) return 'Cancelled';
-    return 'Unknown';
+  // Get days left label
+  const getDaysLeftLabel = (daysLeft) => {
+    if (daysLeft === null) return '';
+    if (daysLeft < 0) return 'Event passed';
+    if (daysLeft === 0) return 'Today';
+    if (daysLeft === 1) return 'Tomorrow';
+    return `${daysLeft} days left`;
   };
 
-  const getFilterCounts = () => {
-    return {
-      active: allTickets.filter(t => t.isActive).length,
-      attended: allTickets.filter(t => t.isAttended).length,
-      cancelled: allTickets.filter(t => t.isCancelled).length,
-      all: allTickets.length
-    };
-  };
+  const RegisteredEventCard = ({ booking, index }) => {
+    const animatedValue = new Animated.Value(0);
+    const event = booking.fullEvent || {};
+    const daysLeft = getDaysLeft(booking.eventDate);
+    const daysLeftLabel = getDaysLeftLabel(daysLeft);
 
-  const FilterButton = ({ filter, label, count, isActive }) => (
-    <TouchableOpacity
-      style={[
-        styles.filterButton,
-        { 
-          backgroundColor: isActive ? colors.primary[500] : colors.background.secondary,
-          borderColor: isActive ? colors.primary[500] : colors.border.light
-        }
-      ]}
-      onPress={() => applyFilter(filter)}
-    >
-      <Text style={[
-        styles.filterButtonText,
-        { color: isActive ? colors.white : colors.text.secondary }
-      ]}>
-        {label}
-      </Text>
-      {count > 0 && (
-        <View style={[
-          styles.filterBadge,
-          { backgroundColor: isActive ? colors.white : colors.primary[500] }
-        ]}>
-          <Text style={[
-            styles.filterBadgeText,
-            { color: isActive ? colors.primary[500] : colors.white }
-          ]}>
-            {count}
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+    React.useEffect(() => {
+      Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 300,
+        delay: index * 50,
+        useNativeDriver: true,
+      }).start();
+    }, []);
 
-  const TicketCard = ({ ticket }) => (
-    <TouchableOpacity
-      style={[styles.ticketCard, { backgroundColor: colors.background.secondary, borderColor: colors.border.light }]}
-      onPress={() => navigation.navigate('Ticket', { 
-        event: {
-          id: ticket.eventId,
-          name: ticket.eventName,
-          date: ticket.eventDate,
-          time: ticket.eventTime,
-          location: ticket.eventLocation,
+    const cardTransform = {
+      opacity: 1,
+      transform: [
+        {
+          translateY: animatedValue.interpolate({
+            inputRange: [0, 1],
+            outputRange: [20, 0],
+          }),
         },
-        quantity: ticket.quantity,
-        purchaseId: ticket.id,
-        qrCode: ticket.qrCode || `TKT${ticket.id.slice(-8).toUpperCase()}`,
-        status: ticket.status || 'confirmed'
-      })}
-    >
-      <View style={styles.ticketHeader}>
-        <View style={styles.eventInfo}>
-          <Text style={[styles.eventName, { color: colors.text.primary }]} numberOfLines={1}>
-            {ticket.eventName}
-          </Text>
-          <Text style={[styles.eventDate, { color: colors.text.secondary }]}>
-            {formatDate(ticket.eventDate)} • {ticket.eventTime}
-          </Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(ticket) }]}>
-          <Feather 
-            name={getStatusIcon(ticket)} 
-            size={12} 
-            color={colors.white} 
-          />
-        </View>
-      </View>
+      ],
+    };
 
-      <View style={styles.ticketDetails}>
-        <View style={styles.locationRow}>
-          <Feather name="map-pin" size={14} color={colors.text.tertiary} />
-          <Text style={[styles.locationText, { color: colors.text.secondary }]} numberOfLines={1}>
-            {ticket.eventLocation}
-          </Text>
-        </View>
-        
-        <View style={styles.ticketInfo}>
-          <View style={styles.quantityRow}>
-            <Feather name="users" size={14} color={colors.text.tertiary} />
-            <Text style={[styles.quantityText, { color: colors.text.secondary }]}>
-              {ticket.quantity} ticket{ticket.quantity > 1 ? 's' : ''}
-            </Text>
-          </View>
-          
-          <View style={styles.priceRow}>
-            <Feather name="dollar-sign" size={14} color={colors.text.tertiary} />
-            <Text style={[styles.priceText, { color: colors.text.secondary }]}>
-              {ticket.totalPrice > 0 ? `₵${ticket.totalPrice.toFixed(2)}` : 'Free'}
-            </Text>
-          </View>
-        </View>
-      </View>
+    const eventTime = booking.eventTime || event.startTime || event.time || '';
+    const eventImage = event.imageBase64 || null;
+    const eventLocation = booking.eventLocation || event.location || '';
 
-      <View style={[styles.qrIndicator, { borderTopColor: colors.border.light }]}>
-        <Feather name="smartphone" size={16} color={colors.primary[500]} />
-        <Text style={[styles.qrText, { color: colors.primary[500] }]}>Tap to view QR code</Text>
-      </View>
-    </TouchableOpacity>
-  );
+    return (
+      <Animated.View style={cardTransform}>
+        <TouchableOpacity
+          style={styles.eventCard}
+          onPress={() => {
+            // Navigate to event detail with the full event data
+            const eventData = event.id
+              ? event
+              : {
+                  id: booking.eventId,
+                  name: booking.eventName,
+                  date: booking.eventDate,
+                  time: booking.eventTime,
+                  location: booking.eventLocation,
+                  ...event,
+                };
+            navigation.navigate('Events', {
+              screen: 'EventDetail',
+              params: { event: eventData },
+            });
+          }}
+          activeOpacity={0.9}
+        >
+          {/* Event Image */}
+          <View style={styles.eventImageContainer}>
+            {eventImage ? (
+              <Image
+                source={{
+                  uri: eventImage.startsWith('data:')
+                    ? eventImage
+                    : `data:image/jpeg;base64,${eventImage}`,
+                }}
+                style={styles.eventImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={[styles.eventImagePlaceholder, { backgroundColor: colors.primary[200] }]}>
+                <Feather name="image" size={24} color={colors.primary[400]} />
+              </View>
+            )}
+
+            {/* Going badge */}
+            <View style={styles.goingBadge}>
+              <Text style={styles.goingBadgeText}>Going</Text>
+            </View>
+
+            {/* Days left badge */}
+            {daysLeft !== null && daysLeft >= 0 && (
+              <View style={styles.daysLeftBadge}>
+                <Feather name="clock" size={12} color={Colors.text.primary} />
+                <Text style={styles.daysLeftBadgeText}>{daysLeftLabel}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Event Title */}
+          <Text style={styles.eventName} numberOfLines={2}>
+            {booking.eventName}
+          </Text>
+
+          {/* Date, Time, Location pills */}
+          <View style={styles.cardPillsContainer}>
+            <View style={styles.cardPillRow}>
+              <View style={styles.cardPill}>
+                <Text style={styles.cardPillText}>
+                  {getCardFormattedDate(booking.eventDate)}
+                </Text>
+              </View>
+              {eventTime ? (
+                <View style={styles.cardPill}>
+                  <Text style={styles.cardPillText}>{eventTime}</Text>
+                </View>
+              ) : null}
+            </View>
+            <View style={styles.cardPillRow}>
+              <View style={styles.cardPill}>
+                <Text style={styles.cardPillText}>
+                  {getLocationString(eventLocation)}
+                </Text>
+              </View>
+              {booking.quantity > 1 && (
+                <View style={styles.cardPill}>
+                  <Text style={styles.cardPillText}>
+                    {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   const EmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Feather name="credit-card" size={64} color={colors.text.tertiary} />
-      <Text style={[styles.emptyTitle, { color: colors.text.secondary }]}>No Tickets Yet</Text>
-      <Text style={[styles.emptySubtitle, { color: colors.text.tertiary }]}>
-        Tickets you purchase will appear here
-      </Text>
+      <Feather name="calendar" size={24} color={Colors.text.tertiary} />
+      <View style={styles.emptyTextContainer}>
+        <Text style={styles.emptyTitle}>
+          {activeFilter === 'active'
+            ? 'No upcoming events'
+            : activeFilter === 'attended'
+            ? 'No past events'
+            : 'No registered events'}
+        </Text>
+        <Text style={styles.emptySubtitle}>
+          {activeFilter === 'active'
+            ? "You haven't registered for any upcoming events yet. Discover events and RSVP!"
+            : activeFilter === 'attended'
+            ? "You haven't attended any events yet."
+            : "You haven't registered for any events yet."}
+        </Text>
+      </View>
       <TouchableOpacity
-        style={[styles.browseButton, { backgroundColor: colors.primary[500] }]}
+        style={styles.browseButton}
         onPress={() => navigation.navigate('Events')}
       >
-        <Feather name="calendar" size={18} color={colors.white} />
-        <Text style={[styles.browseButtonText, { color: colors.white }]}>Browse Events</Text>
+        <Feather name="search" size={18} color={Colors.white} />
+        <Text style={styles.browseButtonText}>Browse Events</Text>
       </TouchableOpacity>
     </View>
   );
 
   if (loading) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background.primary }]}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Loading your tickets...</Text>
-      </View>
-    );
+    return <MyEventsSkeleton />;
   }
-
-  const filterCounts = getFilterCounts();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
-      <View style={[styles.header, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
-        <Text style={[styles.title, { color: colors.text.primary }]}>My Tickets</Text>
-        <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
-          {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
-        </Text>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background.primary}
+      />
+
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.background.primary }]}>
+        <View>
+          <Text style={[styles.greeting, { color: colors.text.secondary }]}>My</Text>
+          <Text style={[styles.title, { color: colors.text.primary }]}>Registered Events</Text>
+        </View>
       </View>
 
-      {/* Filter Tabs */}
-      <View style={[styles.filterContainer, { backgroundColor: colors.background.primary }]}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterScrollContainer}
-        >
-          <FilterButton
-            filter="active"
-            label="Active"
-            count={filterCounts.active}
-            isActive={activeFilter === 'active'}
-          />
-          <FilterButton
-            filter="attended"
-            label="Attended"
-            count={filterCounts.attended}
-            isActive={activeFilter === 'attended'}
-          />
-          <FilterButton
-            filter="cancelled"
-            label="Cancelled"
-            count={filterCounts.cancelled}
-            isActive={activeFilter === 'cancelled'}
-          />
-          <FilterButton
-            filter="all"
-            label="All"
-            count={filterCounts.all}
-            isActive={activeFilter === 'all'}
-          />
-        </ScrollView>
+      {/* Filter PillTabBar */}
+      <View style={styles.filterSection}>
+        <PillTabBar
+          tabs={filterOptions}
+          activeTab={activeFilter}
+          onTabPress={setActiveFilter}
+        />
       </View>
 
       <ScrollView
-        style={styles.content}
+        style={styles.eventsList}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.eventsListContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -319,15 +363,15 @@ const MyTicketsScreen = ({ navigation }) => {
           />
         }
       >
-        {tickets.length === 0 ? (
+        {registeredEvents.length === 0 ? (
           <EmptyState />
         ) : (
-          <View style={styles.ticketsList}>
-            {tickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} />
-            ))}
-          </View>
+          registeredEvents.map((booking, index) => (
+            <RegisteredEventCard key={booking.id} booking={booking} index={index} />
+          ))
         )}
+
+        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
@@ -336,201 +380,180 @@ const MyTicketsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.primary,
   },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ─── Header ──────────────────────────────────────────
   header: {
-    paddingTop: Spacing[12],
-    paddingHorizontal: Spacing[6],
-    paddingBottom: Spacing[6],
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.light,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 16,
+  },
+  greeting: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 14,
+    color: Colors.black,
+    marginBottom: 4,
   },
   title: {
-    fontSize: Typography.fontSize['2xl'],
-    fontWeight: Typography.fontWeight.bold,
+    fontFamily: Typography.fontFamily.extrabold,
+    fontSize: 24,
     color: Colors.text.primary,
-    marginBottom: Spacing[2],
   },
-  subtitle: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.secondary,
+
+  // ─── Filter PillTabBar ───────────────────────────────
+  filterSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  content: {
+
+  // ─── Events list ─────────────────────────────────────
+  eventsList: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
+  eventsListContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 100,
+  },
+
+  // ─── Event Card (Figma gray card with pills) ────────
+  eventCard: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    padding: 14,
+    paddingBottom: 15,
+    marginBottom: 16,
+  },
+  eventImageContainer: {
+    width: '100%',
+    height: 161,
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 17,
+    position: 'relative',
+  },
+  eventImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
+  },
+  eventImagePlaceholder: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background.primary,
   },
-  loadingText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.secondary,
-    marginTop: Spacing[4],
-  },
-  ticketsList: {
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[4],
-  },
-  ticketCard: {
+  goingBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing[4],
-    padding: Spacing[4],
-    ...Shadows.md,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
-  ticketHeader: {
+  goingBadgeText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 12,
+    color: Colors.black,
+  },
+  daysLeftBadge: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing[3],
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    gap: 4,
   },
-  eventInfo: {
-    flex: 1,
-    marginRight: Spacing[3],
+  daysLeftBadgeText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 12,
+    color: Colors.text.primary,
   },
   eventName: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text.primary,
-    marginBottom: Spacing[1],
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 24,
+    color: Colors.black,
+    marginBottom: 17,
   },
-  eventDate: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
+  cardPillsContainer: {
+    gap: 8,
   },
-  statusBadge: {
-    paddingHorizontal: Spacing[2],
-    paddingVertical: Spacing[1],
-    borderRadius: BorderRadius.full,
-  },
-  ticketDetails: {
-    marginBottom: Spacing[3],
-  },
-  locationRow: {
+  cardPillRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing[2],
+    gap: 7,
   },
-  locationText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
-    marginLeft: Spacing[2],
-    flex: 1,
+  cardPill: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
   },
-  ticketInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  cardPillText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 16,
+    color: Colors.black,
   },
-  quantityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  quantityText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
-    marginLeft: Spacing[2],
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  priceText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
-    marginLeft: Spacing[2],
-  },
-  qrIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: Spacing[3],
-    borderTopWidth: 1,
-    borderTopColor: Colors.border.light,
-  },
-  qrText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.primary[500],
-    marginLeft: Spacing[2],
-    fontWeight: Typography.fontWeight.medium,
-  },
+
+  // ─── Empty State ─────────────────────────────────────
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 24,
+    paddingHorizontal: 62,
+    paddingVertical: 64,
     alignItems: 'center',
-    paddingHorizontal: Spacing[6],
-    paddingVertical: Spacing[12],
+    gap: 40,
+  },
+  emptyTextContainer: {
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
   },
   emptyTitle: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.secondary,
-    marginTop: Spacing[4],
-    marginBottom: Spacing[2],
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 16,
+    color: Colors.text.primary,
+    textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.tertiary,
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 12,
+    color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: Spacing[8],
   },
   browseButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary[500],
-    paddingVertical: Spacing[3],
-    paddingHorizontal: Spacing[6],
-    borderRadius: BorderRadius.lg,
+    justifyContent: 'center',
+    backgroundColor: '#060606',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 30,
+    gap: 9,
+    width: 167,
   },
   browseButtonText: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.white,
-    marginLeft: Spacing[2],
-  },
-  filterContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  filterScrollContainer: {
-    paddingRight: 20,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: 12,
-    minHeight: 36,
-  },
-  filterButtonText: {
+    fontFamily: Typography.fontFamily.semibold,
     fontSize: 14,
-    fontWeight: '600',
+    color: Colors.white,
   },
-  filterBadge: {
-    marginLeft: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  filterBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  statusLabelContainer: {
-    marginLeft: 'auto',
-  },
-  statusLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+
+  // ─── Loading ─────────────────────────────────────────
+  loadingText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginTop: 16,
+    textAlign: 'center',
   },
 });
 
