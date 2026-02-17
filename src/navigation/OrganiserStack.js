@@ -1,5 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { Colors } from '../styles/designSystem';
 
 // Import Organiser screens
 import DashboardScreen from '../screens/Organiser/DashboardScreen';
@@ -16,10 +17,11 @@ const OrganiserStack = () => {
       initialRouteName="Dashboard"
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#007AFF',
+          backgroundColor: Colors.primary[500],
         },
         headerTintColor: '#fff',
         headerTitleStyle: {
+          fontFamily: 'PlusJakartaSans-Bold',
           fontWeight: 'bold',
         },
         headerBackTitleVisible: false,
@@ -33,24 +35,24 @@ const OrganiserStack = () => {
           headerStyle: {
             backgroundColor: 'transparent',
           },
-          headerTintColor: '#007AFF',
+          headerTintColor: Colors.primary[500],
           headerTransparent: true,
           headerTitle: '',
         }}
       />
-      
+
       <Stack.Screen
         name="CreateEvent"
         component={CreateEventFlow}
         options={{
           title: 'Create New Event',
           headerStyle: {
-            backgroundColor: '#007AFF',
+            backgroundColor: Colors.primary[500],
           },
           headerTintColor: '#fff',
         }}
       />
-      
+
       <Stack.Screen
         name="ScanTicket"
         component={ScanTicketScreen}
@@ -64,7 +66,7 @@ const OrganiserStack = () => {
           headerTitle: '',
         }}
       />
-      
+
       <Stack.Screen
         name="EventDetail"
         component={EventDetailScreen}
@@ -73,7 +75,7 @@ const OrganiserStack = () => {
           headerShown: false,
         }}
       />
-      
+
       <Stack.Screen
         name="EventAttendees"
         component={EventAttendeesScreen}

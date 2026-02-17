@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Shadows } from '../styles/designSystem';
+import FloatingTabBar from '../components/FloatingTabBar';
 
 // Import Organiser screens
 import DashboardScreen from '../screens/Organiser/DashboardScreen';
@@ -36,38 +37,10 @@ import OrganiserProfileScreen from '../screens/Organiser/OrganiserProfileScreen'
 const OrganiserTabNavigator = () => {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-
-          if (route.name === 'Dashboard') {
-            iconName = 'grid';
-          } else if (route.name === 'Scanner') {
-            iconName = 'camera';
-          } else if (route.name === 'Profile') {
-            iconName = 'user';
-          }
-
-          return <Feather name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: Colors.primary[500],
-        tabBarInactiveTintColor: Colors.text.tertiary,
-        tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopWidth: 1,
-          borderTopColor: Colors.border.light,
-          paddingBottom: Spacing[2],
-          paddingTop: Spacing[2],
-          height: 80,
-          ...Shadows.lg,
-        },
-        tabBarLabelStyle: {
-          fontSize: Typography.fontSize.xs,
-          fontWeight: Typography.fontWeight.semibold,
-          marginTop: Spacing[1],
-        },
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{
         headerShown: false,
-      })}
+      }}
     >
       <Tab.Screen 
         name="Dashboard" 

@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
-import { View, Text } from 'react-native';
+import { View, Text, Dimensions } from 'react-native';
 import { Colors, Typography, Spacing, Shadows } from '../styles/designSystem';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import notificationService from '../services/notificationService';
+import FloatingTabBar from '../components/FloatingTabBar';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Fallback design tokens in case imports fail
 const defaultColors = {
-  primary: { 500: '#007AFF' },
-  text: { tertiary: '#999' },
+  primary: { 500: '#333333' },
+  text: { tertiary: '#7a7a7a' },
   white: '#FFFFFF',
-  border: { light: '#E5E5E5' }
+  border: { light: '#f0f0f0' },
+  background: { secondary: '#fafafa' },
+  error: { 500: '#EF4444' },
 };
 
 const defaultSpacing = [0, 4, 8, 12, 16, 20, 24, 32, 40, 48];
@@ -42,7 +47,35 @@ const EventsStack = () => (
     }}
   >
     <Stack.Screen name="EventList" component={EventListScreen} />
-    <Stack.Screen name="EventDetail" component={EventDetailScreen} />
+    <Stack.Screen
+      name="EventDetail"
+      component={EventDetailScreen}
+      options={{
+        presentation: 'transparentModal',
+        gestureEnabled: true,
+        gestureDirection: 'vertical',
+        cardOverlayEnabled: true,
+        cardStyleInterpolator: ({ current: { progress }, layouts }) => ({
+          cardStyle: {
+            transform: [
+              {
+                translateY: progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [layouts.screen.height, 0],
+                  extrapolate: 'clamp',
+                }),
+              },
+            ],
+          },
+          overlayStyle: {
+            opacity: progress.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.5],
+            }),
+          },
+        }),
+      }}
+    />
     <Stack.Screen name="Ticket" component={TicketScreen} />
     <Stack.Screen name="NotificationCenter" component={NotificationCenterScreen} />
   </Stack.Navigator>
@@ -93,44 +126,9 @@ const UserTabNavigator = () => {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => {
-        // Ensure route exists before accessing its properties
-        const routeName = route?.name || '';
-        
-        return {
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName = 'circle'; // default icon
-
-            if (routeName === 'Events') {
-              iconName = 'calendar';
-            } else if (routeName === 'My Tickets') {
-              iconName = 'bookmark';
-            } else if (routeName === 'Notifications') {
-              iconName = 'bell';
-            } else if (routeName === 'Profile') {
-              iconName = 'user';
-            }
-
-            return <Feather name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: safeColors.primary[500],
-          tabBarInactiveTintColor: safeColors.text.tertiary,
-          tabBarStyle: {
-            backgroundColor: safeColors.background.secondary,
-            borderTopWidth: 1,
-            borderTopColor: safeColors.border.light,
-            height: 90,
-            paddingBottom: 25,
-            paddingTop: safeSpacing[3],
-            ...safeShadows.lg,
-          },
-          tabBarLabelStyle: {
-            fontSize: safeTypography.fontSize.xs,
-            fontWeight: safeTypography.fontWeight.semibold,
-            marginTop: safeSpacing[1],
-          },
-          headerShown: false,
-        };
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
       }}
     >
       <Tab.Screen
@@ -150,55 +148,12 @@ const UserTabNavigator = () => {
         name="My Tickets"
         component={MyTicketsStack}
         options={{
-          tabBarLabel: 'Tickets',
+          tabBarLabel: 'My Events',
         }}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             // Reset the stack to the root screen when tab is pressed
             navigation.navigate('My Tickets', { screen: 'MyTicketsList' });
-          },
-        })}
-      />
-      <Tab.Screen
-        name="Notifications"
-        component={NotificationCenterScreen}
-        options={{
-          tabBarLabel: 'Notifications',
-          tabBarIcon: ({ focused, color, size }) => (
-            <View style={{ position: 'relative' }}>
-              <Feather name="bell" size={size} color={color} />
-              {unreadCount > 0 && (
-                <View style={{
-                  position: 'absolute',
-                  top: -2,
-                  right: -6,
-                  backgroundColor: safeColors.error?.[500] || '#FF3B30',
-                  borderRadius: 8,
-                  minWidth: 16,
-                  height: 16,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                  <Text style={{
-                    color: 'white',
-                    fontSize: 10,
-                    fontWeight: 'bold',
-                  }}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Text>
-                </View>
-              )}
-            </View>
-          ),
-        }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            // Mark all notifications as read when viewing
-            if (user?.uid && unreadCount > 0) {
-              notificationService.markAllAsRead(user.uid).then(() => {
-                setUnreadCount(0);
-              });
-            }
           },
         })}
       />

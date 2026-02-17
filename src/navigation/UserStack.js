@@ -1,5 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { Colors } from '../styles/designSystem';
 
 // Import User screens
 import EventListScreen from '../screens/User/EventListScreen';
@@ -14,10 +15,11 @@ const UserStack = () => {
       initialRouteName="EventList"
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#007bff',
+          backgroundColor: Colors.primary[500],
         },
         headerTintColor: '#fff',
         headerTitleStyle: {
+          fontFamily: 'PlusJakartaSans-Bold',
           fontWeight: 'bold',
         },
         headerBackTitleVisible: false,
@@ -31,24 +33,24 @@ const UserStack = () => {
           headerStyle: {
             backgroundColor: 'transparent',
           },
-          headerTintColor: '#007bff',
+          headerTintColor: Colors.primary[500],
           headerTransparent: true,
           headerTitle: '',
         }}
       />
-      
+
       <Stack.Screen
         name="EventDetail"
         component={EventDetailScreen}
         options={({ route }) => ({
           title: route.params?.event?.name || 'Event Details',
           headerStyle: {
-            backgroundColor: '#007bff',
+            backgroundColor: Colors.primary[500],
           },
           headerTintColor: '#fff',
         })}
       />
-      
+
       <Stack.Screen
         name="Ticket"
         component={TicketScreen}
@@ -57,7 +59,7 @@ const UserStack = () => {
           headerStyle: {
             backgroundColor: 'transparent',
           },
-          headerTintColor: '#007bff',
+          headerTintColor: Colors.primary[500],
           headerTransparent: true,
           headerTitle: '',
         }}
