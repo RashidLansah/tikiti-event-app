@@ -287,7 +287,7 @@ const CreateEventScreen = ({ navigation, route }) => {
         {/* Event Image Upload */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Feather name="image" size={20} color="Colors.primary[500]" />
+            <Feather name="image" size={20} color={Colors.primary[500]} />
             <Text style={styles.sectionTitle}>Event Image</Text>
           </View>
           
@@ -323,7 +323,7 @@ const CreateEventScreen = ({ navigation, route }) => {
         {/* Basic Information */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Feather name="info" size={20} color="Colors.primary[500]" />
+            <Feather name="info" size={20} color={Colors.primary[500]} />
             <Text style={styles.sectionTitle}>Basic Information</Text>
           </View>
 
@@ -337,7 +337,7 @@ const CreateEventScreen = ({ navigation, route }) => {
               value={eventName}
               onChangeText={setEventName}
               placeholder="Enter event name"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={Colors.text.tertiary}
               onFocus={() => setFocusedField('eventName')}
               onBlur={() => setFocusedField(null)}
               autoCorrect={false}
@@ -369,7 +369,7 @@ const CreateEventScreen = ({ navigation, route }) => {
               value={eventDescription}
               onChangeText={setEventDescription}
               placeholder="Describe your event..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={Colors.text.tertiary}
               multiline
               numberOfLines={4}
               onFocus={() => setFocusedField('eventDescription')}
@@ -396,7 +396,7 @@ const CreateEventScreen = ({ navigation, route }) => {
         {/* Date & Time */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Feather name="clock" size={20} color="Colors.primary[500]" />
+            <Feather name="clock" size={20} color={Colors.primary[500]} />
             <Text style={styles.sectionTitle}>Date & Time</Text>
           </View>
 
@@ -422,7 +422,7 @@ const CreateEventScreen = ({ navigation, route }) => {
         {/* Event Type */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Feather name="dollar-sign" size={20} color="Colors.primary[500]" />
+            <Feather name="dollar-sign" size={20} color={Colors.primary[500]} />
             <Text style={styles.sectionTitle}>Event Type</Text>
           </View>
 
@@ -482,7 +482,7 @@ const CreateEventScreen = ({ navigation, route }) => {
         {/* Ticket Information */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Feather name="tag" size={20} color="Colors.primary[500]" />
+            <Feather name="tag" size={20} color={Colors.primary[500]} />
             <Text style={styles.sectionTitle}>Ticket Information</Text>
           </View>
 

@@ -225,7 +225,7 @@ const EventDetailScreen = ({ navigation, route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Feather name="arrow-left" size={24} color="Colors.primary[500]" />
+          <Feather name="arrow-left" size={24} color={Colors.primary[500]} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Event Details</Text>
         <View style={styles.headerActions}>
@@ -233,13 +233,13 @@ const EventDetailScreen = ({ navigation, route }) => {
             event={eventData}
             style={styles.shareButton}
             iconSize={24}
-            iconColor="Colors.primary[500]"
+            iconColor={Colors.primary[500]}
           />
           <ShareButton
             event={eventData}
             style={styles.shareButton}
             iconSize={24}
-            iconColor="Colors.primary[500]"
+            iconColor={Colors.primary[500]}
           />
         </View>
       </View>
@@ -938,7 +938,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     margin: 20,
     marginTop: 0,
-    borderRadius: 16,
+    borderRadius: BorderRadius['3xl'],
     padding: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: Colors.border.light,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   amenitiesGrid: {
     gap: 12,
@@ -960,7 +960,7 @@ const styles = StyleSheet.create({
   amenityText: {
     fontSize: 14,
     color: Colors.text.primary,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans-Medium',
   },
   additionalInfoSection: {
     paddingTop: 24,
@@ -975,13 +975,14 @@ const styles = StyleSheet.create({
   },
   additionalInfoLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     color: Colors.text.primary,
     flex: 1,
   },
   additionalInfoValue: {
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: 'PlusJakartaSans-Regular',
+    color: Colors.text.tertiary,
     flex: 2,
   },
   

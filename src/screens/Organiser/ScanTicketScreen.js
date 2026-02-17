@@ -14,6 +14,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather } from '@expo/vector-icons';
 import { bookingService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
 const { width, height } = Dimensions.get('window');
 
@@ -389,7 +390,7 @@ const ScanTicketScreen = ({ navigation }) => {
                   console.log('❌ Camera closed by user');
                 }}
               >
-                <Feather name="x" size={24} color="#FFFFFF" />
+                <Feather name="x" size={24} color={Colors.white} />
               </TouchableOpacity>
             </View>
           </View>
@@ -420,22 +421,22 @@ const ScanTicketScreen = ({ navigation }) => {
       <View style={styles.resultContainer}>
         <View style={[
           styles.resultHeader,
-          { backgroundColor: scanResult.isValid ? '#F0FDF4' : '#FEF2F2' }
+          { backgroundColor: scanResult.isValid ? Colors.success[50] : Colors.error[50] }
         ]}>
       <View style={[
             styles.resultIconContainer,
-            { backgroundColor: scanResult.isValid ? '#10B981' : '#EF4444' }
+            { backgroundColor: scanResult.isValid ? Colors.success[500] : Colors.error[500] }
       ]}>
-          <Feather 
-              name={scanResult.isValid ? "check" : "x"} 
-            size={24} 
-              color="#FFFFFF"
+          <Feather
+              name={scanResult.isValid ? "check" : "x"}
+            size={24}
+              color={Colors.white}
           />
           </View>
           <View style={styles.resultHeaderText}>
           <Text style={[
             styles.resultTitle,
-              { color: scanResult.isValid ? '#059669' : '#DC2626' }
+              { color: scanResult.isValid ? Colors.success[600] : Colors.error[600] }
           ]}>
             {scanResult.isValid ? 'Valid Ticket' : 'Invalid Ticket'}
           </Text>
@@ -471,7 +472,7 @@ const ScanTicketScreen = ({ navigation }) => {
           style={styles.nextScanButton}
           onPress={() => setScanResult(null)}
         >
-          <Feather name="refresh-cw" size={16} color="#6366F1" />
+          <Feather name="refresh-cw" size={16} color={Colors.primary[500]} />
             <Text style={styles.nextScanButtonText}>Scan Next Ticket</Text>
         </TouchableOpacity>
       </View>
@@ -485,7 +486,7 @@ const ScanTicketScreen = ({ navigation }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Feather name="arrow-left" size={24} color="#6366F1" />
+          <Feather name="arrow-left" size={24} color={Colors.primary[500]} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Ticket Scanner</Text>
@@ -527,7 +528,7 @@ const ScanTicketScreen = ({ navigation }) => {
           disabled={isScanning || isProcessing}
         >
           <View style={[styles.buttonIconContainer, styles.secondaryButtonIconContainer]}>
-            <Feather name="edit-3" size={20} color="#6366F1" />
+            <Feather name="edit-3" size={20} color={Colors.primary[500]} />
           </View>
           <View style={styles.buttonTextContainer}>
             <Text style={styles.secondaryButtonText}>Manual Entry</Text>
@@ -557,7 +558,7 @@ const ScanTicketScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background.secondary,
   },
   header: {
     flexDirection: 'row',
@@ -566,19 +567,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    borderBottomColor: Colors.border.light,
+    ...Shadows.sm,
   },
   backButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.secondary[300],
   },
   headerContent: {
     alignItems: 'center',
@@ -588,12 +585,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: Colors.text.primary,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: 'PlusJakartaSans-Medium',
+    color: Colors.text.tertiary,
     marginTop: 4,
   },
   scanArea: {
@@ -601,7 +599,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    backgroundColor: '#1F2937',
+    backgroundColor: Colors.primary[800],
     margin: 20,
     borderRadius: 16,
   },
@@ -614,7 +612,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 30,
     height: 30,
-    borderColor: '#6366F1',
+    borderColor: Colors.primary[500],
   },
   topLeft: {
     top: 0,
@@ -646,12 +644,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success[500],
   },
   scanInstruction: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans-Medium',
     marginTop: 20,
     textAlign: 'center',
   },
@@ -660,7 +658,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   resultTitleContainer: {
     flexDirection: 'row',
@@ -673,7 +671,7 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'PlusJakartaSans-Bold',
   },
   resultDetails: {
     flexDirection: 'row',
@@ -682,29 +680,30 @@ const styles = StyleSheet.create({
   },
   resultLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontFamily: 'PlusJakartaSans-SemiBold',
+    color: Colors.text.primary,
   },
   resultValue: {
     fontSize: 14,
-    color: '#666',
+    fontFamily: 'PlusJakartaSans-Regular',
+    color: Colors.text.tertiary,
   },
   nextScanButton: {
-    backgroundColor: '#6366F1',
+    backgroundColor: Colors.primary[500],
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 16,
-    shadowColor: '#6366F1',
+    shadowColor: Colors.primary[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   nextScanButtonText: {
-    color: 'white',
+    color: Colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -721,40 +720,40 @@ const styles = StyleSheet.create({
   },
   scanButton: {
     flex: 1,
-    backgroundColor: '#6366F1',
+    backgroundColor: Colors.primary[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#6366F1',
+    shadowColor: Colors.primary[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   scanningButton: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: Colors.secondary[600],
   },
   scanButtonText: {
-    color: 'white',
+    color: Colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
   },
   manualButton: {
     flex: 1,
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.success[500],
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#10B981',
+    shadowColor: Colors.success[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   manualButtonText: {
-    color: 'white',
+    color: Colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -764,33 +763,29 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background.primary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...Shadows.sm,
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: Colors.text.primary,
   },
   statLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.text.tertiary,
     marginTop: 4,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans-Medium',
     textAlign: 'center',
   },
   
   // Camera Styles
   cameraContainer: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.primary[900],
   },
   camera: {
     flex: 1,
@@ -820,31 +815,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0F4FF',
+    backgroundColor: Colors.primary[50],
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#6366F1',
+    borderColor: Colors.primary[500],
   },
   scanAgainButtonText: {
-    color: '#6366F1',
+    color: Colors.primary[500],
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
   },
   
   // Updated Result Styles
   resultContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background.primary,
     marginHorizontal: 20,
     marginBottom: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: BorderRadius['3xl'],
+    ...Shadows.md,
     overflow: 'hidden',
   },
   resultHeader: {
@@ -852,7 +843,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   resultIconContainer: {
     width: 48,
@@ -867,13 +858,13 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans-Bold',
     marginBottom: 2,
   },
   resultSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+    color: Colors.text.tertiary,
+    fontFamily: 'PlusJakartaSans-Medium',
   },
   resultBody: {
     padding: 16,
@@ -884,17 +875,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F9FAFB',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   resultLabel: {
     fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+    color: Colors.text.tertiary,
+    fontFamily: 'PlusJakartaSans-Medium',
   },
   resultValue: {
     fontSize: 14,
-    color: '#111827',
-    fontWeight: '600',
+    color: Colors.text.primary,
+    fontFamily: 'PlusJakartaSans-SemiBold',
     flex: 1,
     textAlign: 'right',
   },
@@ -902,18 +893,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.secondary[300],
     paddingVertical: 12,
     marginHorizontal: 16,
     marginBottom: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   nextScanButtonText: {
-    color: '#6366F1',
+    color: Colors.primary[500],
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     marginLeft: 6,
   },
   
@@ -924,41 +915,37 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   primaryButton: {
-    backgroundColor: '#6366F1',
+    backgroundColor: Colors.primary[500],
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 20,
     paddingHorizontal: 20,
     borderRadius: 16,
-    shadowColor: '#6366F1',
+    shadowColor: Colors.primary[500],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   secondaryButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: 'rgba(0,0,0,0.1)',
+    ...Shadows.sm,
   },
   disabledButton: {
-    backgroundColor: '#9CA3AF',
-    shadowColor: '#9CA3AF',
+    backgroundColor: Colors.secondary[600],
+    shadowColor: Colors.secondary[600],
     shadowOpacity: 0.2,
   },
   disabledSecondaryButton: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#D1D5DB',
+    backgroundColor: Colors.secondary[100],
+    borderColor: Colors.secondary[500],
     opacity: 0.6,
   },
   buttonIconContainer: {
@@ -974,43 +961,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans-Bold',
     marginBottom: 2,
   },
   primaryButtonSubtext: {
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 14,
-    fontWeight: '400',
+    fontFamily: 'PlusJakartaSans-Regular',
   },
   secondaryButtonText: {
-    color: '#1F2937',
+    color: Colors.text.primary,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     marginBottom: 2,
   },
   secondaryButtonSubtext: {
-    color: '#6B7280',
+    color: Colors.text.tertiary,
     fontSize: 13,
-    fontWeight: '400',
+    fontFamily: 'PlusJakartaSans-Regular',
   },
   secondaryButtonIconContainer: {
-    backgroundColor: '#F0F4FF',
+    backgroundColor: Colors.primary[50],
     borderWidth: 1,
-    borderColor: '#E0E7FF',
+    borderColor: Colors.primary[200],
   },
   testScanButton: {
-    backgroundColor: 'rgba(16, 185, 129, 0.9)',
+    backgroundColor: 'rgba(34, 197, 94, 0.9)',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 6,
     marginBottom: 10,
   },
   testScanButtonText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
   },
   debugInfo: {
     position: 'absolute',
@@ -1022,8 +1009,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   debugText: {
-    color: '#FFFFFF',
+    color: Colors.white,
     fontSize: 12,
+    fontFamily: 'PlusJakartaSans-Regular',
     textAlign: 'center',
     marginVertical: 2,
   },

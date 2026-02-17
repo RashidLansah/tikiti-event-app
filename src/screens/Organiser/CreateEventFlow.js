@@ -75,8 +75,8 @@ const CreateEventFlow = ({ navigation, route }) => {
       case 2: return formData.eventDescription.trim().length > 0;
       case 3: return formData.eventDate !== null;
       case 4: return formData.eventTime.trim().length > 0;
-             case 5: return formData.eventType === 'free';
-       case 6: return formData.totalTickets.trim().length > 0;
+      case 5: return formData.eventType === 'free' || (formData.eventType === 'paid' && formData.ticketPrice.trim().length > 0);
+      case 6: return formData.totalTickets.trim().length > 0;
       case 7: return formData.category !== '';
              case 8: return formData.selectedLocation !== null;
        case 9: return true; // Image upload is optional
@@ -161,8 +161,9 @@ const CreateEventFlow = ({ navigation, route }) => {
         }),
         date: formData.eventDate ? formData.eventDate.toISOString().split('T')[0] : '',
         time: formData.eventTime,
-                 type: 'free',
-         price: 0,
+        startTime: formData.eventTime,
+        type: formData.eventType || 'free',
+        price: formData.eventType === 'paid' ? parseFloat(formData.ticketPrice) || 0 : 0,
         totalTickets: formData.totalTickets ? parseInt(formData.totalTickets) : 100,
         category: formData.category,
         imageBase64: base64Image,
@@ -179,7 +180,7 @@ const CreateEventFlow = ({ navigation, route }) => {
         ]);
       } else {
         const docRef = await eventService.create(eventData, user.uid);
-                 Alert.alert('Success', `Free event "${formData.eventName}" created successfully!`, [
+        Alert.alert('Success', `Event "${formData.eventName}" created successfully!`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
       }
@@ -729,13 +730,14 @@ const styles = StyleSheet.create({
   },
   typeformQuestion: {
     fontSize: 32,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans-Bold',
     textAlign: 'center',
     marginBottom: Spacing[4],
     lineHeight: 40,
   },
   typeformSubtitle: {
     fontSize: 16,
+    fontFamily: 'PlusJakartaSans-Regular',
     textAlign: 'center',
     marginBottom: Spacing[12],
     lineHeight: 24,
@@ -927,7 +929,7 @@ const styles = StyleSheet.create({
      fontSize: 14,
      color: Colors.text.secondary,
      textAlign: 'center',
-     fontWeight: Typography.fontWeight.medium,
+     fontFamily: 'PlusJakartaSans-Medium',
    },
  });
 

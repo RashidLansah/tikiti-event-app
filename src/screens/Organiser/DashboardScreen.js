@@ -15,6 +15,8 @@ import { eventService, bookingService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import PillTabBar from '../../components/PillTabBar';
+import { DashboardSkeleton } from '../../components/Skeleton';
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -22,6 +24,15 @@ const DashboardScreen = ({ navigation }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  const dashboardTabs = [
+    { key: 'dashboard', label: 'Dashboard', icon: 'menu' },
+    { key: 'events', label: 'Events', icon: 'calendar' },
+    { key: 'attendees', label: 'Attendees', icon: 'calendar' },
+    { key: 'messages', label: 'Messages', icon: 'calendar' },
+    { key: 'reports', label: 'Reports', icon: 'calendar' },
+  ];
 
   const fetchEvents = async () => {
     if (!user) return;
@@ -192,6 +203,14 @@ const DashboardScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.pillTabContainer}>
+        <PillTabBar
+          tabs={dashboardTabs}
+          activeTab={activeTab}
+          onTabPress={setActiveTab}
+        />
+      </View>
+
       <ScrollView 
         style={styles.eventsList}
         showsVerticalScrollIndicator={false}
@@ -200,10 +219,7 @@ const DashboardScreen = ({ navigation }) => {
         }
       >
         {loading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={colors.primary[500]} />
-            <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Loading events...</Text>
-          </View>
+          <DashboardSkeleton />
         ) : events.length > 0 ? (
           events.map((event) => (
             <EventCard key={event.id} event={event} />
@@ -282,10 +298,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: Spacing[4],
     paddingHorizontal: Spacing[6],
-    paddingBottom: Spacing[6],
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.light,
+    paddingBottom: Spacing[4],
+    backgroundColor: Colors.background.primary,
+    borderBottomWidth: 0,
+  },
+  pillTabContainer: {
+    paddingHorizontal: Spacing[6],
+    paddingBottom: Spacing[4],
   },
   title: {
     fontSize: Typography.fontSize['2xl'],
@@ -338,7 +357,7 @@ const styles = StyleSheet.create({
   },
   fullEventText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans-Bold',
     color: Colors.white,
     letterSpacing: 0.5,
   },
@@ -353,21 +372,21 @@ const styles = StyleSheet.create({
   },
   eventName: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: Colors.text.primary,
     flex: 1,
     letterSpacing: -0.3,
   },
   eventDate: {
     fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+    color: Colors.text.secondary,
+    fontFamily: 'PlusJakartaSans-Medium',
   },
   eventLocation: {
     fontSize: 15,
-    color: '#6B7280',
+    color: Colors.text.secondary,
     marginBottom: 8,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans-Medium',
   },
   organizerInfo: {
     flexDirection: 'row',
@@ -376,31 +395,31 @@ const styles = StyleSheet.create({
   },
   organizerText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'PlusJakartaSans-Medium',
     marginLeft: 4,
   },
   eventStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.secondary[300],
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(0,0,0,0.1)',
   },
   stat: {
     alignItems: 'center',
   },
   statValue: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#10B981',
+    fontFamily: 'PlusJakartaSans-ExtraBold',
+    color: Colors.primary[500],
   },
   statLabel: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: Colors.text.tertiary,
     marginTop: 6,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -415,21 +434,22 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#FFF7ED',
+    backgroundColor: Colors.primary[50],
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
   },
   emptyStateTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: Colors.text.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   emptyStateSubtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    fontFamily: 'PlusJakartaSans-Regular',
+    color: Colors.text.tertiary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
@@ -438,12 +458,12 @@ const styles = StyleSheet.create({
   createFirstEventButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF6B35',
+    backgroundColor: Colors.primary[500],
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     marginBottom: 32,
-    shadowColor: '#FF6B35',
+    shadowColor: Colors.primary[500],
     shadowOffset: {
       width: 0,
       height: 4,
@@ -454,12 +474,12 @@ const styles = StyleSheet.create({
   },
   createFirstEventButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontFamily: 'PlusJakartaSans-SemiBold',
+    color: Colors.white,
     marginLeft: 8,
   },
   tipsCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.secondary[300],
     borderRadius: 12,
     padding: 24,
     width: '100%',
@@ -467,8 +487,8 @@ const styles = StyleSheet.create({
   },
   tipsTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#374151',
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: Colors.text.primary,
     marginBottom: 16,
   },
   tipItem: {
@@ -478,7 +498,8 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: 'PlusJakartaSans-Regular',
+    color: Colors.text.secondary,
     marginLeft: 12,
     flex: 1,
     lineHeight: 20,
@@ -491,7 +512,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
+    fontFamily: 'PlusJakartaSans-Regular',
+    color: Colors.text.tertiary,
     marginTop: 16,
     textAlign: 'center',
   },

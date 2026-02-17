@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import { eventService } from '../../services/firestoreService';
+import TikitiLoader from '../../components/TikitiLoader';
 
 const OrganiserProfileScreen = ({ navigation }) => {
   const { 
@@ -187,7 +188,7 @@ Thank you!`;
           </View>
 
           <TouchableOpacity style={styles.editButton}>
-            <Feather name="edit-2" size={16} color="#FFFFFF" />
+            <Feather name="edit-2" size={16} color={Colors.white} />
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
@@ -422,12 +423,7 @@ Thank you!`;
       {/* Switching Loading Overlay */}
       {isSwitching && (
         <View style={styles.switchingOverlay}>
-          <View style={styles.switchingModal}>
-            <ActivityIndicator size="large" color={colors.primary[500]} />
-            <Text style={[styles.switchingText, { color: colors.text.primary }]}>
-              Switching to attendee view...
-            </Text>
-          </View>
+          <TikitiLoader duration={1500} message="Switching to attendee view..." />
         </View>
       )}
     </View>
@@ -530,7 +526,7 @@ const styles = StyleSheet.create({
   },
   accountTypeText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'PlusJakartaSans-SemiBold',
     color: Colors.warning[700],
     marginLeft: 6,
   },
