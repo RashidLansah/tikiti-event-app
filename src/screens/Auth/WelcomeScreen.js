@@ -176,7 +176,7 @@ const WelcomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.black,
     paddingHorizontal: Spacing[6],
   },
   logoContainer: {
@@ -199,8 +199,9 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 24,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.white,
     textAlign: 'center',
     paddingHorizontal: Spacing[4],
     letterSpacing: 2,
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
     gap: Spacing[4],
   },
   primaryButton: {
-    backgroundColor: Colors.primary[500], // Orange brand color
+    backgroundColor: Colors.primary[500],
     paddingVertical: Spacing[4],
     paddingHorizontal: Spacing[6],
     borderRadius: BorderRadius.lg,
@@ -219,12 +220,13 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: Colors.white,
   },
   secondaryButton: {
     borderWidth: 2,
-    borderColor: Colors.primary[500], // Orange brand color
+    borderColor: Colors.primary[500],
     paddingVertical: Spacing[4],
     paddingHorizontal: Spacing[6],
     borderRadius: BorderRadius.lg,
@@ -232,8 +234,9 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
-    color: '#FF6B35', // Orange brand color
+    color: Colors.primary[500],
   },
 });
 

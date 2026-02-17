@@ -228,12 +228,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.fontSize['3xl'],
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     marginBottom: Spacing[2],
   },
   subtitle: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     lineHeight: 24,
   },
@@ -245,6 +247,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.secondary,
     marginBottom: Spacing[2],
@@ -263,6 +266,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
     padding: 0,
   },
@@ -275,6 +279,7 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.primary[500],
     fontWeight: Typography.fontWeight.medium,
   },
@@ -294,6 +299,7 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
   },
@@ -305,10 +311,12 @@ const styles = StyleSheet.create({
   },
   signUpText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
   },
   signUpLink: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semibold,
     color: Colors.primary[500],
     fontWeight: Typography.fontWeight.semibold,
   },

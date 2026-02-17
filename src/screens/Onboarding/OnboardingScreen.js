@@ -25,8 +25,8 @@ const OnboardingScreen = ({ navigation }) => {
       id: 1,
       title: 'Browse Amazing\nEvents',
       subtitle: 'Discover concerts, festivals, conferences and local events happening around you. Find your next great experience with just a tap.',
-      backgroundColor: Colors.primary[50],
-      accentColor: Colors.primary[500],
+      backgroundColor: Colors.info[50],
+      accentColor: Colors.info[500],
       icon: 'calendar',
       iconSize: 80,
     },
@@ -34,8 +34,8 @@ const OnboardingScreen = ({ navigation }) => {
       id: 2,
       title: 'Book Tickets\nInstantly',
       subtitle: 'Secure your spot at any event with our streamlined booking process. Get instant confirmation and digital tickets delivered to your phone.',
-      backgroundColor: Colors.secondary[50],
-      accentColor: Colors.secondary[500],
+      backgroundColor: Colors.success[50],
+      accentColor: Colors.success[500],
       icon: 'credit-card',
       iconSize: 80,
     },
@@ -220,6 +220,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   logo: {
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.primary[500],
@@ -230,6 +231,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[2],
   },
   skipText: {
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: Typography.fontSize.sm,
     color: Colors.text.secondary,
     fontWeight: Typography.fontWeight.semibold,
@@ -284,6 +286,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing[8],
   },
   title: {
+    fontFamily: 'PlusJakartaSans-Bold',
     fontSize: Typography.fontSize['4xl'],
     fontWeight: Typography.fontWeight.bold,
     textAlign: 'center',
@@ -291,6 +294,7 @@ const styles = StyleSheet.create({
     lineHeight: Typography.lineHeight.tight * Typography.fontSize['4xl'],
   },
   subtitle: {
+    fontFamily: 'PlusJakartaSans-Regular',
     fontSize: Typography.fontSize.base,
     textAlign: 'center',
     lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.base,
@@ -330,6 +334,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   nextButtonText: {
+    fontFamily: 'PlusJakartaSans-SemiBold',
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,

@@ -143,11 +143,13 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     textAlign: 'center',
   },
   placeholderSubtext: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.tertiary,
     textAlign: 'center',
   },
@@ -162,6 +164,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.fontSize['3xl'],
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     textAlign: 'center',
@@ -169,6 +172,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     textAlign: 'center',
     lineHeight: Typography.lineHeight.relaxed * Typography.fontSize.base,
@@ -212,22 +216,26 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
     marginBottom: 2,
   },
   primaryButtonSubtext: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.primary[100],
   },
   secondaryButtonText: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.primary[500],
     marginBottom: 2,
   },
   secondaryButtonSubtext: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
   },
   footer: {
@@ -235,11 +243,13 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.tertiary,
     textAlign: 'center',
     lineHeight: Typography.lineHeight.normal * Typography.fontSize.xs,
   },
   footerLink: {
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.primary[600],
     fontWeight: Typography.fontWeight.medium,
   },

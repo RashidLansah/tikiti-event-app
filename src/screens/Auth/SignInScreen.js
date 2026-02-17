@@ -177,10 +177,11 @@ const styles = StyleSheet.create({
   backButton: {
     padding: Spacing[2],
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.secondary[200],
   },
   title: {
     fontSize: Typography.fontSize.xl,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     textAlign: 'center',
@@ -195,6 +196,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     marginBottom: Spacing[8],
     textAlign: 'center',
@@ -204,6 +206,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: Typography.fontWeight.medium,
     color: Colors.text.primary,
     marginBottom: Spacing[2],
@@ -216,6 +219,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[3],
     paddingHorizontal: Spacing[4],
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
     minHeight: 48,
     textAlignVertical: 'center',
@@ -248,6 +252,7 @@ const styles = StyleSheet.create({
   passwordInput: {
     flex: 1,
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
   },
   eyeIcon: {
@@ -266,6 +271,7 @@ const styles = StyleSheet.create({
   },
   signInButtonText: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
   },
@@ -275,6 +281,7 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.primary[500],
     fontWeight: Typography.fontWeight.medium,
   },
@@ -287,10 +294,12 @@ const styles = StyleSheet.create({
   },
   createAccountText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
   },
   createAccountLink: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semibold,
     color: Colors.primary[500],
     fontWeight: Typography.fontWeight.semibold,
   },

@@ -628,10 +628,11 @@ const styles = StyleSheet.create({
   backButton: {
     padding: Spacing[2],
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: Colors.secondary[200],
   },
   title: {
     fontSize: Typography.fontSize.xl,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
   },
@@ -673,6 +674,7 @@ const styles = StyleSheet.create({
 
   progressText: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.text.tertiary,
     textAlign: 'center',
     fontWeight: Typography.fontWeight.medium,
@@ -687,12 +689,14 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: Typography.fontSize.xxl,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     marginBottom: Spacing[2],
   },
   stepSubtitle: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     marginBottom: Spacing[8],
   },
@@ -701,6 +705,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: Typography.fontWeight.medium,
     color: Colors.text.primary,
     marginBottom: Spacing[2],
@@ -713,6 +718,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[3],
     paddingHorizontal: Spacing[4],
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
     minHeight: 48,
     textAlignVertical: 'center',
@@ -731,6 +737,7 @@ const styles = StyleSheet.create({
   passwordInput: {
     flex: 1,
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
   },
   eyeIcon: {
@@ -758,6 +765,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
   },
   modalOverlay: {
@@ -782,6 +790,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
   },
@@ -804,6 +813,7 @@ const styles = StyleSheet.create({
   },
   countryText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
   },
   inputFieldFocused: {
@@ -829,6 +839,7 @@ const styles = StyleSheet.create({
   },
   interestText: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.text.secondary,
     textAlign: 'center',
     fontWeight: Typography.fontWeight.medium,
@@ -839,6 +850,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.tertiary,
   },
   reviewCard: {
@@ -849,6 +861,7 @@ const styles = StyleSheet.create({
   },
   reviewTitle: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     marginBottom: Spacing[4],
@@ -860,10 +873,12 @@ const styles = StyleSheet.create({
   },
   reviewLabel: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
   },
   reviewValue: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.text.primary,
     fontWeight: Typography.fontWeight.medium,
   },
@@ -884,6 +899,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
   },
@@ -896,6 +912,7 @@ const styles = StyleSheet.create({
   },
   typeformQuestion: {
     fontSize: 32,
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: Spacing[4],
@@ -903,6 +920,7 @@ const styles = StyleSheet.create({
   },
   typeformSubtitle: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: Typography.fontWeight.medium,
     textAlign: 'center',
     marginBottom: Spacing[8],
@@ -919,6 +937,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[4],
     paddingHorizontal: Spacing[5],
     fontSize: 18,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
     minHeight: 56,
     textAlignVertical: 'center',
@@ -937,6 +956,7 @@ const styles = StyleSheet.create({
   typeformPasswordInput: {
     flex: 1,
     fontSize: 18,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
   },
   typeformDropdown: {
@@ -952,6 +972,7 @@ const styles = StyleSheet.create({
   },
   typeformDropdownText: {
     fontSize: 18,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
   },
   typeformInterestsGrid: {
@@ -971,6 +992,7 @@ const styles = StyleSheet.create({
   },
   typeformInterestText: {
     fontSize: 14,
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.text.secondary,
     textAlign: 'center',
     fontWeight: Typography.fontWeight.medium,
@@ -981,6 +1003,7 @@ const styles = StyleSheet.create({
   },
   typeformSkipText: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.tertiary,
   },
   typeformContinueButton: {
@@ -994,6 +1017,7 @@ const styles = StyleSheet.create({
   },
   typeformContinueText: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
   },
@@ -1009,10 +1033,12 @@ const styles = StyleSheet.create({
   },
   typeformReviewLabel: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
   },
   typeformReviewValue: {
     fontSize: 16,
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.text.primary,
     fontWeight: Typography.fontWeight.medium,
   },

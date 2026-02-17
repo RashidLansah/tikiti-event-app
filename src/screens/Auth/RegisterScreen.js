@@ -403,12 +403,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.fontSize['3xl'],
+    fontFamily: Typography.fontFamily.bold,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     marginBottom: Spacing[2],
   },
   subtitle: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     lineHeight: 24,
   },
@@ -428,6 +430,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.secondary,
     marginBottom: Spacing[2],
@@ -446,6 +449,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
     padding: 0,
   },
@@ -469,6 +473,7 @@ const styles = StyleSheet.create({
   },
   registerButtonText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
   },
@@ -481,10 +486,12 @@ const styles = StyleSheet.create({
   },
   signInText: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
   },
   signInLink: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semibold,
     color: Colors.primary[500],
     fontWeight: Typography.fontWeight.semibold,
   },
@@ -493,6 +500,7 @@ const styles = StyleSheet.create({
   },
   userTypeTitle: {
     fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.primary,
     marginBottom: Spacing[4],
@@ -512,7 +520,7 @@ const styles = StyleSheet.create({
   },
   userTypeOptionSelected: {
     borderColor: Colors.primary[500],
-    backgroundColor: Colors.primary[25],
+    backgroundColor: Colors.primary[50],
   },
   userTypeContent: {
     flexDirection: 'row',
@@ -532,6 +540,7 @@ const styles = StyleSheet.create({
   },
   userTypeOptionTitle: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.text.primary,
     marginBottom: 2,
@@ -541,6 +550,7 @@ const styles = StyleSheet.create({
   },
   userTypeOptionDescription: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     lineHeight: Typography.lineHeight.normal * Typography.fontSize.sm,
   },
