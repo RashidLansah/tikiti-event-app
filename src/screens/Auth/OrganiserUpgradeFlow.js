@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[4],
     borderRadius: BorderRadius.lg,
     alignItems: 'center',
-    ...Shadows.medium,
+    ...Shadows.md,
   },
   disabledButton: {
     opacity: 0.6,

@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[5],
     borderWidth: 1,
     borderColor: Colors.border.light,
-    ...Shadows.medium,
+    ...Shadows.md,
     overflow: 'hidden',
   },
   eventImageContainer: {

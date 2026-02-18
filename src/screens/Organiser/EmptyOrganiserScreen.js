@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[6],
     borderRadius: BorderRadius.lg,
     marginBottom: Spacing[8],
-    ...Shadows.medium,
+    ...Shadows.md,
   },
   createEventButtonText: {
     fontSize: Typography.fontSize.lg,

@@ -8,7 +8,7 @@ import { Colors } from '../styles/designSystem';
 
 // Import tab navigators
 import UserTabNavigator from './UserTabNavigator';
-import OrganiserTabNavigator from './OrganiserTabNavigator';
+// import OrganiserTabNavigator from './OrganiserTabNavigator'; // Disabled: organiser features on web dashboard
 
 // Import auth screens
 import WelcomeScreen from '../screens/Auth/WelcomeScreen';
@@ -18,7 +18,7 @@ import CreateAccountFlow from '../screens/Auth/CreateAccountFlow';
 // Import common screens
 import PrivacyPolicyScreen from '../screens/Common/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/Common/TermsOfServiceScreen';
-import OrganiserUpgradeFlow from '../screens/Auth/OrganiserUpgradeFlow';
+// import OrganiserUpgradeFlow from '../screens/Auth/OrganiserUpgradeFlow'; // Disabled: organiser features on web dashboard
 
 // Import deep linking utilities
 import { linkingConfig, handleDeepLink, getInitialRoute } from '../utils/deepLinking';
