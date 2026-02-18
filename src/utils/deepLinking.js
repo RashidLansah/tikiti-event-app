@@ -7,7 +7,6 @@ export const linkingConfig = {
     'tikiti://',
     'https://gettikiti.com',
     'https://www.gettikiti.com',
-    'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app' // Fallback URL
   ],
   config: {
     screens: {
@@ -91,10 +90,8 @@ export const handleDeepLink = (url, navigation) => {
 
 // Generate shareable event link
 export const generateEventLink = (eventId, eventName = null) => {
-  // Use environment-based domain for consistency
-  const domain = __DEV__
-    ? 'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app'
-    : 'https://gettikiti.com';
+  // Always use production domain for shared links
+  const domain = 'https://gettikiti.com';
 
   // Web route is /event/{eventId} (singular, no slug)
   return `${domain}/event/${eventId}`;

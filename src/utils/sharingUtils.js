@@ -7,15 +7,12 @@
 // Base URLs for different environments
 const BASE_URLS = {
   production: 'https://gettikiti.com',
-  development: 'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app',
   local: 'http://localhost:19006'
 };
 
 // Get the appropriate base URL based on environment
+// Always use production domain for shared links since they're shared externally
 const getBaseUrl = () => {
-  if (__DEV__) {
-    return BASE_URLS.development;
-  }
   return BASE_URLS.production;
 };
 
@@ -105,8 +102,7 @@ export const validateEventUrl = (url) => {
     // Check if it's a Tikiti domain
     const tikitiDomains = [
       'gettikiti.com',
-      'www.gettikiti.com',
-      'tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app'
+      'www.gettikiti.com'
     ];
     
     if (!tikitiDomains.includes(urlObj.hostname)) {

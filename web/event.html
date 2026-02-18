@@ -487,11 +487,19 @@
 
         // Get event ID from URL
         function getEventId() {
+            // Check query parameter first (from Next.js redirect)
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryEventId = urlParams.get('eventId');
+            if (queryEventId) {
+                console.log('Event ID from query parameter:', queryEventId);
+                return queryEventId;
+            }
+
             const path = window.location.pathname;
             console.log('Current path:', path);
-            
-            // Handle both formats: /events/event-name-abc123 and /events/abc123
-            const eventMatch = path.match(/^\/events\/(.+)$/);
+
+            // Handle both formats: /event/{id}, /events/event-name-abc123, /events/abc123
+            const eventMatch = path.match(/^\/events?\/(.+)$/);
             if (eventMatch) {
                 const pathPart = eventMatch[1];
                 console.log('Path part:', pathPart);

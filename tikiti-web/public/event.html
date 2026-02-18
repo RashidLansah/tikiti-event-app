@@ -735,7 +735,7 @@
             const path = window.location.pathname;
             console.log('🔍 Current path:', path);
 
-            const eventMatch = path.match(/^\/events\/(.+)$/);
+            const eventMatch = path.match(/^\/events?\/(.+)$/);
             if (eventMatch) {
                 const pathPart = eventMatch[1];
                 console.log('🔍 Path part:', pathPart);

@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/event/(.*)",
+      "destination": "/event.html"
+    },
+    {
       "source": "/events/(.*)",
       "destination": "/event.html"
     },
