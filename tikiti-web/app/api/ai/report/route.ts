@@ -221,7 +221,7 @@ Be specific with numbers and percentages. Highlight both strengths and areas for
   } catch (error: any) {
     console.error('AI report error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to generate report' },
+      { error: 'Failed to generate report. Please try again.' },
       { status: 500 }
     );
   }

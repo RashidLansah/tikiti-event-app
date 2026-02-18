@@ -151,7 +151,7 @@ Respond with ONLY the description text, no explanations or preamble.`;
   } catch (error: any) {
     console.error('AI description error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to generate description' },
+      { error: 'Failed to generate description. Please try again.' },
       { status: 500 }
     );
   }

@@ -250,7 +250,7 @@ export async function POST(req: NextRequest) {
     console.error('Error sending bulk SMS:', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to send SMS',
+      error: 'Failed to send messages. Please try again.',
     }, { status: 500 });
   }
 }

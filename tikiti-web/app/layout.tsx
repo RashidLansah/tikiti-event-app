@@ -12,8 +12,14 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Tikiti - Event Management Dashboard",
-  description: "Manage your events, teams, and attendees with Tikiti",
+  title: "Tikiti — Event Management Platform",
+  description: "Create events, manage attendees, scan tickets, and track analytics. The modern event platform for organizers and attendees.",
+  keywords: ["events", "ticketing", "event management", "QR tickets", "Tikiti"],
+  openGraph: {
+    title: "Tikiti — Event Management Platform",
+    description: "Create events people remember.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

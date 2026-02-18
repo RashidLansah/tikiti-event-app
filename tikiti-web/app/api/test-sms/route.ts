@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: 'SMS test failed. Please try again.',
       phoneNumber: formattedPhone,
       senderId: arkeselSenderId,
       message: message,
