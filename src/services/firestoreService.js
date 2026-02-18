@@ -18,6 +18,35 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
 import { emailService } from '../config/emailService';
+import logger from '../utils/logger';
+
+// Firestore error mapper — returns user-friendly messages
+export const getFirestoreErrorMessage = (error) => {
+  const code = error?.code || '';
+  switch (code) {
+    case 'permission-denied':
+      return "You don't have permission to perform this action.";
+    case 'unavailable':
+      return 'Service temporarily unavailable. Please check your connection and try again.';
+    case 'not-found':
+      return 'The requested data was not found.';
+    case 'unauthenticated':
+      return 'Please sign in to continue.';
+    case 'deadline-exceeded':
+      return 'Request timed out. Please try again.';
+    case 'resource-exhausted':
+      return 'Too many requests. Please wait a moment and try again.';
+    case 'cancelled':
+      return 'The request was cancelled. Please try again.';
+    case 'already-exists':
+      return 'This item already exists.';
+    default:
+      if (error?.message?.includes('network') || error?.message?.includes('Network')) {
+        return 'Network error. Please check your connection and try again.';
+      }
+      return 'Something went wrong. Please try again.';
+  }
+};
 
 // Collection names
 export const COLLECTIONS = {
@@ -41,7 +70,7 @@ export const userService = {
       });
       return userRef;
     } catch (error) {
-      console.error('Error creating user profile:', error);
+      logger.error('Error creating user profile:', error);
       throw error;
     }
   },
@@ -58,7 +87,7 @@ export const userService = {
         return null;
       }
     } catch (error) {
-      console.error('Error getting user profile:', error);
+      logger.error('Error getting user profile:', error);
       throw error;
     }
   },
@@ -72,7 +101,7 @@ export const userService = {
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      console.error('Error updating user profile:', error);
+      logger.error('Error updating user profile:', error);
       throw error;
     }
   }
@@ -106,7 +135,7 @@ export const eventService = {
       });
       return docRef;
     } catch (error) {
-      console.error('Error creating event:', error);
+      logger.error('Error creating event:', error);
       
       // Provide more specific error messages
       if (error.message.includes('longer than 1048487 bytes')) {
@@ -131,7 +160,7 @@ export const eventService = {
         return null;
       }
     } catch (error) {
-      console.error('Error getting event:', error);
+      logger.error('Error getting event:', error);
       throw error;
     }
   },
@@ -171,7 +200,7 @@ export const eventService = {
         lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1]
       };
     } catch (error) {
-      console.error('Error getting events:', error);
+      logger.error('Error getting events:', error);
       throw error;
     }
   },
@@ -206,7 +235,7 @@ export const eventService = {
 
       return events;
     } catch (error) {
-      console.error('Error getting events by category:', error);
+      logger.error('Error getting events by category:', error);
       throw error;
     }
   },
@@ -243,7 +272,7 @@ export const eventService = {
 
       return events;
     } catch (error) {
-      console.error('Error searching events:', error);
+      logger.error('Error searching events:', error);
       throw error;
     }
   },
@@ -276,7 +305,7 @@ export const eventService = {
 
       return events;
     } catch (error) {
-      console.error('Error getting organizer events:', error);
+      logger.error('Error getting organizer events:', error);
       throw error;
     }
   },
@@ -328,7 +357,7 @@ export const eventService = {
         .sort((a, b) => new Date(b.createdAt?.toDate?.() || b.createdAt) - new Date(a.createdAt?.toDate?.() || a.createdAt))
         .slice(0, limitCount);
     } catch (error) {
-      console.error('Error getting events by location:', error);
+      logger.error('Error getting events by location:', error);
       throw error;
     }
   },
@@ -357,7 +386,7 @@ export const eventService = {
       
       return combinedEvents.slice(0, limitCount);
     } catch (error) {
-      console.error('Error getting events near user:', error);
+      logger.error('Error getting events near user:', error);
       // Fallback to getting all events
       const result = await eventService.getAll(limitCount);
       return result.events;
@@ -381,7 +410,7 @@ export const eventService = {
         callback(events);
       });
     } catch (error) {
-      console.error('Error setting up organizer events listener:', error);
+      logger.error('Error setting up organizer events listener:', error);
       return null;
     }
   },
@@ -403,7 +432,7 @@ export const eventService = {
         callback(events);
       });
     } catch (error) {
-      console.error('Error setting up all events listener:', error);
+      logger.error('Error setting up all events listener:', error);
       return null;
     }
   },
@@ -417,7 +446,7 @@ export const eventService = {
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      console.error('Error updating event:', error);
+      logger.error('Error updating event:', error);
       throw error;
     }
   },
@@ -431,7 +460,7 @@ export const eventService = {
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      console.error('Error deleting event:', error);
+      logger.error('Error deleting event:', error);
       throw error;
     }
   },
@@ -442,7 +471,7 @@ export const eventService = {
       const eventRef = doc(db, COLLECTIONS.EVENTS, eventId);
       await deleteDoc(eventRef);
     } catch (error) {
-      console.error('Error permanently deleting event:', error);
+      logger.error('Error permanently deleting event:', error);
       throw error;
     }
   },
@@ -468,7 +497,7 @@ export const eventUpdateService = {
       });
       return updates;
     } catch (error) {
-      console.error('Error getting event updates:', error);
+      logger.error('Error getting event updates:', error);
       return [];
     }
   },
@@ -486,7 +515,7 @@ export const eventUpdateService = {
         callback(updates);
       });
     } catch (error) {
-      console.error('Error subscribing to event updates:', error);
+      logger.error('Error subscribing to event updates:', error);
       return null;
     }
   },
@@ -506,7 +535,7 @@ export const eventSurveyService = {
       });
       return surveys;
     } catch (error) {
-      console.error('Error getting event surveys:', error);
+      logger.error('Error getting event surveys:', error);
       return [];
     }
   },
@@ -523,7 +552,7 @@ export const eventSurveyService = {
       });
       return docRef;
     } catch (error) {
-      console.error('Error submitting survey response:', error);
+      logger.error('Error submitting survey response:', error);
       throw error;
     }
   },
@@ -582,22 +611,22 @@ export const bookingService = {
           bookingReference: `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
         };
         
-        console.log('📧 Sending email confirmation for booking:', bookingWithId.id);
+        logger.log('📧 Sending email confirmation for booking:', bookingWithId.id);
         const emailResult = await emailService.sendTicketConfirmation(bookingWithId);
         
         if (emailResult.success) {
-          console.log('✅ Email confirmation sent successfully');
+          logger.log('✅ Email confirmation sent successfully');
         } else {
-          console.warn('⚠️ Email confirmation failed:', emailResult.message);
+          logger.warn('⚠️ Email confirmation failed:', emailResult.message);
         }
       } catch (emailError) {
-        console.error('❌ Email service error (booking still created):', emailError);
+        logger.error('❌ Email service error (booking still created):', emailError);
         // Don't throw here - booking was successful, email is secondary
       }
 
       return docRef;
     } catch (error) {
-      console.error('Error creating booking:', error);
+      logger.error('Error creating booking:', error);
       throw error;
     }
   },
@@ -615,7 +644,7 @@ export const bookingService = {
       
       return bookings;
     } catch (error) {
-      console.error('Error getting user bookings:', error);
+      logger.error('Error getting user bookings:', error);
       throw error;
     }
   },
@@ -625,7 +654,7 @@ export const bookingService = {
     try {
       // Check if user is authenticated
       if (!auth.currentUser) {
-        console.log('⚠️ User not authenticated, returning empty attendees list');
+        logger.log('⚠️ User not authenticated, returning empty attendees list');
         return [];
       }
       
@@ -644,11 +673,11 @@ export const bookingService = {
       
       return attendees;
     } catch (error) {
-      console.error('Error getting event attendees:', error);
+      logger.error('Error getting event attendees:', error);
       
       // Handle specific error types
       if (error.code === 'permission-denied') {
-        console.log('⚠️ Permission denied for attendee fetch, returning empty list');
+        logger.log('⚠️ Permission denied for attendee fetch, returning empty list');
         return [];
       }
       
@@ -676,7 +705,7 @@ export const bookingService = {
       
       return null;
     } catch (error) {
-      console.error('Error checking user booking:', error);
+      logger.error('Error checking user booking:', error);
       throw error;
     }
   },
@@ -742,7 +771,7 @@ export const bookingService = {
 
       return docRef;
     } catch (error) {
-      console.error('Error creating RSVP:', error);
+      logger.error('Error creating RSVP:', error);
       throw error;
     }
   },
@@ -768,7 +797,7 @@ export const bookingService = {
 
       return true;
     } catch (error) {
-      console.error('Error cancelling booking:', error);
+      logger.error('Error cancelling booking:', error);
       throw error;
     }
   },
@@ -776,10 +805,10 @@ export const bookingService = {
   // Get a specific booking by ID
   getById: async (bookingId) => {
     try {
-      console.log('🔍 Getting booking by ID:', bookingId);
+      logger.log('🔍 Getting booking by ID:', bookingId);
       
       if (!bookingId || typeof bookingId !== 'string') {
-        console.log('❌ Invalid booking ID:', bookingId);
+        logger.log('❌ Invalid booking ID:', bookingId);
         return null;
       }
       
@@ -788,16 +817,16 @@ export const bookingService = {
       
       if (bookingSnap.exists()) {
         const booking = { id: bookingSnap.id, ...bookingSnap.data() };
-        console.log('✅ Booking found:', booking);
+        logger.log('✅ Booking found:', booking);
         return booking;
       }
       
-      console.log('❌ Booking not found for ID:', bookingId);
+      logger.log('❌ Booking not found for ID:', bookingId);
       return null;
     } catch (error) {
-      console.error('❌ Error getting booking by ID:', error);
-      console.error('❌ Booking ID was:', bookingId);
-      console.error('❌ Error details:', error.message);
+      logger.error('❌ Error getting booking by ID:', error);
+      logger.error('❌ Booking ID was:', bookingId);
+      logger.error('❌ Error details:', error.message);
       throw error;
     }
   },
@@ -805,10 +834,10 @@ export const bookingService = {
   // Update a booking
   update: async (bookingId, updates) => {
     try {
-      console.log('🔄 Updating booking:', bookingId, 'with:', updates);
+      logger.log('🔄 Updating booking:', bookingId, 'with:', updates);
       
       if (!bookingId || typeof bookingId !== 'string') {
-        console.log('❌ Invalid booking ID for update:', bookingId);
+        logger.log('❌ Invalid booking ID for update:', bookingId);
         throw new Error('Invalid booking ID provided');
       }
       
@@ -817,12 +846,12 @@ export const bookingService = {
         ...updates,
         updatedAt: serverTimestamp(),
       });
-      console.log('✅ Booking updated successfully');
+      logger.log('✅ Booking updated successfully');
     } catch (error) {
-      console.error('❌ Error updating booking:', error);
-      console.error('❌ Booking ID was:', bookingId);
-      console.error('❌ Updates were:', updates);
-      console.error('❌ Error details:', error.message);
+      logger.error('❌ Error updating booking:', error);
+      logger.error('❌ Booking ID was:', bookingId);
+      logger.error('❌ Updates were:', updates);
+      logger.error('❌ Error details:', error.message);
       throw error;
     }
   },
@@ -842,7 +871,7 @@ export const categoryService = {
 
       return categories;
     } catch (error) {
-      console.error('Error getting categories:', error);
+      logger.error('Error getting categories:', error);
       throw error;
     }
   },
@@ -872,7 +901,7 @@ export const categoryService = {
 
       return defaultCategories;
     } catch (error) {
-      console.error('Error initializing categories:', error);
+      logger.error('Error initializing categories:', error);
       throw error;
     }
   }

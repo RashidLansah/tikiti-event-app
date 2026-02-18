@@ -16,6 +16,8 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { useAuth } from '../../context/AuthContext';
+import { authService } from '../../services/authService';
+import logger from '../../utils/logger';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -38,9 +40,9 @@ const LoginScreen = ({ navigation }) => {
       const user = await login(email.trim(), password);
       
       // Navigation will be handled by AuthContext state change
-      console.log('Login successful:', user.email);
+      logger.log('Login successful:', user.email);
     } catch (error) {
-      Alert.alert('Login Failed', error.message || 'An error occurred during login. Please try again.');
+      Alert.alert('Login Failed', authService.getErrorMessage(error));
     } finally {
       setLoading(false);
     }

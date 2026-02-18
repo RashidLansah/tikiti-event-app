@@ -17,7 +17,8 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles
 import PillTabBar from '../../components/PillTabBar';
 import { MyEventsSkeleton } from '../../components/Skeleton';
 import { useTheme } from '../../context/ThemeContext';
-import { bookingService, eventService } from '../../services/firestoreService';
+import { bookingService, eventService, getFirestoreErrorMessage } from '../../services/firestoreService';
+import logger from '../../utils/logger';
 import { useAuth } from '../../context/AuthContext';
 
 const MyTicketsScreen = ({ navigation }) => {
@@ -71,8 +72,8 @@ const MyTicketsScreen = ({ navigation }) => {
       setAllBookings(enhancedBookings);
       applyFilter(activeFilter, enhancedBookings);
     } catch (error) {
-      console.error('Error loading registered events:', error);
-      Alert.alert('Error', 'Failed to load your registered events');
+      logger.error('Error loading registered events:', error);
+      Alert.alert('Error', getFirestoreErrorMessage(error));
     }
   };
 

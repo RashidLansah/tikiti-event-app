@@ -20,8 +20,9 @@ import { EventListSkeleton } from '../../components/Skeleton';
 import TikitiLoader from '../../components/TikitiLoader';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { eventService, bookingService } from '../../services/firestoreService';
+import { eventService, bookingService, getFirestoreErrorMessage } from '../../services/firestoreService';
 import notificationService from '../../services/notificationService';
+import logger from '../../utils/logger';
 
 const EventListScreen = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
@@ -51,28 +52,28 @@ const EventListScreen = ({ navigation }) => {
   const loadEvents = async () => {
     try {
       let eventsData = [];
-      
+
       // If user has a country set, load events near them
       if (userProfile?.organisationCountry) {
-        console.log('📍 Loading events for user country:', userProfile.organisationCountry);
+        logger.log('Loading events for user country:', userProfile.organisationCountry);
         eventsData = await eventService.getNearUser(userProfile.organisationCountry, 20);
       } else {
-        // Fallback to all events if no country set
-        console.log('📍 No user country set, loading all events');
+        logger.log('No user country set, loading all events');
         const result = await eventService.getAll(20);
         eventsData = result.events || [];
       }
-      
+
       setEvents(eventsData);
     } catch (error) {
-      console.error('Error loading events:', error);
+      logger.error('Error loading events:', error);
       // Fallback to all events on error
       try {
         const result = await eventService.getAll(20);
         setEvents(result.events || []);
       } catch (fallbackError) {
-        console.error('Error loading fallback events:', fallbackError);
+        logger.error('Error loading fallback events:', fallbackError);
         setEvents([]);
+        Alert.alert('Couldn\'t Load Events', getFirestoreErrorMessage(fallbackError));
       }
     }
   };

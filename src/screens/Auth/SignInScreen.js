@@ -13,6 +13,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { authService } from '../../services/authService';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
 const SignInScreen = ({ navigation }) => {
@@ -34,7 +35,7 @@ const SignInScreen = ({ navigation }) => {
     try {
       await login(email.trim(), password);
     } catch (error) {
-      Alert.alert('Sign In Failed', error.message);
+      Alert.alert('Sign In Failed', authService.getErrorMessage(error));
     } finally {
       setLoading(false);
     }

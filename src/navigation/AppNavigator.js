@@ -22,6 +22,7 @@ import OrganiserUpgradeFlow from '../screens/Auth/OrganiserUpgradeFlow';
 
 // Import deep linking utilities
 import { linkingConfig, handleDeepLink, getInitialRoute } from '../utils/deepLinking';
+import logger from '../utils/logger';
 
 const Stack = createStackNavigator();
 
@@ -30,11 +31,11 @@ const AppNavigator = () => {
   const { user, userProfile, loading } = useAuth();
   
   // Debug logging
-  console.log('🔍 AppNavigator Debug:');
-  console.log('  - User:', user?.email);
-  console.log('  - UserProfile:', userProfile);
-  console.log('  - AccountType:', userProfile?.accountType);
-  console.log('  - Loading:', loading);
+  logger.log('🔍 AppNavigator Debug:');
+  logger.log('  - User:', user?.email);
+  logger.log('  - UserProfile:', userProfile);
+  logger.log('  - AccountType:', userProfile?.accountType);
+  logger.log('  - Loading:', loading);
   
   // Get initial route (for web deep linking)
   const initialRoute = getInitialRoute();
@@ -57,7 +58,7 @@ const AppNavigator = () => {
   const getInitialRouteName = () => {
     // If we have a web deep link (like EventWeb), use it regardless of auth state
     if (initialRoute?.name === 'EventWeb') {
-      console.log('🌐 Web deep link detected, routing to EventWeb');
+      logger.log('🌐 Web deep link detected, routing to EventWeb');
       return 'EventWeb';
     }
     
@@ -67,17 +68,17 @@ const AppNavigator = () => {
     
     // Ensure we have a userProfile before making routing decisions
     if (!userProfile) {
-      console.log('⚠️ No userProfile available yet, defaulting to UserFlow');
+      logger.log('⚠️ No userProfile available yet, defaulting to UserFlow');
       return 'UserFlow';
     }
     
-    console.log('🔍 Routing decision based on accountType:', userProfile.accountType);
+    logger.log('🔍 Routing decision based on accountType:', userProfile.accountType);
     
     if (userProfile.accountType === 'organizer') {
-      console.log('🎯 Routing to OrganiserFlow');
+      logger.log('🎯 Routing to OrganiserFlow');
       return 'OrganiserFlow';
     } else {
-      console.log('🎯 Routing to UserFlow (accountType:', userProfile.accountType, ')');
+      logger.log('🎯 Routing to UserFlow (accountType:', userProfile.accountType, ')');
       return 'UserFlow';
     }
   };
@@ -91,12 +92,12 @@ const AppNavigator = () => {
         // Handle any pending deep links when navigation is ready
         if (Platform.OS === 'web') {
           // Web deep link handling is automatic via linking config
-          console.log('🔗 Navigation ready, current URL:', window.location.href);
+          logger.log('🔗 Navigation ready, current URL:', window.location.href);
         }
       }}
       onStateChange={(state) => {
         if (Platform.OS === 'web') {
-          console.log('🔄 Navigation state changed:', state);
+          logger.log('🔄 Navigation state changed:', state);
         }
       }}
     >

@@ -14,6 +14,8 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { useAuth } from '../../context/AuthContext';
+import { authService } from '../../services/authService';
+import logger from '../../utils/logger';
 
 const RegisterScreen = ({ navigation, route }) => {
   const [formData, setFormData] = useState({
@@ -81,17 +83,17 @@ const RegisterScreen = ({ navigation, route }) => {
         accountType,
       };
       
-      console.log('🔍 Creating profile with accountType:', accountType);
-      console.log('🔍 Full profile data:', profileData);
+      logger.log('Creating profile with accountType:', accountType);
+      logger.log('Full profile data:', profileData);
       
       // Register user and create profile (handled by AuthContext)
       const user = await register(email.trim(), password, displayName, profileData);
 
-      console.log('✅ Registration successful:', user.email);
-      
+      logger.log('Registration successful:', user.email);
+
       // Navigation will be handled by AuthContext state change
     } catch (error) {
-      Alert.alert('Registration Failed', error.message || 'An error occurred during registration. Please try again.');
+      Alert.alert('Registration Failed', authService.getErrorMessage(error));
     } finally {
       setLoading(false);
     }

@@ -15,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { bookingService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import logger from '../../utils/logger';
 
 const { width, height } = Dimensions.get('window');
 
@@ -52,7 +53,7 @@ const ScanTicketScreen = ({ navigation }) => {
         invalid: todayScanned.filter(t => !t.isValid).length,
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
+      logger.error('Error loading stats:', error);
     }
   };
 
@@ -79,70 +80,70 @@ const ScanTicketScreen = ({ navigation }) => {
   };
 
   const handleStartScan = async () => {
-    console.log('🎯 Starting scan process...');
-    console.log('📋 Permission status:', permission);
+    logger.log('🎯 Starting scan process...');
+    logger.log('📋 Permission status:', permission);
     
     if (!permission) {
-      console.log('❌ No permission object found');
+      logger.log('❌ No permission object found');
       Alert.alert('Permission Required', 'Camera permission is required to scan QR codes.');
       return;
     }
     
     if (!permission.granted) {
-      console.log('📱 Requesting camera permission...');
+      logger.log('📱 Requesting camera permission...');
       const { granted } = await requestPermission();
-      console.log('✅ Permission granted:', granted);
+      logger.log('✅ Permission granted:', granted);
       if (!granted) {
         Alert.alert('No Access', 'No access to camera. Please enable camera permission in settings.');
         return;
       }
     }
     
-    console.log('✅ Camera permission confirmed');
+    logger.log('✅ Camera permission confirmed');
     setIsScanning(true);
     setScanResult(null);
     setIsProcessing(false);
     startScanAnimation();
-    console.log('📸 Camera should be opening...');
-    console.log('🔄 States: isScanning=true, isProcessing=false');
+    logger.log('📸 Camera should be opening...');
+    logger.log('🔄 States: isScanning=true, isProcessing=false');
   };
 
   const handleBarcodeScanned = async ({ type, data }) => {
-    console.log('🔍 BARCODE SCAN EVENT TRIGGERED!');
-    console.log('📱 Barcode type:', type);
-    console.log('📱 QR Code data:', data);
-    console.log('📱 Data length:', data?.length);
-    console.log('📱 Is processing:', isProcessing);
+    logger.log('🔍 BARCODE SCAN EVENT TRIGGERED!');
+    logger.log('📱 Barcode type:', type);
+    logger.log('📱 QR Code data:', data);
+    logger.log('📱 Data length:', data?.length);
+    logger.log('📱 Is processing:', isProcessing);
     
     if (isProcessing) {
-      console.log('⏳ Already processing, ignoring scan');
+      logger.log('⏳ Already processing, ignoring scan');
       return; // Prevent multiple scans
     }
     
     // Provide haptic feedback
     Vibration.vibrate(100);
-    console.log('✅ Vibration triggered');
+    logger.log('✅ Vibration triggered');
     
     setIsProcessing(true);
       setIsScanning(false);
     stopScanAnimation();
-    console.log('🔄 States updated: processing=true, scanning=false');
+    logger.log('🔄 States updated: processing=true, scanning=false');
     
     try {
       // Parse the QR code data
-      console.log('🔍 Raw QR data received:', data);
+      logger.log('🔍 Raw QR data received:', data);
       
       let ticketData;
       try {
         ticketData = JSON.parse(data);
-        console.log('✅ Successfully parsed JSON:', ticketData);
+        logger.log('✅ Successfully parsed JSON:', ticketData);
       } catch (parseError) {
-        console.log('❌ JSON parse failed, trying other formats:', parseError.message);
-        console.log('📝 Raw data:', data);
+        logger.log('❌ JSON parse failed, trying other formats:', parseError.message);
+        logger.log('📝 Raw data:', data);
         
         // Try pipe-separated format: "SIMPLE123|Test Event|Test User|test-booking-123|confirmed"
         if (data.includes('|')) {
-          console.log('🔍 Trying pipe-separated format');
+          logger.log('🔍 Trying pipe-separated format');
           const parts = data.split('|');
           if (parts.length >= 5) {
             ticketData = {
@@ -152,15 +153,15 @@ const ScanTicketScreen = ({ navigation }) => {
               purchaseId: parts[3],
               status: parts[4]
             };
-            console.log('✅ Successfully parsed pipe format:', ticketData);
+            logger.log('✅ Successfully parsed pipe format:', ticketData);
           } else {
-            console.log('❌ Invalid pipe format - not enough parts');
+            logger.log('❌ Invalid pipe format - not enough parts');
           }
         }
         
         // Try minimal format (just ticket ID)
         else if (data.length < 50 && !data.includes(' ')) {
-          console.log('🔍 Trying minimal format (ticket ID only)');
+          logger.log('🔍 Trying minimal format (ticket ID only)');
           ticketData = {
             ticketId: data,
             eventName: 'Unknown Event',
@@ -168,7 +169,7 @@ const ScanTicketScreen = ({ navigation }) => {
             purchaseId: 'test-booking-123', // Use test booking for minimal format
             status: 'confirmed'
           };
-          console.log('✅ Successfully parsed minimal format:', ticketData);
+          logger.log('✅ Successfully parsed minimal format:', ticketData);
         }
         
         // If all parsing fails
@@ -212,7 +213,7 @@ const ScanTicketScreen = ({ navigation }) => {
       }
       
     } catch (error) {
-      console.error('Error processing QR code:', error);
+      logger.error('Error processing QR code:', error);
       setScanResult({
         ticketId: 'INVALID',
         eventName: 'Unknown Event',
@@ -227,32 +228,32 @@ const ScanTicketScreen = ({ navigation }) => {
 
   const validateTicket = async (ticketData) => {
     try {
-      console.log('🎫 Validating ticket data:', ticketData);
+      logger.log('🎫 Validating ticket data:', ticketData);
       
       // Check if required fields exist
       if (!ticketData.purchaseId) {
-        console.log('❌ No purchaseId found in ticket data');
+        logger.log('❌ No purchaseId found in ticket data');
         return false;
       }
       
-      console.log('🔍 Looking up booking:', ticketData.purchaseId);
+      logger.log('🔍 Looking up booking:', ticketData.purchaseId);
       
       // Check if booking exists and is valid
       const booking = await bookingService.getById(ticketData.purchaseId);
-      console.log('📋 Booking found:', booking);
+      logger.log('📋 Booking found:', booking);
       
       if (!booking) {
-        console.log('❌ Booking not found');
+        logger.log('❌ Booking not found');
         return false; // Booking doesn't exist
       }
       
       if (booking.status === 'used') {
-        console.log('❌ Ticket already used');
+        logger.log('❌ Ticket already used');
         return false; // Already used
       }
       
       if (booking.status !== 'confirmed') {
-        console.log('❌ Booking not confirmed, status:', booking.status);
+        logger.log('❌ Booking not confirmed, status:', booking.status);
         return false; // Not confirmed
       }
       
@@ -263,26 +264,26 @@ const ScanTicketScreen = ({ navigation }) => {
         today.setHours(0, 0, 0, 0);
         
         if (eventDate < today) {
-          console.log('❌ Event date has passed');
+          logger.log('❌ Event date has passed');
           return false; // Event date has passed
         }
       }
       
-      console.log('✅ Ticket validation successful');
+      logger.log('✅ Ticket validation successful');
       return true;
     } catch (error) {
-      console.error('❌ Error validating ticket:', error);
-      console.error('❌ Error details:', error.message);
+      logger.error('❌ Error validating ticket:', error);
+      logger.error('❌ Error details:', error.message);
       return false;
     }
   };
 
   const markTicketAsUsed = async (purchaseId) => {
     try {
-      console.log('🏷️ Marking ticket as used:', purchaseId);
+      logger.log('🏷️ Marking ticket as used:', purchaseId);
       
       if (!purchaseId) {
-        console.log('❌ No purchaseId provided');
+        logger.log('❌ No purchaseId provided');
         return;
       }
       
@@ -291,10 +292,10 @@ const ScanTicketScreen = ({ navigation }) => {
         usedAt: new Date().toISOString(),
         usedBy: user?.uid,
       });
-      console.log('✅ Ticket marked as used successfully:', purchaseId);
+      logger.log('✅ Ticket marked as used successfully:', purchaseId);
     } catch (error) {
-      console.error('❌ Error marking ticket as used:', error);
-      console.error('❌ Error details:', error.message);
+      logger.error('❌ Error marking ticket as used:', error);
+      logger.error('❌ Error details:', error.message);
     }
   };
 
@@ -387,7 +388,7 @@ const ScanTicketScreen = ({ navigation }) => {
                 onPress={() => {
                   setIsScanning(false);
                   stopScanAnimation();
-                  console.log('❌ Camera closed by user');
+                  logger.log('❌ Camera closed by user');
                 }}
               >
                 <Feather name="x" size={24} color={Colors.white} />

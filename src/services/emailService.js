@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+
 // Using SendGrid Web API directly instead of Node.js library
 const SENDGRID_API_ENDPOINT = 'https://api.sendgrid.com/v3/mail/send';
 
@@ -14,14 +16,14 @@ class EmailService {
   // Send welcome email to new users
   async sendWelcomeEmail(userEmail, userName) {
     try {
-      console.log('📧 Attempting to send welcome email to:', userEmail);
-      console.log('📧 SendGrid API Key available:', !!SENDGRID_API_KEY && SENDGRID_API_KEY !== 'YOUR_SENDGRID_API_KEY_HERE');
-      console.log('📧 API Key starts with SG.:', SENDGRID_API_KEY?.startsWith('SG.'));
-      console.log('📧 API Key length:', SENDGRID_API_KEY?.length);
+      logger.log('📧 Attempting to send welcome email to:', userEmail);
+      logger.log('📧 SendGrid API Key available:', !!SENDGRID_API_KEY && SENDGRID_API_KEY !== 'YOUR_SENDGRID_API_KEY_HERE');
+      logger.log('📧 API Key starts with SG.:', SENDGRID_API_KEY?.startsWith('SG.'));
+      logger.log('📧 API Key length:', SENDGRID_API_KEY?.length);
       
       // Check if API key is properly configured
       if (!SENDGRID_API_KEY || SENDGRID_API_KEY === 'YOUR_SENDGRID_API_KEY_HERE') {
-        console.error('❌ SendGrid API Key not configured. Please set EXPO_PUBLIC_SENDGRID_API_KEY environment variable.');
+        logger.error('❌ SendGrid API Key not configured. Please set EXPO_PUBLIC_SENDGRID_API_KEY environment variable.');
         return { success: false, error: 'SendGrid API Key not configured' };
       }
       
@@ -67,15 +69,15 @@ class EmailService {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ SendGrid API error:', response.status, errorText);
+        logger.error('❌ SendGrid API error:', response.status, errorText);
         throw new Error(`SendGrid API error: ${response.status} - ${errorText}`);
       }
 
       const responseData = await response.json();
-      console.log('✅ Welcome email sent successfully!', responseData);
+      logger.log('✅ Welcome email sent successfully!', responseData);
       return { success: true };
     } catch (error) {
-      console.error('❌ Error sending welcome email:', error);
+      logger.error('❌ Error sending welcome email:', error);
       return { success: false, error: error.message };
     }
   }
@@ -324,10 +326,10 @@ Thank you for choosing Tikiti. Let's create amazing memories together!
         throw new Error(`SendGrid API error: ${response.status}`);
       }
 
-      console.log('✅ Event reminder email sent successfully!');
+      logger.log('✅ Event reminder email sent successfully!');
       return { success: true };
     } catch (error) {
-      console.error('❌ Error sending event reminder email:', error);
+      logger.error('❌ Error sending event reminder email:', error);
       return { success: false, error: error.message };
     }
   }

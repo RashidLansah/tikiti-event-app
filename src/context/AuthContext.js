@@ -6,6 +6,7 @@ import { auth, db } from '../config/firebase';
 import { authService } from '../services/authService';
 import notificationService from '../services/notificationService';
 import emailService from '../services/emailService';
+import logger from '../utils/logger';
 
 const AuthContext = createContext({});
 
@@ -35,10 +36,10 @@ export const AuthProvider = ({ children }) => {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
             const profileData = userDoc.data();
-            console.log('🔍 Fetched user profile:', profileData);
+            logger.log('🔍 Fetched user profile:', profileData);
             setUserProfile(profileData);
           } else {
-            console.log('⚠️ No user profile found for:', firebaseUser.uid);
+            logger.log('⚠️ No user profile found for:', firebaseUser.uid);
             // Set a default profile to prevent indefinite loading
             setUserProfile({ 
               accountType: 'user', 
@@ -47,7 +48,7 @@ export const AuthProvider = ({ children }) => {
             });
           }
         } catch (error) {
-          console.error('Error fetching user profile:', error);
+          logger.error('Error fetching user profile:', error);
           // Set a default profile on error to prevent indefinite loading
           setUserProfile({ 
             accountType: 'user', 
@@ -71,21 +72,21 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setUserProfile(null);
     } catch (error) {
-      console.error('Error signing out:', error);
+      logger.error('Error signing out:', error);
       throw error;
     }
   };
 
   const createUserProfile = async (userId, profileData) => {
     try {
-      console.log('📝 Creating user profile for:', userId, 'with data:', profileData);
+      logger.log('📝 Creating user profile for:', userId, 'with data:', profileData);
       const userRef = doc(db, 'users', userId);
       await setDoc(userRef, {
         ...profileData,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      console.log('✅ User profile created successfully');
+      logger.log('✅ User profile created successfully');
       setUserProfile(profileData);
       
       // Send welcome notification
@@ -96,9 +97,9 @@ export const AuthProvider = ({ children }) => {
       if (profileData.email) {
         try {
           await emailService.sendWelcomeEmail(profileData.email, userName);
-          console.log('✅ Welcome email sent successfully');
+          logger.log('✅ Welcome email sent successfully');
         } catch (error) {
-          console.error('❌ Failed to send welcome email:', error);
+          logger.error('❌ Failed to send welcome email:', error);
           // Don't throw error - email failure shouldn't break registration
         }
       }
@@ -106,7 +107,7 @@ export const AuthProvider = ({ children }) => {
       // Force a small delay to ensure state is updated
       await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
-      console.error('Error creating user profile:', error);
+      logger.error('Error creating user profile:', error);
       throw error;
     }
   };
@@ -123,7 +124,7 @@ export const AuthProvider = ({ children }) => {
       await setDoc(userRef, updatedData, { merge: true });
       setUserProfile(updatedData);
     } catch (error) {
-      console.error('Error updating user profile:', error);
+      logger.error('Error updating user profile:', error);
       throw error;
     }
   };
@@ -147,7 +148,7 @@ export const AuthProvider = ({ children }) => {
       // User state will be updated by onAuthStateChanged
       return userCredential;
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -164,7 +165,7 @@ export const AuthProvider = ({ children }) => {
       
       return user;
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('Registration error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -175,7 +176,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await authService.resetPassword(email);
     } catch (error) {
-      console.error('Password reset error:', error);
+      logger.error('Password reset error:', error);
       throw error;
     }
   };
