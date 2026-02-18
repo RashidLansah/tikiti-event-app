@@ -856,7 +856,7 @@ export default function LandingPage() {
             <div>
               <h4 className="text-[14px] font-semibold text-white/60 uppercase tracking-wider mb-4">Legal</h4>
               <div className="space-y-3">
-                <a href="#" className="block text-[14px] text-white/40 hover:text-white transition-colors">Privacy Policy</a>
+                <a href="/privacy" className="block text-[14px] text-white/40 hover:text-white transition-colors">Privacy Policy</a>
                 <a href="#" className="block text-[14px] text-white/40 hover:text-white transition-colors">Terms of Service</a>
                 <a href="#" className="block text-[14px] text-white/40 hover:text-white transition-colors">Cookie Policy</a>
               </div>
