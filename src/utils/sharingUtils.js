@@ -27,20 +27,8 @@ const getBaseUrl = () => {
  */
 export const generateEventShareUrl = (eventId, eventName = null) => {
   const baseUrl = getBaseUrl();
-  
-  if (eventName) {
-    // Create SEO-friendly URL slug
-    const slug = eventName
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single
-      .trim();
-    
-    return `${baseUrl}/events/${slug}-${eventId}`;
-  }
-  
-  return `${baseUrl}/events/${eventId}`;
+  // Web route is /event/{eventId} (singular, no slug)
+  return `${baseUrl}/event/${eventId}`;
 };
 
 /**
@@ -125,14 +113,14 @@ export const validateEventUrl = (url) => {
       return { isValid: false, eventId: null };
     }
     
-    // Check if it's an event URL
-    const eventMatch = urlObj.pathname.match(/^\/events\/(.+)$/);
+    // Check if it's an event URL (matches /event/{id} or /events/{slug}-{id})
+    const eventMatch = urlObj.pathname.match(/^\/events?\/(.+)$/);
     if (eventMatch) {
       // Extract event ID from the end of the path
       const pathPart = eventMatch[1];
       const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
       const eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
-      
+
       return { isValid: true, eventId };
     }
     

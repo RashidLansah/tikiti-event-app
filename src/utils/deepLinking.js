@@ -18,7 +18,7 @@ export const linkingConfig = {
       
       // Web Event View
       EventWeb: {
-        path: 'events/:eventId',
+        path: 'event/:eventId',
         parse: {
           eventId: (eventId) => eventId,
         },
@@ -53,12 +53,12 @@ export const handleDeepLink = (url, navigation) => {
   const parsed = Linking.parse(url);
   const { hostname, path, queryParams } = parsed;
 
-  // Check if it's an event link
-  const eventMatch = path?.match(/^\/events\/(.+)$/);
+  // Check if it's an event link (matches /event/{id} or /events/{slug}-{id})
+  const eventMatch = path?.match(/^\/events?\/(.+)$/);
   if (eventMatch) {
     // Extract event ID from the path - handle both formats:
-    // 1. /events/event-name-abc123 (SEO-friendly)
-    // 2. /events/abc123 (simple)
+    // 1. /event/abc123 (current)
+    // 2. /events/event-name-abc123 (legacy SEO-friendly)
     const pathPart = eventMatch[1];
     const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
     const eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
@@ -92,23 +92,12 @@ export const handleDeepLink = (url, navigation) => {
 // Generate shareable event link
 export const generateEventLink = (eventId, eventName = null) => {
   // Use environment-based domain for consistency
-  const domain = __DEV__ 
+  const domain = __DEV__
     ? 'https://tikiti-7u2hl0aum-lansahs-projects-ff07a47b.vercel.app'
     : 'https://gettikiti.com';
-  
-  if (eventName) {
-    // Create SEO-friendly URL slug
-    const slug = eventName
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Replace multiple hyphens with single
-      .trim();
-    
-    return `${domain}/events/${slug}-${eventId}`;
-  }
-  
-  return `${domain}/events/${eventId}`;
+
+  // Web route is /event/{eventId} (singular, no slug)
+  return `${domain}/event/${eventId}`;
 };
 
 // Share event function
@@ -222,9 +211,11 @@ export const getInitialRoute = () => {
       const path = window.location.pathname;
       console.log('🔍 Checking web path for deep linking:', path);
       
-      const eventMatch = path.match(/^\/events\/(.+)$/);
+      const eventMatch = path.match(/^\/events?\/(.+)$/);
       if (eventMatch) {
-        const eventId = eventMatch[1];
+        const pathPart = eventMatch[1];
+        const eventIdMatch = pathPart.match(/-([a-zA-Z0-9]+)$/);
+        const eventId = eventIdMatch ? eventIdMatch[1] : pathPart;
         console.log('✅ Event deep link detected:', eventId);
         return {
           name: 'EventWeb',
