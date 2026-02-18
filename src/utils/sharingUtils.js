@@ -6,12 +6,13 @@
 
 // Base URLs for different environments
 const BASE_URLS = {
-  production: 'https://gettikiti.com',
+  production: 'https://tikitidashboard.vercel.app',
+  legacy: 'https://gettikiti.com',
   local: 'http://localhost:19006'
 };
 
 // Get the appropriate base URL based on environment
-// Always use production domain for shared links since they're shared externally
+// Use the web dashboard URL where the /event/[id] route is deployed
 const getBaseUrl = () => {
   return BASE_URLS.production;
 };
@@ -102,7 +103,8 @@ export const validateEventUrl = (url) => {
     // Check if it's a Tikiti domain
     const tikitiDomains = [
       'gettikiti.com',
-      'www.gettikiti.com'
+      'www.gettikiti.com',
+      'tikitidashboard.vercel.app'
     ];
     
     if (!tikitiDomains.includes(urlObj.hostname)) {

@@ -7,6 +7,7 @@ export const linkingConfig = {
     'tikiti://',
     'https://gettikiti.com',
     'https://www.gettikiti.com',
+    'https://tikitidashboard.vercel.app',
   ],
   config: {
     screens: {
@@ -90,8 +91,8 @@ export const handleDeepLink = (url, navigation) => {
 
 // Generate shareable event link
 export const generateEventLink = (eventId, eventName = null) => {
-  // Always use production domain for shared links
-  const domain = 'https://gettikiti.com';
+  // Use the web dashboard URL where /event/[id] route is deployed
+  const domain = 'https://tikitidashboard.vercel.app';
 
   // Web route is /event/{eventId} (singular, no slug)
   return `${domain}/event/${eventId}`;
