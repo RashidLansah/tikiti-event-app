@@ -72,7 +72,7 @@ export default {
       eas: {
         projectId: "4a3d499a-fee7-465b-b0c6-3c9ba76073bc"
       },
-      sendgridApiKey: process.env.EXPO_PUBLIC_SENDGRID_API_KEY
+      brevoApiKey: process.env.EXPO_PUBLIC_BREVO_API_KEY
     }
   }
 };

@@ -1,20 +1,27 @@
-// SendGrid Email Service Configuration
-const SENDGRID_CONFIG = {
-  apiKey: process.env.EXPO_PUBLIC_SENDGRID_API_KEY || 'YOUR_SENDGRID_API_KEY_HERE',
-  fromEmail: 'gettikiti@gmail.com',
-  fromName: 'Tikiti Events',
-  replyTo: 'gettikiti@gmail.com' // Add reply-to address
+import logger from '../utils/logger';
+
+// Brevo (Sendinblue) Email Service Configuration
+const BREVO_CONFIG = {
+  apiKey: process.env.EXPO_PUBLIC_BREVO_API_KEY || '',
+  apiEndpoint: 'https://api.brevo.com/v3/smtp/email',
+  fromEmail: process.env.EXPO_PUBLIC_BREVO_SENDER_EMAIL || 'noreply@gettikiti.com',
+  fromName: 'Tikiti',
+  replyTo: 'lansah@gettikiti.com',
 };
 
-// SendGrid email service
+// Brevo email service
 export const emailService = {
-  // Initialize SendGrid
+  // Initialize Brevo
   init: async () => {
     try {
-      console.log('✅ SendGrid email service ready');
+      if (!BREVO_CONFIG.apiKey) {
+        logger.warn('Brevo API key not configured. Emails will not be sent.');
+        return false;
+      }
+      logger.log('Brevo email service ready');
       return true;
     } catch (error) {
-      console.error('❌ SendGrid initialization failed:', error);
+      logger.error('Brevo initialization failed:', error);
       return false;
     }
   },
@@ -22,6 +29,11 @@ export const emailService = {
   // Send ticket confirmation email
   sendTicketConfirmation: async (bookingData) => {
     try {
+      if (!BREVO_CONFIG.apiKey) {
+        logger.error('Brevo API key not configured. Please set EXPO_PUBLIC_BREVO_API_KEY.');
+        return { success: false, message: 'Email service not configured' };
+      }
+
       // Handle location data - it might be an object or string
       let locationText = 'Location not specified';
       if (bookingData.eventLocation) {
@@ -32,208 +44,181 @@ export const emailService = {
         }
       }
 
-      console.log('📧 Sending ticket confirmation email to:', bookingData.userEmail);
-      console.log('📍 Location data:', bookingData.eventLocation, '-> Formatted as:', locationText);
+      logger.log('Sending ticket confirmation email to:', bookingData.userEmail);
 
-      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      // Generate QR code data
+      const qrCodeData = JSON.stringify({
+        eventId: bookingData.eventId,
+        userId: bookingData.userId,
+        bookingId: bookingData.id,
+      });
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrCodeData)}`;
+
+      // Generate ticket ID
+      const ticketId = bookingData.bookingReference || `TK-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`.toUpperCase();
+
+      const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Ticket for ${bookingData.eventName}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; background-color: #fefff7;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <tr>
+      <td>
+        <!-- Logo -->
+        <div style="text-align: center; margin-bottom: 32px;">
+          <div style="display: inline-block; width: 48px; height: 48px; background-color: #333; border-radius: 12px; line-height: 48px; color: white; font-weight: bold; font-size: 18px;">TK</div>
+          <h1 style="margin: 16px 0 0; font-size: 24px; font-weight: 800; color: #333;">Tikiti</h1>
+        </div>
+
+        <!-- Main Content -->
+        <div style="background-color: white; border-radius: 24px; padding: 40px; border: 1px solid rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="display: inline-block; background-color: #dcfce7; color: #16a34a; padding: 8px 16px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+              Booking Confirmed
+            </span>
+          </div>
+
+          <h2 style="margin: 0 0 8px; font-size: 28px; font-weight: 700; color: #333; text-align: center;">You're Going!</h2>
+
+          <p style="margin: 0 0 32px; font-size: 16px; color: #86868b; text-align: center;">
+            Hi ${bookingData.userName}, your ticket is ready
+          </p>
+
+          <!-- Event Card -->
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 32px;">
+            <tr>
+              <td style="background-color: #333333; border-radius: 20px; padding: 32px;">
+                <h3 style="margin: 0 0 24px; font-size: 24px; font-weight: 700; color: #ffffff;">${bookingData.eventName}</h3>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="padding-bottom: 16px;">
+                      <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: #999999; letter-spacing: 1px;">Date & Time</p>
+                      <p style="margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #ffffff;">${bookingData.eventDate || 'TBD'} at ${bookingData.eventTime || 'TBD'}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom: 16px;">
+                      <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: #999999; letter-spacing: 1px;">Location</p>
+                      <p style="margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #ffffff;">${locationText}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td width="50%" valign="top">
+                            <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: #999999; letter-spacing: 1px;">Ticket Type</p>
+                            <p style="margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #ffffff;">General Admission</p>
+                          </td>
+                          <td width="50%" valign="top">
+                            <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: #999999; letter-spacing: 1px;">Quantity</p>
+                            <p style="margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #ffffff;">${bookingData.quantity || 1} ticket${(bookingData.quantity || 1) > 1 ? 's' : ''}</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <!-- QR Code Section -->
+          <div style="text-align: center; padding: 32px; background-color: #f8f8f8; border-radius: 16px; margin-bottom: 32px;">
+            <p style="margin: 0 0 16px; font-size: 14px; font-weight: 600; color: #333;">Your Entry QR Code</p>
+
+            <div style="display: inline-block; padding: 16px; background-color: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <img src="${qrCodeUrl}" alt="QR Code" width="180" height="180" style="display: block;" />
+            </div>
+
+            <p style="margin: 16px 0 0; font-size: 12px; color: #86868b;">
+              Show this QR code at the venue entrance
+            </p>
+          </div>
+
+          <!-- Ticket ID -->
+          <div style="background-color: #fef3c7; border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 32px;">
+            <p style="margin: 0; font-size: 12px; color: #92400e; font-weight: 600; text-transform: uppercase;">Ticket ID</p>
+            <p style="margin: 4px 0 0; font-size: 18px; color: #92400e; font-weight: 700; font-family: monospace;">${ticketId}</p>
+          </div>
+
+          <p style="margin: 0; font-size: 14px; color: #86868b; text-align: center;">
+            You can also access your ticket in the Tikiti app
+          </p>
+        </div>
+
+        <!-- Tips -->
+        <div style="background-color: white; border-radius: 16px; padding: 24px; margin-top: 16px; border: 1px solid rgba(0,0,0,0.1);">
+          <p style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #333;">Event Day Tips</p>
+          <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #86868b; line-height: 1.8;">
+            <li>Have your QR code ready before arriving</li>
+            <li>Arrive 15-30 minutes early</li>
+            <li>Screenshot your QR code in case of poor connectivity</li>
+          </ul>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; margin-top: 32px;">
+          <p style="margin: 0; font-size: 14px; color: #86868b;">
+            &copy; ${new Date().getFullYear()} Tikiti Events. All rights reserved.
+          </p>
+          <p style="margin: 8px 0 0; font-size: 12px; color: #86868b;">
+            Questions? Contact the event organizer through the Tikiti app.
+          </p>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `;
+
+      const response = await fetch(BREVO_CONFIG.apiEndpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${SENDGRID_CONFIG.apiKey}`,
-          'Content-Type': 'application/json',
+          'accept': 'application/json',
+          'api-key': BREVO_CONFIG.apiKey,
+          'content-type': 'application/json',
         },
         body: JSON.stringify({
-          personalizations: [
+          sender: {
+            name: BREVO_CONFIG.fromName,
+            email: BREVO_CONFIG.fromEmail,
+          },
+          to: [
             {
-              to: [{ email: bookingData.userEmail, name: bookingData.userName }],
-              subject: `Your Ticket for ${bookingData.eventName}`,
-              // Add custom args for better tracking
-              custom_args: {
-                event_id: bookingData.eventId,
-                booking_id: bookingData.id,
-                user_id: bookingData.userId
-              }
+              email: bookingData.userEmail,
+              name: bookingData.userName,
             }
           ],
-          from: {
-            email: SENDGRID_CONFIG.fromEmail,
-            name: SENDGRID_CONFIG.fromName
+          replyTo: {
+            email: BREVO_CONFIG.replyTo,
+            name: 'Tikiti Events',
           },
-          reply_to: {
-            email: SENDGRID_CONFIG.replyTo,
-            name: 'Tikiti Events'
-          },
-          // Add proper headers to improve deliverability
-          headers: {
-            'X-Mailer': 'Tikiti Events',
-            'X-Priority': '3',
-            'X-MSMail-Priority': 'Normal'
-          },
-          content: [
-            {
-              type: 'text/html',
-              value: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <title>Your Event Ticket - Tikiti Events</title>
-                </head>
-                <body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-                  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-                    
-                    <!-- Header -->
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; position: relative; overflow: hidden;">
-                      <div style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-                      <div style="position: absolute; bottom: -30px; left: -30px; width: 60px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-                      <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); position: relative; z-index: 1;">
-                        🎫 Your Event Ticket
-                      </h1>
-                      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; position: relative; z-index: 1;">
-                        Confirmation & Entry Details
-                      </p>
-                    </div>
-                    
-                    <!-- Main Content -->
-                    <div style="padding: 40px 30px;">
-                      
-                      <!-- Event Details Card -->
-                      <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 16px; padding: 30px; margin-bottom: 30px; border: 1px solid #dee2e6; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                        <h2 style="color: #2c3e50; margin: 0 0 25px 0; font-size: 26px; font-weight: 600; text-align: center; border-bottom: 2px solid #667eea; padding-bottom: 15px;">
-                          ${bookingData.eventName}
-                        </h2>
-                        
-                        <!-- Event Details Grid -->
-                        <div style="display: grid; gap: 20px;">
-                          
-                          <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                              <span style="color: white; font-size: 18px;">📅</span>
-                            </div>
-                            <div style="flex: 1;">
-                              <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">DATE</div>
-                              <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${bookingData.eventDate}</div>
-                            </div>
-                          </div>
-                          
-                          <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                              <span style="color: white; font-size: 18px;">🕐</span>
-                            </div>
-                            <div style="flex: 1;">
-                              <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">TIME</div>
-                              <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${bookingData.eventTime}</div>
-                            </div>
-                          </div>
-                          
-                          <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                              <span style="color: white; font-size: 18px;">📍</span>
-                            </div>
-                            <div style="flex: 1;">
-                              <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">LOCATION</div>
-                              <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${locationText}</div>
-                            </div>
-                          </div>
-                          
-                          <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                              <span style="color: white; font-size: 18px;">👤</span>
-                            </div>
-                            <div style="flex: 1;">
-                              <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">ATTENDEE</div>
-                              <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${bookingData.userName}</div>
-                            </div>
-                          </div>
-                          
-                          <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                              <span style="color: white; font-size: 18px;">🎟️</span>
-                            </div>
-                            <div style="flex: 1;">
-                              <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">TICKETS</div>
-                              <div style="color: #2c3e50; font-size: 16px; font-weight: 500;">${bookingData.quantity} ticket${bookingData.quantity > 1 ? 's' : ''}</div>
-                            </div>
-                          </div>
-                          
-                          <div style="display: flex; align-items: center; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                              <span style="color: white; font-size: 18px;">🔖</span>
-                            </div>
-                            <div style="flex: 1;">
-                              <div style="font-weight: 600; color: #495057; font-size: 14px; margin-bottom: 4px;">BOOKING REFERENCE</div>
-                              <div style="color: #2c3e50; font-size: 16px; font-weight: 500; font-family: 'Courier New', monospace; letter-spacing: 1px;">${bookingData.bookingReference}</div>
-                            </div>
-                          </div>
-                          
-                        </div>
-                      </div>
-                      
-                      <!-- QR Code Section -->
-                      <div style="text-align: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 16px; padding: 30px; border: 1px solid #dee2e6;">
-                        <h3 style="color: #2c3e50; margin: 0 0 20px 0; font-size: 20px; font-weight: 600;">
-                          📱 QR Code for Entry
-                        </h3>
-                        <div style="background: white; border-radius: 12px; padding: 25px; display: inline-block; border: 2px solid #dee2e6; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                          <div style="font-family: 'Courier New', monospace; font-size: 11px; color: #6c757d; word-break: break-all; line-height: 1.4; max-width: 300px;">
-                            ${JSON.stringify({
-                              eventId: bookingData.eventId,
-                              userId: bookingData.userId,
-                              bookingId: bookingData.id,
-                              timestamp: new Date().toISOString()
-                            }, null, 2)}
-                          </div>
-                        </div>
-                        <p style="color: #6c757d; font-size: 14px; margin: 15px 0 0 0; font-style: italic;">
-                          Show this QR code at the event entrance
-                        </p>
-                      </div>
-                      
-                    </div>
-                    
-                    <!-- Footer -->
-                    <div style="background: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #dee2e6;">
-                      <div style="margin-bottom: 20px;">
-                        <h4 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 18px; font-weight: 600;">
-                          Thank you for using Tikiti Events! 🎉
-                        </h4>
-                        <p style="color: #6c757d; margin: 0; font-size: 14px; line-height: 1.5;">
-                          We're excited to see you at the event. Have a great time!
-                        </p>
-                      </div>
-                      
-                      <div style="border-top: 1px solid #dee2e6; padding-top: 20px;">
-                        <p style="color: #adb5bd; margin: 0 0 10px 0; font-size: 12px;">
-                          This is a transactional email for your event ticket.
-                        </p>
-                        <p style="color: #adb5bd; margin: 0; font-size: 12px;">
-                          <a href="mailto:gettikiti@gmail.com?subject=Unsubscribe&body=Please unsubscribe me from Tikiti Events emails" 
-                             style="color: #6c757d; text-decoration: underline;">Unsubscribe</a> | 
-                          <a href="mailto:gettikiti@gmail.com" style="color: #6c757d; text-decoration: underline;">Contact Support</a>
-                        </p>
-                      </div>
-                    </div>
-                    
-                  </div>
-                </body>
-                </html>
-              `
-            }
-          ]
+          subject: `Your Ticket for ${bookingData.eventName}`,
+          htmlContent: emailHtml,
+          tags: ['ticket-confirmation', 'booking'],
         })
       });
 
       if (response.ok) {
-        console.log('✅ Ticket confirmation email sent successfully via SendGrid');
+        const result = await response.json();
+        logger.log('Ticket confirmation email sent successfully via Brevo:', result.messageId);
         return { success: true, message: 'Ticket confirmation email sent successfully!' };
       } else {
         const errorData = await response.text();
-        console.error('❌ SendGrid API error:', response.status, errorData);
-        return { success: false, message: `SendGrid error: ${response.status} - ${errorData}` };
+        logger.error('Brevo API error:', response.status, errorData);
+        return { success: false, message: 'Failed to send ticket email. Please check the Tikiti app for your ticket.' };
       }
     } catch (error) {
-      console.error('❌ SendGrid ticket confirmation failed:', error);
-      return { success: false, message: `SendGrid error: ${error.message}` };
+      logger.error('Brevo ticket confirmation failed:', error);
+      return { success: false, message: 'Failed to send ticket email. Please check the Tikiti app for your ticket.' };
     }
   }
 };
