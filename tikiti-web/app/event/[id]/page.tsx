@@ -1,61 +1,80 @@
-'use client';
+import { Metadata } from 'next';
+import { fetchEventFromFirebase, extractLocationText } from '@/lib/firebase/rest-api';
+import EventRedirect from './EventRedirect';
 
-import { useParams } from 'next/navigation';
-import { useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+// Revalidate every 5 minutes (ISR)
+export const revalidate = 300;
 
-export default function EventPage() {
-  const params = useParams();
-  const eventId = params.id as string;
+const BASE_URL = 'https://gettikiti.com';
 
-  useEffect(() => {
-    if (eventId) {
-      window.location.href = `/event.html?eventId=${eventId}`;
-    }
-  }, [eventId]);
+type Props = {
+  params: Promise<{ id: string }>;
+};
 
-  return (
-    <div className="min-h-screen bg-[#fefff7]">
-      {/* Header */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#fefff7]/80 backdrop-blur-xl border-b border-black/5">
-        <div className="max-w-[800px] mx-auto px-6">
-          <div className="flex items-center justify-between h-[64px]">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => window.history.length > 1 ? window.history.back() : window.location.href = '/events'}
-                className="w-9 h-9 rounded-full bg-[#f0f0f0] flex items-center justify-center hover:bg-[#e5e5e5] transition-colors"
-              >
-                <ArrowLeft size={18} className="text-[#333]" />
-              </button>
-              <Link href="/" className="text-[28px] font-extrabold text-[#333] tracking-tight">
-                Tikiti
-              </Link>
-            </div>
-            <Link
-              href="/events"
-              className="text-[13px] font-semibold text-white bg-[#333] px-4 py-2 rounded-full hover:bg-[#1a1a1a] transition-colors"
-            >
-              Browse Events
-            </Link>
-          </div>
-        </div>
-      </nav>
+/**
+ * Generate dynamic OG meta tags for social sharing.
+ * This runs server-side so WhatsApp, Twitter, and Facebook crawlers
+ * can see the event title, description, and image in link previews.
+ */
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const event = await fetchEventFromFirebase(id);
 
-      {/* Loading State */}
-      <div className="pt-[120px] pb-24 px-6">
-        <div className="max-w-[800px] mx-auto">
-          {/* Banner skeleton */}
-          <div className="h-[300px] bg-[#f0f0f0] rounded-[24px] animate-pulse mb-8" />
-          {/* Content skeleton */}
-          <div className="space-y-4">
-            <div className="h-5 bg-[#f0f0f0] rounded-full w-1/4 animate-pulse" />
-            <div className="h-8 bg-[#f0f0f0] rounded-full w-3/4 animate-pulse" />
-            <div className="h-4 bg-[#f0f0f0] rounded-full w-1/2 animate-pulse" />
-            <div className="h-4 bg-[#f0f0f0] rounded-full w-1/3 animate-pulse" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  if (!event) {
+    return {
+      title: 'Event Not Found - Tikiti',
+      description: 'This event could not be found on Tikiti.',
+    };
+  }
+
+  const eventName = event.name || 'Amazing Event';
+  const eventDescription = event.description || `Join us for ${eventName}`;
+  const locationText = extractLocationText(event.location, event.address);
+  const eventDate = event.date || '';
+
+  // Build a rich description with date and location
+  const richDescription = eventDate
+    ? `${eventDescription} — ${eventDate} at ${locationText}`
+    : eventDescription;
+
+  // Use the OG image API route which serves the actual event flyer
+  const ogImageUrl = event.imageBase64
+    ? `${BASE_URL}/api/og-image/${id}`
+    : `${BASE_URL}/favicon.png`;
+
+  return {
+    title: `${eventName} - Tikiti`,
+    description: richDescription,
+    openGraph: {
+      title: eventName,
+      description: richDescription,
+      type: 'website',
+      url: `${BASE_URL}/event/${id}`,
+      siteName: 'Tikiti',
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${eventName} - Event Poster`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: eventName,
+      description: richDescription,
+      images: [ogImageUrl],
+    },
+  };
+}
+
+/**
+ * Event page — server component that renders the client redirect.
+ * The actual event content is displayed by event.html (static HTML + Firebase JS).
+ * This page exists to provide server-rendered OG meta tags for social sharing.
+ */
+export default async function EventPage({ params }: Props) {
+  const { id } = await params;
+  return <EventRedirect eventId={id} />;
 }

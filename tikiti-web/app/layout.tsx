@@ -15,6 +15,10 @@ export const metadata: Metadata = {
   title: "Tikiti — Event Management Platform",
   description: "Create events, manage attendees, scan tickets, and track analytics. The modern event platform for organizers and attendees.",
   keywords: ["events", "ticketing", "event management", "QR tickets", "Tikiti"],
+  icons: {
+    icon: '/favicon.png',
+    apple: '/favicon.png',
+  },
   openGraph: {
     title: "Tikiti — Event Management Platform",
     description: "Create events people remember.",
