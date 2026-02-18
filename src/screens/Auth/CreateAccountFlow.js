@@ -522,7 +522,7 @@ const CreateAccountFlow = ({ navigation }) => {
       {renderProgressBar()}
 
       {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {renderCurrentStep()}
       </ScrollView>
 
