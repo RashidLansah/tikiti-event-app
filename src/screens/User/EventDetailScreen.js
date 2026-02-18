@@ -626,7 +626,6 @@ const EventDetailScreen = ({ navigation, route }) => {
             Share.share({
               message: `🎉 ${event.name}\n📅 ${event.date}\n⏰ ${event.startTime || event.time || 'TBA'}\n📍 ${getLocationString()}\n${event.type === 'free' ? '🎟️ Free Event' : `💰 ₵${event.price}`}\n\n🔗 Register here: ${eventUrl}`,
               title: event.name,
-              url: eventUrl,
             });
           }}
         >
@@ -1138,7 +1137,6 @@ const EventDetailScreen = ({ navigation, route }) => {
                 Share.share({
                   message: `🎉 ${event.name}\n📅 ${event.date}\n📍 ${getLocationString()}\n${event.type === 'free' ? '🎟️ Free Event' : `💰 ₵${event.price}`}\n\n🔗 Register here: ${eventUrl}`,
                   title: event.name,
-                  url: eventUrl,
                 });
               }}
             >
