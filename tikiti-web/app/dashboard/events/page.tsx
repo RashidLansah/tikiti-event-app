@@ -45,6 +45,13 @@ export default function EventsPage() {
   const [statusFilter, setStatusFilter] = useState<Event['status'] | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
+  // Auto-archive past events once on mount
+  useEffect(() => {
+    if (currentOrganization?.id) {
+      eventService.archivePastEvents(currentOrganization.id).catch(() => {});
+    }
+  }, [currentOrganization?.id]);
+
   useEffect(() => {
     if (currentOrganization?.id) {
       loadEvents();
@@ -139,6 +146,17 @@ export default function EventsPage() {
     );
   });
 
+  // Split into upcoming and past
+  const now = new Date();
+  const upcomingEvents = filteredEvents.filter(event => {
+    const end = new Date(`${event.date} ${(event as any).endTime || '23:59'}`);
+    return now <= end;
+  });
+  const pastEvents = filteredEvents.filter(event => {
+    const end = new Date(`${event.date} ${(event as any).endTime || '23:59'}`);
+    return now > end;
+  });
+
   if (loading && events.length === 0) {
     return <EventsSkeleton />;
   }
@@ -229,119 +247,172 @@ export default function EventsPage() {
           )}
         </div>
       ) : (
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {filteredEvents.map((event) => {
-            const statusStyle = getStatusStyles(event.status);
-            return (
-              <div
-                key={event.id}
-                className="bg-white border border-black/10 rounded-[24px] overflow-hidden hover:shadow-lg transition-shadow group"
-              >
-                {/* Event Image */}
-                <div className="h-48 bg-gray-200 relative">
-                  {event.imageUrl ? (
-                    <img
-                      src={event.imageUrl}
-                      alt={event.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
-                      <Calendar className="w-12 h-12 text-white/60" />
-                    </div>
-                  )}
-                  {/* Status Badge */}
-                  <div className={`absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-semibold ${statusStyle.bg} ${statusStyle.text}`}>
-                    {statusStyle.label}
-                  </div>
-                  {/* Actions Menu */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="absolute top-4 right-4 bg-white/90 hover:bg-white rounded-full p-2 transition-colors">
-                        <MoreVertical className="h-4 w-4 text-[#333]" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-[16px]">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/events/${event.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/events/${event.id}/edit`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDuplicate(event.id!)}>
-                        <Copy className="mr-2 h-4 w-4" />
-                        Duplicate
-                      </DropdownMenuItem>
-                      {event.status === 'draft' && (
-                        <DropdownMenuItem onClick={() => handlePublish(event.id!)}>
-                          Publish
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(event.id!)}
-                        className="text-red-600"
-                      >
-                        Archive
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {/* Event Details */}
-                <div className="p-5">
-                  <h3 className="text-xl font-extrabold text-[#333] mb-3 line-clamp-2">
-                    {event.name}
-                  </h3>
-
-                  <div className="flex flex-col gap-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-[#333]">
-                      <MapPin className="w-4 h-4" />
-                      <span className="line-clamp-1">{event.location || 'Location TBD'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-[#333]">
-                      <Calendar className="w-4 h-4" />
-                      <span>{formatDate(event.date)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-[#333]">
-                      <Clock className="w-4 h-4" />
-                      <span>{event.time || '00:00'}</span>
-                    </div>
-                  </div>
-
-                  {/* Stats Row */}
-                  <div className="flex items-center gap-4 py-4 border-t border-black/10">
-                    <div className="flex-1">
-                      <p className="text-sm text-[#86868b]">Tickets</p>
-                      <p className="text-2xl font-semibold text-[#333]">{event.soldTickets || 0}/{event.totalTickets}</p>
-                    </div>
-                    <div className="h-10 w-px bg-black/10" />
-                    <div className="flex-1">
-                      <p className="text-sm text-[#86868b]">Category</p>
-                      <p className="text-base font-semibold text-[#333]">{event.category}</p>
-                    </div>
-                  </div>
-
-                  {/* Action Button */}
-                  <Link
-                    href={`/dashboard/events/${event.id}`}
-                    className="flex items-center justify-center gap-2 w-full bg-[#f0f0f0] text-[#333] px-4 py-3 rounded-[16px] text-base font-semibold hover:bg-[#e8e8e8] transition-colors mt-2 group"
-                  >
-                    View Details
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
+        <div className="flex flex-col gap-6">
+          {/* Upcoming Events */}
+          {upcomingEvents.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="w-5 h-5 text-[#333]" />
+                <h2 className="text-lg font-bold text-[#333]">Upcoming Events ({upcomingEvents.length})</h2>
               </div>
-            );
-          })}
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {upcomingEvents.map((event) => {
+                  const statusStyle = getStatusStyles(event.status);
+                  return (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      statusStyle={statusStyle}
+                      formatDate={formatDate}
+                      handleEventPress={(id: string) => router.push(`/dashboard/events/${id}`)}
+                      handleDuplicate={handleDuplicate}
+                      handleDelete={handleDelete}
+                      handlePublish={handlePublish}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Past Events */}
+          {pastEvents.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="w-5 h-5 text-[#86868b]" />
+                <h2 className="text-lg font-bold text-[#86868b]">Past Events ({pastEvents.length})</h2>
+              </div>
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 opacity-60">
+                {pastEvents.map((event) => {
+                  const statusStyle = getStatusStyles(event.status);
+                  return (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      statusStyle={statusStyle}
+                      formatDate={formatDate}
+                      handleEventPress={(id: string) => router.push(`/dashboard/events/${id}`)}
+                      handleDuplicate={handleDuplicate}
+                      handleDelete={handleDelete}
+                      handlePublish={handlePublish}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+// Extracted Event Card component for reuse
+function EventCard({ event, statusStyle, formatDate, handleDuplicate, handleDelete, handlePublish }: any) {
+  return (
+    <div
+      className="bg-white border border-black/10 rounded-[24px] overflow-hidden hover:shadow-lg transition-shadow group"
+    >
+      {/* Event Image */}
+      <div className="h-48 bg-gray-200 relative">
+        {event.imageUrl ? (
+          <img
+            src={event.imageUrl}
+            alt={event.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center">
+            <Calendar className="w-12 h-12 text-white/60" />
+          </div>
+        )}
+        {/* Status Badge */}
+        <div className={`absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-semibold ${statusStyle.bg} ${statusStyle.text}`}>
+          {statusStyle.label}
+        </div>
+        {/* Actions Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="absolute top-4 right-4 bg-white/90 hover:bg-white rounded-full p-2 transition-colors">
+              <MoreVertical className="h-4 w-4 text-[#333]" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="rounded-[16px]">
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/events/${event.id}`}>
+                <Eye className="mr-2 h-4 w-4" />
+                View
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/dashboard/events/${event.id}/edit`}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDuplicate(event.id!)}>
+              <Copy className="mr-2 h-4 w-4" />
+              Duplicate
+            </DropdownMenuItem>
+            {event.status === 'draft' && (
+              <DropdownMenuItem onClick={() => handlePublish(event.id!)}>
+                Publish
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleDelete(event.id!)}
+              className="text-red-600"
+            >
+              Archive
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Event Details */}
+      <div className="p-5">
+        <h3 className="text-xl font-extrabold text-[#333] mb-3 line-clamp-2">
+          {event.name}
+        </h3>
+
+        <div className="flex flex-col gap-2 mb-4">
+          <div className="flex items-center gap-2 text-sm text-[#333]">
+            <MapPin className="w-4 h-4" />
+            <span className="line-clamp-1">{event.location || 'Location TBD'}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-[#333]">
+            <Calendar className="w-4 h-4" />
+            <span>{formatDate(event.date)}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-[#333]">
+            <Clock className="w-4 h-4" />
+            <span>{event.time || '00:00'}</span>
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        <div className="flex items-center gap-4 py-4 border-t border-black/10">
+          <div className="flex-1">
+            <p className="text-sm text-[#86868b]">Tickets</p>
+            <p className="text-2xl font-semibold text-[#333]">{event.soldTickets || 0}/{event.totalTickets}</p>
+          </div>
+          <div className="h-10 w-px bg-black/10" />
+          <div className="flex-1">
+            <p className="text-sm text-[#86868b]">Category</p>
+            <p className="text-base font-semibold text-[#333]">{event.category}</p>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <Link
+          href={`/dashboard/events/${event.id}`}
+          className="flex items-center justify-center gap-2 w-full bg-[#f0f0f0] text-[#333] px-4 py-3 rounded-[16px] text-base font-semibold hover:bg-[#e8e8e8] transition-colors mt-2 group"
+        >
+          View Details
+          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+        </Link>
+      </div>
     </div>
   );
 }

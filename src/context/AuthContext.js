@@ -6,7 +6,11 @@ import { auth, db } from '../config/firebase';
 import { authService } from '../services/authService';
 import notificationService from '../services/notificationService';
 import emailService from '../services/emailService';
+import eventArchivingService from '../services/eventArchivingService';
 import logger from '../utils/logger';
+
+// Module-level flag: only run archiving once per app session
+let hasArchivedThisSession = false;
 
 const AuthContext = createContext({});
 
@@ -38,6 +42,22 @@ export const AuthProvider = ({ children }) => {
             const profileData = userDoc.data();
             logger.log('🔍 Fetched user profile:', profileData);
             setUserProfile(profileData);
+
+            // Background archive past events for organisers (once per session)
+            if (
+              !hasArchivedThisSession &&
+              (profileData.accountType === 'organiser' || profileData.organisationName)
+            ) {
+              hasArchivedThisSession = true;
+              eventArchivingService
+                .archiveOrganizerPastEvents(firebaseUser.uid)
+                .then((result) => {
+                  if (result.archivedCount > 0) {
+                    logger.log(`Auto-archived ${result.archivedCount} past events`);
+                  }
+                })
+                .catch((err) => logger.error('Background archiving failed:', err));
+            }
           } else {
             logger.log('⚠️ No user profile found for:', firebaseUser.uid);
             // Set a default profile to prevent indefinite loading

@@ -1,28 +1,28 @@
 import { db } from '../config/firebase';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  addDoc, 
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  updateDoc,
+  addDoc,
   deleteDoc,
-  Timestamp 
+  Timestamp
 } from 'firebase/firestore';
+import logger from '../utils/logger';
 
 /**
  * Event Archiving Service
- * 
- * This service handles the automatic archiving of past events to keep the database clean
- * and improve performance. It provides both automatic and manual archiving capabilities.
- * 
+ *
+ * Handles automatic archiving of past events to keep the database clean.
+ * Events are archived 24 hours after they end by default.
+ *
  * Features:
- * - Automatic archiving of events 24-48 hours after they end
- * - Manual archiving for organizers
- * - Event status management (active, archived, cancelled)
+ * - Automatic archiving of organiser's past events on login
+ * - Manual archiving for organisers
  * - Archive history tracking
- * - Performance optimization
+ * - Event restore capability
  */
 
 class EventArchivingService {
@@ -41,15 +41,14 @@ class EventArchivingService {
   shouldArchiveEvent(event, bufferHours = 24) {
     try {
       const now = new Date();
-      const eventDate = new Date(event.date);
       const eventEndTime = new Date(`${event.date} ${event.endTime || '23:59'}`);
-      
+
       // Add buffer time after event ends
       const archiveTime = new Date(eventEndTime.getTime() + bufferHours * 60 * 60 * 1000);
-      
+
       return now >= archiveTime;
     } catch (error) {
-      console.error('Error checking if event should be archived:', error);
+      logger.error('Error checking if event should be archived:', error);
       return false;
     }
   }
@@ -63,18 +62,22 @@ class EventArchivingService {
    */
   async archiveEvent(eventId, reason = 'automatic', archivedBy = null) {
     try {
-      console.log(`🗂️ Archiving event ${eventId} (reason: ${reason})`);
+      logger.log(`Archiving event ${eventId} (reason: ${reason})`);
 
       // Get the event document
       const eventRef = doc(db, 'events', eventId);
       const eventSnapshot = await getDocs(query(this.eventsCollection, where('__name__', '==', eventId)));
-      
+
       if (eventSnapshot.empty) {
         throw new Error(`Event ${eventId} not found`);
       }
 
       const eventData = eventSnapshot.docs[0].data();
-      const eventDoc = eventSnapshot.docs[0];
+
+      // Skip if already archived
+      if (eventData.status === 'archived') {
+        return { success: true, message: 'Event already archived', originalEventId: eventId };
+      }
 
       // Create archived event document
       const archivedEventData = {
@@ -84,7 +87,6 @@ class EventArchivingService {
         archivedBy: archivedBy,
         archiveReason: reason,
         archivedFrom: 'events',
-        // Keep original timestamps for reference
         originalCreatedAt: eventData.createdAt,
         originalUpdatedAt: eventData.updatedAt,
       };
@@ -102,11 +104,11 @@ class EventArchivingService {
         archivedBy: archivedBy,
         archiveReason: reason,
         archivedEventId: archivedEventRef.id,
-        isActive: false, // Ensure it's not active anymore
+        isActive: false,
       });
 
-      console.log(`✅ Event ${eventId} archived successfully`);
-      
+      logger.log(`Event ${eventId} archived successfully`);
+
       return {
         success: true,
         message: 'Event archived successfully',
@@ -115,7 +117,7 @@ class EventArchivingService {
       };
 
     } catch (error) {
-      console.error(`❌ Error archiving event ${eventId}:`, error);
+      logger.error(`Error archiving event ${eventId}:`, error);
       return {
         success: false,
         message: `Failed to archive event: ${error.message}`,
@@ -125,15 +127,62 @@ class EventArchivingService {
   }
 
   /**
-   * Archive multiple events automatically
+   * Archive past events for a specific organiser (safe for Firestore rules)
+   * Only archives events owned by the given organiser.
+   * @param {string} organizerId - The organiser's user ID
+   * @param {number} bufferHours - Hours to wait after event ends before archiving
+   * @returns {Object} - Result of archiving operation
+   */
+  async archiveOrganizerPastEvents(organizerId, bufferHours = 24) {
+    try {
+      logger.log(`Starting auto-archive for organiser ${organizerId}`);
+
+      const organizerEventsQuery = query(
+        this.eventsCollection,
+        where('organizerId', '==', organizerId),
+        where('isActive', '==', true)
+      );
+
+      const snapshot = await getDocs(organizerEventsQuery);
+      const eventsToArchive = [];
+
+      snapshot.forEach((docSnap) => {
+        const eventData = { id: docSnap.id, ...docSnap.data() };
+        if (this.shouldArchiveEvent(eventData, bufferHours)) {
+          eventsToArchive.push(eventData);
+        }
+      });
+
+      if (eventsToArchive.length === 0) {
+        return { success: true, archivedCount: 0 };
+      }
+
+      logger.log(`Found ${eventsToArchive.length} past events to archive`);
+
+      let successCount = 0;
+      for (const event of eventsToArchive) {
+        const result = await this.archiveEvent(event.id, 'automatic', organizerId);
+        if (result.success) successCount++;
+      }
+
+      logger.log(`Archived ${successCount}/${eventsToArchive.length} events for organiser`);
+
+      return { success: true, archivedCount: successCount };
+    } catch (error) {
+      logger.error('Error archiving organiser past events:', error);
+      return { success: false, archivedCount: 0 };
+    }
+  }
+
+  /**
+   * Archive multiple events automatically (all active events — requires broad permissions)
    * @param {number} bufferHours - Hours to wait after event ends before archiving
    * @returns {Object} - Result of bulk archiving operation
    */
   async archivePastEvents(bufferHours = 24) {
     try {
-      console.log(`🗂️ Starting automatic event archiving (buffer: ${bufferHours}h)`);
+      logger.log(`Starting automatic event archiving (buffer: ${bufferHours}h)`);
 
-      // Get all active events
       const activeEventsQuery = query(
         this.eventsCollection,
         where('isActive', '==', true)
@@ -142,104 +191,73 @@ class EventArchivingService {
       const snapshot = await getDocs(activeEventsQuery);
       const eventsToArchive = [];
 
-      // Check which events should be archived
-      snapshot.forEach((doc) => {
-        const eventData = { id: doc.id, ...doc.data() };
+      snapshot.forEach((docSnap) => {
+        const eventData = { id: docSnap.id, ...docSnap.data() };
         if (this.shouldArchiveEvent(eventData, bufferHours)) {
           eventsToArchive.push(eventData);
         }
       });
 
-      console.log(`📊 Found ${eventsToArchive.length} events to archive`);
+      logger.log(`Found ${eventsToArchive.length} events to archive`);
 
       if (eventsToArchive.length === 0) {
-        return {
-          success: true,
-          message: 'No events to archive',
-          archivedCount: 0
-        };
+        return { success: true, message: 'No events to archive', archivedCount: 0 };
       }
 
-      // Archive events in batches to avoid overwhelming the database
       const batchSize = 10;
-      const results = [];
       let successCount = 0;
       let errorCount = 0;
 
       for (let i = 0; i < eventsToArchive.length; i += batchSize) {
         const batch = eventsToArchive.slice(i, i + batchSize);
-        
-        const batchPromises = batch.map(event => 
-          this.archiveEvent(event.id, 'automatic', null)
+
+        const batchResults = await Promise.allSettled(
+          batch.map(event => this.archiveEvent(event.id, 'automatic', null))
         );
 
-        const batchResults = await Promise.allSettled(batchPromises);
-        
-        batchResults.forEach((result, index) => {
+        batchResults.forEach((result) => {
           if (result.status === 'fulfilled' && result.value.success) {
             successCount++;
-            results.push({
-              eventId: batch[index].id,
-              success: true,
-              message: 'Archived successfully'
-            });
           } else {
             errorCount++;
-            results.push({
-              eventId: batch[index].id,
-              success: false,
-              message: result.reason?.message || 'Unknown error'
-            });
           }
         });
 
-        // Small delay between batches to be gentle on the database
+        // Small delay between batches
         if (i + batchSize < eventsToArchive.length) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
-      console.log(`✅ Archiving complete: ${successCount} successful, ${errorCount} failed`);
+      logger.log(`Archiving complete: ${successCount} successful, ${errorCount} failed`);
 
       return {
         success: true,
         message: `Archived ${successCount} events successfully`,
         archivedCount: successCount,
         errorCount: errorCount,
-        results: results
       };
 
     } catch (error) {
-      console.error('❌ Error in bulk archiving:', error);
-      return {
-        success: false,
-        message: `Bulk archiving failed: ${error.message}`,
-        error: error
-      };
+      logger.error('Error in bulk archiving:', error);
+      return { success: false, message: `Bulk archiving failed: ${error.message}`, error };
     }
   }
 
   /**
-   * Manually archive an event (for organizers)
-   * @param {string} eventId - Event ID to archive
-   * @param {string} organizerId - ID of the organizer archiving the event
-   * @param {string} reason - Reason for manual archiving
-   * @returns {Object} - Result of archiving operation
+   * Manually archive an event (for organisers)
    */
   async manualArchiveEvent(eventId, organizerId, reason = 'manual') {
     try {
-      // Verify the organizer owns this event
       const eventSnapshot = await getDocs(query(
-        this.eventsCollection, 
+        this.eventsCollection,
         where('__name__', '==', eventId)
       ));
 
-      if (eventSnapshot.empty) {
-        throw new Error('Event not found');
-      }
+      if (eventSnapshot.empty) throw new Error('Event not found');
 
       const eventData = eventSnapshot.docs[0].data();
-      
+
       if (eventData.organizerId !== organizerId) {
         throw new Error('Unauthorized: You can only archive your own events');
       }
@@ -251,46 +269,34 @@ class EventArchivingService {
       return await this.archiveEvent(eventId, reason, organizerId);
 
     } catch (error) {
-      console.error(`❌ Error in manual archiving:`, error);
-      return {
-        success: false,
-        message: `Manual archiving failed: ${error.message}`,
-        error: error
-      };
+      logger.error('Error in manual archiving:', error);
+      return { success: false, message: `Manual archiving failed: ${error.message}`, error };
     }
   }
 
   /**
    * Restore an archived event
-   * @param {string} archivedEventId - Archived event ID
-   * @param {string} restoredBy - User ID who restored the event
-   * @returns {Object} - Result of restore operation
    */
   async restoreEvent(archivedEventId, restoredBy) {
     try {
-      console.log(`🔄 Restoring archived event ${archivedEventId}`);
+      logger.log(`Restoring archived event ${archivedEventId}`);
 
-      // Get the archived event
       const archivedEventSnapshot = await getDocs(query(
         this.archivedEventsCollection,
         where('__name__', '==', archivedEventId)
       ));
 
-      if (archivedEventSnapshot.empty) {
-        throw new Error('Archived event not found');
-      }
+      if (archivedEventSnapshot.empty) throw new Error('Archived event not found');
 
       const archivedEventData = archivedEventSnapshot.docs[0].data();
       const originalEventId = archivedEventData.originalEventId;
 
-      // Check if original event still exists
       const originalEventSnapshot = await getDocs(query(
         this.eventsCollection,
         where('__name__', '==', originalEventId)
       ));
 
       if (!originalEventSnapshot.empty) {
-        // Update the existing event
         const originalEventRef = doc(db, 'events', originalEventId);
         await updateDoc(originalEventRef, {
           status: 'active',
@@ -302,7 +308,6 @@ class EventArchivingService {
           archivedBy: null,
         });
       } else {
-        // Create new event from archived data
         const restoredEventData = {
           ...archivedEventData,
           status: 'active',
@@ -311,7 +316,6 @@ class EventArchivingService {
           restoredBy: restoredBy,
           createdAt: archivedEventData.originalCreatedAt || Timestamp.now(),
           updatedAt: Timestamp.now(),
-          // Remove archive-specific fields
           originalEventId: null,
           archivedAt: null,
           archivedBy: null,
@@ -324,34 +328,21 @@ class EventArchivingService {
         await addDoc(this.eventsCollection, restoredEventData);
       }
 
-      // Log the restore action
       await this.logArchiveAction(originalEventId, archivedEventId, 'restored', restoredBy);
 
-      console.log(`✅ Event ${originalEventId} restored successfully`);
-
-      return {
-        success: true,
-        message: 'Event restored successfully',
-        eventId: originalEventId
-      };
+      logger.log(`Event ${originalEventId} restored successfully`);
+      return { success: true, message: 'Event restored successfully', eventId: originalEventId };
 
     } catch (error) {
-      console.error(`❌ Error restoring event:`, error);
-      return {
-        success: false,
-        message: `Restore failed: ${error.message}`,
-        error: error
-      };
+      logger.error('Error restoring event:', error);
+      return { success: false, message: `Restore failed: ${error.message}`, error };
     }
   }
 
   /**
-   * Get archived events for an organizer
-   * @param {string} organizerId - Organizer ID
-   * @param {number} limit - Maximum number of events to return
-   * @returns {Array} - Array of archived events
+   * Get archived events for an organiser
    */
-  async getArchivedEvents(organizerId, limit = 50) {
+  async getArchivedEvents(organizerId, limitCount = 50) {
     try {
       const archivedEventsQuery = query(
         this.archivedEventsCollection,
@@ -362,46 +353,40 @@ class EventArchivingService {
       const snapshot = await getDocs(archivedEventsQuery);
       const archivedEvents = [];
 
-      snapshot.forEach((doc) => {
-        archivedEvents.push({ id: doc.id, ...doc.data() });
+      snapshot.forEach((docSnap) => {
+        archivedEvents.push({ id: docSnap.id, ...docSnap.data() });
       });
 
-      // Sort by archive date (newest first) and limit
       return archivedEvents
         .sort((a, b) => b.archivedAt?.toDate?.() - a.archivedAt?.toDate?.())
-        .slice(0, limit);
+        .slice(0, limitCount);
 
     } catch (error) {
-      console.error('Error getting archived events:', error);
+      logger.error('Error getting archived events:', error);
       return [];
     }
   }
 
   /**
    * Log archive actions for audit trail
-   * @param {string} eventId - Event ID
-   * @param {string} archivedEventId - Archived event ID
-   * @param {string} action - Action performed ('archived', 'restored')
-   * @param {string} userId - User ID who performed the action
    */
   async logArchiveAction(eventId, archivedEventId, action, userId) {
     try {
       await addDoc(this.archiveLogCollection, {
-        eventId: eventId,
-        archivedEventId: archivedEventId,
-        action: action,
-        userId: userId,
+        eventId,
+        archivedEventId,
+        action,
+        userId,
         timestamp: Timestamp.now(),
         createdAt: Timestamp.now()
       });
     } catch (error) {
-      console.error('Error logging archive action:', error);
+      logger.error('Error logging archive action:', error);
     }
   }
 
   /**
    * Get archive statistics
-   * @returns {Object} - Archive statistics
    */
   async getArchiveStats() {
     try {
@@ -421,19 +406,13 @@ class EventArchivingService {
       };
 
     } catch (error) {
-      console.error('Error getting archive stats:', error);
-      return {
-        activeEvents: 0,
-        archivedEvents: 0,
-        totalEvents: 0,
-        archiveRate: 0
-      };
+      logger.error('Error getting archive stats:', error);
+      return { activeEvents: 0, archivedEvents: 0, totalEvents: 0, archiveRate: 0 };
     }
   }
 
   /**
    * Clean up old archive logs (keep only last 90 days)
-   * @param {number} daysToKeep - Number of days to keep logs
    */
   async cleanupArchiveLogs(daysToKeep = 90) {
     try {
@@ -448,25 +427,18 @@ class EventArchivingService {
       const snapshot = await getDocs(oldLogsQuery);
       const deletePromises = [];
 
-      snapshot.forEach((doc) => {
-        deletePromises.push(deleteDoc(doc.ref));
+      snapshot.forEach((docSnap) => {
+        deletePromises.push(deleteDoc(docSnap.ref));
       });
 
       await Promise.all(deletePromises);
+      logger.log(`Cleaned up ${deletePromises.length} old archive logs`);
 
-      console.log(`🧹 Cleaned up ${deletePromises.length} old archive logs`);
-
-      return {
-        success: true,
-        deletedCount: deletePromises.length
-      };
+      return { success: true, deletedCount: deletePromises.length };
 
     } catch (error) {
-      console.error('Error cleaning up archive logs:', error);
-      return {
-        success: false,
-        message: error.message
-      };
+      logger.error('Error cleaning up archive logs:', error);
+      return { success: false, message: error.message };
     }
   }
 }

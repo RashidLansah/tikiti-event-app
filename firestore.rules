@@ -176,7 +176,7 @@ service cloud.firestore {
     // Admin collection - admin users (if you have admin functionality)
     match /admins/{adminId} {
       // Only admins can read/write admin data
-      allow read, write: if isAuthenticated() && 
+      allow read, write: if isAuthenticated() &&
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
@@ -208,6 +208,20 @@ service cloud.firestore {
         request.auth.uid == resource.data.userId;
     }
     
+    // Archived events collection - copies of archived events
+    match /archivedEvents/{archivedEventId} {
+      allow read: if isAuthenticated();
+      allow create: if isOrganizer();
+      allow update, delete: if false; // Archives are immutable
+    }
+
+    // Archive log collection - audit trail for archive actions
+    match /archiveLog/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Logs are immutable
+    }
+
     // Default rule - deny all other access
     match /{document=**} {
       allow read, write: if false;

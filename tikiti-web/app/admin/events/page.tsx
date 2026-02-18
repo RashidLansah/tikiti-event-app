@@ -47,7 +47,7 @@ export default function AdminEventsPage() {
   const [filteredEvents, setFilteredEvents] = useState<PlatformEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft' | 'cancelled'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft' | 'cancelled' | 'archived'>('all');
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; event: PlatformEvent | null }>({
     open: false,
     event: null
@@ -171,6 +171,7 @@ export default function AdminEventsPage() {
     total: events.length,
     published: events.filter(e => e.status === 'published').length,
     draft: events.filter(e => e.status === 'draft').length,
+    archived: events.filter(e => e.status === 'archived').length,
     totalRegistrations: events.reduce((acc, e) => acc + (e.totalRegistrations || 0), 0)
   };
 
@@ -285,6 +286,13 @@ export default function AdminEventsPage() {
                 size="sm"
               >
                 Cancelled
+              </Button>
+              <Button
+                variant={filterStatus === 'archived' ? 'default' : 'outline'}
+                onClick={() => setFilterStatus('archived')}
+                size="sm"
+              >
+                Archived
               </Button>
             </div>
           </div>

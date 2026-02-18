@@ -531,6 +531,47 @@ export const eventService = {
     }
   },
 
+  // Archive past events for an organization (runs once on dashboard load)
+  archivePastEvents: async (organizationId: string, bufferHours: number = 24): Promise<{ archivedCount: number }> => {
+    try {
+      const eventsRef = collection(db, COLLECTIONS.EVENTS);
+      const q = query(
+        eventsRef,
+        where('organizationId', '==', organizationId),
+        where('isActive', '==', true)
+      );
+
+      const snapshot = await getDocs(q);
+      const now = new Date();
+      let archivedCount = 0;
+
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+        const eventEndTime = new Date(`${data.date} ${data.endTime || '23:59'}`);
+        const archiveTime = new Date(eventEndTime.getTime() + bufferHours * 60 * 60 * 1000);
+
+        if (now >= archiveTime && data.status !== 'archived') {
+          const eventRef = doc(db, COLLECTIONS.EVENTS, docSnap.id);
+          await updateDoc(eventRef, {
+            status: 'archived',
+            isActive: false,
+            updatedAt: serverTimestamp(),
+          });
+          archivedCount++;
+        }
+      }
+
+      if (archivedCount > 0) {
+        console.log(`Auto-archived ${archivedCount} past events for organization`);
+      }
+
+      return { archivedCount };
+    } catch (error) {
+      console.error('Error archiving past events:', error);
+      return { archivedCount: 0 };
+    }
+  },
+
   // Get event statistics
   getStatistics: async (organizationId: string): Promise<{
     total: number;

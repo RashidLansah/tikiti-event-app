@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,24 @@ const DashboardScreen = ({ navigation }) => {
     { key: 'messages', label: 'Messages', icon: 'calendar' },
     { key: 'reports', label: 'Reports', icon: 'calendar' },
   ];
+
+  // Split events into upcoming and past
+  const { upcomingEvents, pastEvents } = useMemo(() => {
+    const now = new Date();
+    const upcoming = [];
+    const past = [];
+
+    events.forEach((event) => {
+      const eventEndTime = new Date(`${event.date} ${event.endTime || '23:59'}`);
+      if (now <= eventEndTime) {
+        upcoming.push(event);
+      } else {
+        past.push(event);
+      }
+    });
+
+    return { upcomingEvents: upcoming, pastEvents: past };
+  }, [events]);
 
   const fetchEvents = async () => {
     if (!user) return;
@@ -221,9 +239,39 @@ const DashboardScreen = ({ navigation }) => {
         {loading ? (
           <DashboardSkeleton />
         ) : events.length > 0 ? (
-          events.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))
+          <>
+            {/* Upcoming Events */}
+            {upcomingEvents.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Feather name="calendar" size={18} color={colors.primary[500]} />
+                  <Text style={[styles.sectionTitle, { color: colors.text.primary }]}>
+                    Upcoming Events ({upcomingEvents.length})
+                  </Text>
+                </View>
+                {upcomingEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </>
+            )}
+
+            {/* Past Events */}
+            {pastEvents.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Feather name="clock" size={18} color={colors.text.tertiary} />
+                  <Text style={[styles.sectionTitle, { color: colors.text.tertiary }]}>
+                    Past Events ({pastEvents.length})
+                  </Text>
+                </View>
+                {pastEvents.map((event) => (
+                  <View key={event.id} style={{ opacity: 0.6 }}>
+                    <EventCard event={event} />
+                  </View>
+                ))}
+              </>
+            )}
+          </>
         ) : (
           <View style={styles.emptyState}>
             <View style={[styles.emptyIcon, { backgroundColor: colors.primary[50] }]}>
@@ -326,6 +374,17 @@ const styles = StyleSheet.create({
   eventsList: {
     flex: 1,
     paddingHorizontal: Spacing[6],
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing[4],
+    marginTop: Spacing[2],
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontFamily: 'PlusJakartaSans-Bold',
   },
   eventCard: {
     backgroundColor: Colors.white,

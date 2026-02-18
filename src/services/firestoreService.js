@@ -415,7 +415,7 @@ export const eventService = {
     }
   },
 
-  // Listen to real-time updates for all events
+  // Listen to real-time updates for all events (filters out past events)
   listenToAllEvents: (callback) => {
     try {
       const q = query(
@@ -426,8 +426,17 @@ export const eventService = {
 
       return onSnapshot(q, (querySnapshot) => {
         const events = [];
+        const now = new Date();
+
         querySnapshot.forEach((doc) => {
-          events.push({ id: doc.id, ...doc.data() });
+          const eventData = doc.data();
+          // Filter out past events (2-hour buffer after event ends)
+          const eventEndTime = new Date(`${eventData.date} ${eventData.endTime || '23:59'}`);
+          const bufferTime = new Date(eventEndTime.getTime() + 2 * 60 * 60 * 1000);
+
+          if (now <= bufferTime) {
+            events.push({ id: doc.id, ...eventData });
+          }
         });
         callback(events);
       });
