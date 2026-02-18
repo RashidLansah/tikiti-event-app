@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,9 @@ const RegisterScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [selectedAccountType, setSelectedAccountType] = useState('user');
   const [focusedInput, setFocusedInput] = useState(null);
-  
+  const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
+
   const { register } = useAuth();
   const accountType = selectedAccountType;
 
@@ -297,6 +299,7 @@ const RegisterScreen = ({ navigation, route }) => {
             ]}>
               <Feather name="lock" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
               <TextInput
+                ref={passwordRef}
                 style={styles.input}
                 value={formData.password}
                 onChangeText={(value) => updateFormData('password', value)}
@@ -308,7 +311,12 @@ const RegisterScreen = ({ navigation, route }) => {
                 onBlur={() => setFocusedInput(null)}
               />
               <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
+                onPress={() => {
+                  setShowPassword(!showPassword);
+                  if (Platform.OS === 'android') {
+                    setTimeout(() => passwordRef.current?.focus(), 100);
+                  }
+                }}
                 style={styles.eyeIcon}
                 activeOpacity={0.7}
               >
@@ -330,6 +338,7 @@ const RegisterScreen = ({ navigation, route }) => {
             ]}>
               <Feather name="lock" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
               <TextInput
+                ref={confirmPasswordRef}
                 style={styles.input}
                 value={formData.confirmPassword}
                 onChangeText={(value) => updateFormData('confirmPassword', value)}
@@ -341,7 +350,12 @@ const RegisterScreen = ({ navigation, route }) => {
                 onBlur={() => setFocusedInput(null)}
               />
               <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                onPress={() => {
+                  setShowConfirmPassword(!showConfirmPassword);
+                  if (Platform.OS === 'android') {
+                    setTimeout(() => confirmPasswordRef.current?.focus(), 100);
+                  }
+                }}
                 style={styles.eyeIcon}
                 activeOpacity={0.7}
               >

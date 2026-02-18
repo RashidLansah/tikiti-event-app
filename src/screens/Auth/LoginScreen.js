@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
+  const passwordRef = useRef(null);
 
   const { login } = useAuth();
 
@@ -147,6 +148,7 @@ const LoginScreen = ({ navigation }) => {
             ]}>
               <Feather name="lock" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
               <TextInput
+                ref={passwordRef}
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
@@ -158,7 +160,12 @@ const LoginScreen = ({ navigation }) => {
                 onBlur={() => setFocusedInput(null)}
               />
               <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
+                onPress={() => {
+                  setShowPassword(!showPassword);
+                  if (Platform.OS === 'android') {
+                    setTimeout(() => passwordRef.current?.focus(), 100);
+                  }
+                }}
                 style={styles.eyeIcon}
                 activeOpacity={0.7}
               >

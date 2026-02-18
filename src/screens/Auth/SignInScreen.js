@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ const SignInScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
+  const passwordRef = useRef(null);
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
@@ -94,6 +95,7 @@ const SignInScreen = ({ navigation }) => {
             focusedField === 'password' && styles.inputFieldFocused
           ]}>
             <TextInput
+              ref={passwordRef}
               style={[styles.passwordInput, { color: colors.text.primary }]}
               placeholder="Enter your password"
               placeholderTextColor={colors.text.tertiary}
@@ -106,7 +108,12 @@ const SignInScreen = ({ navigation }) => {
               returnKeyType="done"
             />
             <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
+              onPress={() => {
+                setShowPassword(!showPassword);
+                if (Platform.OS === 'android') {
+                  setTimeout(() => passwordRef.current?.focus(), 100);
+                }
+              }}
               style={styles.eyeIcon}
               activeOpacity={0.7}
             >

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,8 @@ const CreateAccountFlow = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -254,6 +256,7 @@ const CreateAccountFlow = ({ navigation }) => {
           }
         ]}>
           <TextInput
+            ref={passwordRef}
             style={[styles.typeformPasswordInput, { color: colors.text.primary }]}
             placeholder="Password"
             placeholderTextColor={colors.text.tertiary}
@@ -266,7 +269,12 @@ const CreateAccountFlow = ({ navigation }) => {
             returnKeyType="next"
           />
           <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
+            onPress={() => {
+              setShowPassword(!showPassword);
+              if (Platform.OS === 'android') {
+                setTimeout(() => passwordRef.current?.focus(), 100);
+              }
+            }}
             style={styles.eyeIcon}
             activeOpacity={0.7}
           >
@@ -295,6 +303,7 @@ const CreateAccountFlow = ({ navigation }) => {
           formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && { borderColor: colors.success[500], borderWidth: 2 }
         ]}>
           <TextInput
+            ref={confirmPasswordRef}
             style={[styles.typeformPasswordInput, { color: colors.text.primary }]}
             placeholder="Confirm password"
             placeholderTextColor={colors.text.tertiary}
@@ -308,15 +317,20 @@ const CreateAccountFlow = ({ navigation }) => {
           />
           <View style={styles.passwordIconsContainer}>
             {formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && (
-              <Feather 
-                name="check-circle" 
-                size={20} 
-                color={colors.success[500]} 
+              <Feather
+                name="check-circle"
+                size={20}
+                color={colors.success[500]}
                 style={styles.passwordMatchIcon}
               />
             )}
             <TouchableOpacity
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              onPress={() => {
+                setShowConfirmPassword(!showConfirmPassword);
+                if (Platform.OS === 'android') {
+                  setTimeout(() => confirmPasswordRef.current?.focus(), 100);
+                }
+              }}
               style={styles.eyeIcon}
               activeOpacity={0.7}
             >
