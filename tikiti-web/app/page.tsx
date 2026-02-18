@@ -252,8 +252,17 @@ export default function LandingPage() {
                 <p className="text-[16px] text-[#86868b] mb-8 max-w-[400px] leading-relaxed">
                   Discover events, register instantly, get your QR ticket, receive real-time updates, and never miss a moment.
                 </p>
-                <div className="inline-flex items-center gap-2 bg-[#333] text-white text-[15px] font-semibold px-6 py-3 rounded-full">
-                  Coming to App Store & Play Store
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <a
+                    href="https://apps.apple.com/gh/app/tikiti/id6751210748"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-[#333] text-white text-[15px] font-semibold px-6 py-3 rounded-full hover:bg-[#1a1a1a] transition-colors"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                    Download on iOS
+                  </a>
+                  <span className="text-[13px] text-[#86868b] font-medium">Android coming soon</span>
                 </div>
               </div>
               {/* Decorative */}
@@ -518,6 +527,25 @@ export default function LandingPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Download CTA */}
+          <div className="mt-14 text-center">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <a
+                href="https://apps.apple.com/gh/app/tikiti/id6751210748"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 bg-[#333] text-white text-[16px] font-semibold px-8 py-4 rounded-full hover:bg-[#1a1a1a] transition-colors"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                Download on the App Store
+              </a>
+              <div className="inline-flex items-center gap-2 bg-[#f0f0f0] text-[#86868b] text-[16px] font-semibold px-8 py-4 rounded-full">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.523 2.295l-2.005 3.472c1.372.562 2.494 1.57 3.193 2.838H3.29c.699-1.268 1.82-2.276 3.193-2.838L4.478 2.295a.39.39 0 01.143-.533.39.39 0 01.533.143l2.036 3.525a8.29 8.29 0 012.81-.49 8.29 8.29 0 012.81.49l2.036-3.525a.39.39 0 01.533-.143.39.39 0 01.143.533zM7.008 7.17a.78.78 0 10-.001 1.56.78.78 0 00.001-1.56zm5.985 0a.78.78 0 100 1.56.78.78 0 000-1.56zM3.09 9.824h17.82c.054.395.09.796.09 1.206v6.93c0 2.37-1.922 4.29-4.29 4.29H7.29A4.294 4.294 0 013 17.96v-6.93c0-.41.036-.811.09-1.206z"/></svg>
+                Android — Coming Soon
+              </div>
             </div>
           </div>
         </div>
@@ -809,6 +837,7 @@ export default function LandingPage() {
                 <a href="#features" className="block text-[14px] text-white/40 hover:text-white transition-colors">Features</a>
                 <a href="#dashboard" className="block text-[14px] text-white/40 hover:text-white transition-colors">Dashboard</a>
                 <a href="#mobile" className="block text-[14px] text-white/40 hover:text-white transition-colors">Mobile App</a>
+                <a href="https://apps.apple.com/gh/app/tikiti/id6751210748" target="_blank" rel="noopener noreferrer" className="block text-[14px] text-white/40 hover:text-white transition-colors">Download for iOS</a>
               </div>
             </div>
 
