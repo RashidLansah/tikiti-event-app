@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: Spacing[2],
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     backgroundColor: Colors.secondary[200],
   },
   title: {
@@ -643,9 +643,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[6],
     paddingVertical: Spacing[8],
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    borderBottomColor: Colors.border.light,
   },
   progressBarWrapper: {
     width: '100%',
@@ -654,13 +654,13 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 6,
-    borderRadius: 3,
+    borderRadius: BorderRadius.full,
     backgroundColor: Colors.gray[200],
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: BorderRadius.full,
     backgroundColor: Colors.primary[500],
     shadowColor: Colors.primary[500],
     shadowOffset: {
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[4],
     borderRadius: BorderRadius.lg,
     alignItems: 'center',
-    ...Shadows.medium,
+    ...Shadows.md,
   },
   disabledButton: {
     opacity: 0.6,
@@ -911,15 +911,15 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[12],
   },
   typeformQuestion: {
-    fontSize: 32,
+    fontSize: Typography.fontSize['3xl'],
     fontFamily: Typography.fontFamily.bold,
-    fontWeight: '700',
+    fontWeight: Typography.fontWeight.bold,
     textAlign: 'center',
     marginBottom: Spacing[4],
     lineHeight: 40,
   },
   typeformSubtitle: {
-    fontSize: 16,
+    fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.medium,
     fontWeight: Typography.fontWeight.medium,
     textAlign: 'center',
@@ -936,7 +936,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing[4],
     paddingHorizontal: Spacing[5],
-    fontSize: 18,
+    fontSize: Typography.fontSize.lg,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
     minHeight: 56,
@@ -955,7 +955,7 @@ const styles = StyleSheet.create({
   },
   typeformPasswordInput: {
     flex: 1,
-    fontSize: 18,
+    fontSize: Typography.fontSize.lg,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
   },
@@ -971,7 +971,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   typeformDropdownText: {
-    fontSize: 18,
+    fontSize: Typography.fontSize.lg,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
   },
@@ -991,7 +991,7 @@ const styles = StyleSheet.create({
     gap: Spacing[2],
   },
   typeformInterestText: {
-    fontSize: 14,
+    fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.medium,
     color: Colors.text.secondary,
     textAlign: 'center',
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[4],
   },
   typeformSkipText: {
-    fontSize: 16,
+    fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.tertiary,
   },
@@ -1013,10 +1013,10 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     alignItems: 'center',
     borderWidth: 2,
-    ...Shadows.medium,
+    ...Shadows.md,
   },
   typeformContinueText: {
-    fontSize: 16,
+    fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.semibold,
     fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
@@ -1032,12 +1032,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[4],
   },
   typeformReviewLabel: {
-    fontSize: 16,
+    fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
   },
   typeformReviewValue: {
-    fontSize: 16,
+    fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.medium,
     color: Colors.text.primary,
     fontWeight: Typography.fontWeight.medium,

@@ -213,12 +213,14 @@ const DashboardScreen = ({ navigation }) => {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background.primary }]}>
       <View style={[styles.header, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
         <Text style={[styles.title, { color: colors.text.primary }]}>My Events</Text>
+        {/* Create Event - Disabled: Event creation now available only through the web dashboard
         <TouchableOpacity
           style={[styles.createButton, { backgroundColor: colors.primary[500] }]}
           onPress={() => navigation.navigate('CreateEvent')}
         >
           <Text style={[styles.createButtonText, { color: colors.white }]}>+ Create Event</Text>
         </TouchableOpacity>
+        */}
       </View>
 
       <View style={styles.pillTabContainer}>
@@ -286,6 +288,7 @@ const DashboardScreen = ({ navigation }) => {
               You're now an organiser! Start creating amazing events and managing your attendees.
             </Text>
 
+            {/* Create First Event - Disabled: Event creation now available only through the web dashboard
             <TouchableOpacity
               style={[styles.createFirstEventButton, { backgroundColor: colors.primary[500] }]}
               onPress={() => navigation.navigate('CreateEvent')}
@@ -295,6 +298,7 @@ const DashboardScreen = ({ navigation }) => {
                 Create Your First Event
               </Text>
             </TouchableOpacity>
+            */}
 
             {/* Quick Tips */}
             <View style={[styles.tipsCard, { backgroundColor: colors.background.secondary }]}>

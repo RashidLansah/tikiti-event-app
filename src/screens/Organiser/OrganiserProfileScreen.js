@@ -303,8 +303,8 @@ Thank you!`;
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
 
-          {/* Switch to Attendee */}
-          <TouchableOpacity 
+          {/* Switch to Attendee - Disabled: Organiser features now available only through the web dashboard
+          <TouchableOpacity
             style={[styles.menuItem, { borderBottomColor: 'transparent' }]}
             onPress={handleSwitchToAttendee}
           >
@@ -317,6 +317,7 @@ Thank you!`;
             </View>
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
+          */}
         </View>
 
         {/* Settings */}

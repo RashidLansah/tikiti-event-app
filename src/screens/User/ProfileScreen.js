@@ -313,27 +313,27 @@ Thank you!`;
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
 
-          {/* Role Switch - Show appropriate option based on current role and capabilities */}
-          <TouchableOpacity 
+          {/* Role Switch - Disabled: Organiser features now available only through the web dashboard
+          <TouchableOpacity
             style={[styles.menuItem, { borderBottomColor: 'transparent' }]}
             onPress={isCurrentlyAttendee ? handleSwitchToOrganiser : handleSwitchToAttendee}
           >
             <View style={styles.menuIcon}>
-              <Feather 
-                name={isCurrentlyAttendee ? "users" : "user"} 
-                size={20} 
-                color={getSubtleIconColor(colors.warning[500])} 
+              <Feather
+                name={isCurrentlyAttendee ? "users" : "user"}
+                size={20}
+                color={getSubtleIconColor(colors.warning[500])}
               />
             </View>
             <View style={styles.menuContent}>
               <Text style={[styles.menuTitle, { color: colors.text.primary }]}>
-                {isCurrentlyAttendee 
+                {isCurrentlyAttendee
                   ? (hasOrganiserRole() ? 'Switch to Organiser' : 'Become an Organiser')
                   : 'Switch to Attendee'
                 }
               </Text>
               <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>
-                {isCurrentlyAttendee 
+                {isCurrentlyAttendee
                   ? (hasOrganiserRole() ? 'Manage your events' : 'Create and manage events')
                   : 'Browse and attend events'
                 }
@@ -341,6 +341,7 @@ Thank you!`;
             </View>
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
+          */}
         </View>
 
         {/* Settings */}

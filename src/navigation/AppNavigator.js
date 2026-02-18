@@ -72,15 +72,9 @@ const AppNavigator = () => {
       return 'UserFlow';
     }
     
-    logger.log('🔍 Routing decision based on accountType:', userProfile.accountType);
-    
-    if (userProfile.accountType === 'organizer') {
-      logger.log('🎯 Routing to OrganiserFlow');
-      return 'OrganiserFlow';
-    } else {
-      logger.log('🎯 Routing to UserFlow (accountType:', userProfile.accountType, ')');
-      return 'UserFlow';
-    }
+    // All users now go to UserFlow — organiser features are on the web dashboard
+    logger.log('🎯 Routing to UserFlow (organiser features moved to web dashboard)');
+    return 'UserFlow';
   };
 
   const initialRouteName = getInitialRouteName();
@@ -146,6 +140,7 @@ const AppNavigator = () => {
                 headerShown: false,
               }}
             />
+            {/* OrganiserFlow - Disabled: Organiser features now on web dashboard
             <Stack.Screen
               name="OrganiserFlow"
               component={OrganiserTabNavigator}
@@ -153,6 +148,7 @@ const AppNavigator = () => {
                 headerShown: false,
               }}
             />
+            */}
           </>
         )}
 
@@ -174,7 +170,7 @@ const AppNavigator = () => {
           }}
         />
 
-        {/* Organiser Upgrade Flow */}
+        {/* Organiser Upgrade Flow - Disabled: Organiser features now on web dashboard
         <Stack.Screen
           name="OrganiserUpgrade"
           component={OrganiserUpgradeFlow}
@@ -183,6 +179,7 @@ const AppNavigator = () => {
             headerShown: false,
           }}
         />
+        */}
       </Stack.Navigator>
     </NavigationContainer>
   );

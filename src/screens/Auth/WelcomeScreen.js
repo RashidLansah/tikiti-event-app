@@ -198,9 +198,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[6],
   },
   tagline: {
-    fontSize: 24,
+    fontSize: Typography.fontSize['2xl'],
     fontFamily: Typography.fontFamily.semibold,
-    fontWeight: '600',
+    fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
     textAlign: 'center',
     paddingHorizontal: Spacing[4],
@@ -216,12 +216,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[6],
     borderRadius: BorderRadius.lg,
     alignItems: 'center',
-    ...Shadows.medium,
+    ...Shadows.md,
   },
   primaryButtonText: {
-    fontSize: 16,
+    fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.semibold,
-    fontWeight: '600',
+    fontWeight: Typography.fontWeight.semibold,
     color: Colors.white,
   },
   secondaryButton: {
@@ -233,9 +233,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryButtonText: {
-    fontSize: 16,
+    fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.semibold,
-    fontWeight: '600',
+    fontWeight: Typography.fontWeight.semibold,
     color: Colors.primary[500],
   },
 });

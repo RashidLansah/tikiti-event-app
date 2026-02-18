@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: Spacing[2],
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     backgroundColor: Colors.secondary[200],
   },
   title: {
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     alignItems: 'center',
     marginTop: Spacing[6],
-    ...Shadows.medium,
+    ...Shadows.md,
   },
   disabledButton: {
     opacity: 0.6,
