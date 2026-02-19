@@ -69,6 +69,8 @@ export const authService = {
   // Get authentication error message
   getErrorMessage: (error) => {
     switch (error.code) {
+      case 'auth/invalid-credential':
+        return 'Incorrect email or password. Please try again.';
       case 'auth/user-not-found':
         return 'No account found with this email address.';
       case 'auth/wrong-password':
@@ -83,8 +85,10 @@ export const authService = {
         return 'Network error. Please check your connection.';
       case 'auth/too-many-requests':
         return 'Too many failed attempts. Please try again later.';
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Please contact support.';
       default:
-        return error.message || 'An unexpected error occurred.';
+        return 'Something went wrong. Please try again.';
     }
   }
 };
