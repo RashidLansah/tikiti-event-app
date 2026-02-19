@@ -198,8 +198,8 @@ export function NewDashboardLayout({ children }: { children: React.ReactNode }) 
       </header>
 
       {/* Page Content */}
-      <main className="flex-1 px-8 lg:px-16 xl:px-32 pb-8 overflow-auto">
-        <div className="h-full">
+      <main className="flex-1 px-8 lg:px-16 xl:px-32 overflow-auto">
+        <div className="min-h-full pb-16">
           {children}
         </div>
       </main>
