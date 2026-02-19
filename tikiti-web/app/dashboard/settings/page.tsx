@@ -153,15 +153,6 @@ export default function SettingsPage() {
   const handleUpgrade = async (planId: PlanId) => {
     if (!currentOrganization?.id || !isOwner) return;
 
-    if (!currentOrganization.email) {
-      toast({
-        title: 'Email required',
-        description: 'Please add an organization email in the General tab before upgrading.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setBillingLoading(true);
     try {
       const response = await fetch('/api/billing/initialize', {
@@ -170,6 +161,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           planId,
           orgId: currentOrganization.id,
+          userEmail: user?.email || '',
         }),
       });
 

@@ -7,7 +7,7 @@ import { getPlan, normalizePlanId } from '@/lib/billing/plans';
 
 export async function POST(req: NextRequest) {
   try {
-    const { planId, orgId } = await req.json();
+    const { planId, orgId, userEmail } = await req.json();
 
     if (!planId || !orgId) {
       return NextResponse.json(
@@ -44,18 +44,18 @@ export async function POST(req: NextRequest) {
     }
 
     const orgData = orgDoc.data()!;
-    const orgEmail = orgData.email || '';
+    const billingEmail = orgData.email || userEmail || '';
     const orgName = orgData.name || '';
 
-    if (!orgEmail) {
+    if (!billingEmail) {
       return NextResponse.json(
-        { error: 'Organization email is required for billing. Please update your organization settings.' },
+        { error: 'An email address is required for billing. Please update your profile or organization settings.' },
         { status: 400 }
       );
     }
 
     // Get or create Paystack customer
-    const customer = await getOrCreateCustomer(orgEmail, orgName);
+    const customer = await getOrCreateCustomer(billingEmail, orgName);
 
     // Build callback URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     // Initialize transaction with the plan
     // Paystack will charge the plan amount when plan code is provided
     const transaction = await initializeTransaction({
-      email: orgEmail,
+      email: billingEmail,
       amount: plan.price * 100, // Convert USD to cents
       currency: 'USD',
       callback_url: callbackUrl,
