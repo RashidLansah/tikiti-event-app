@@ -131,6 +131,14 @@ export function ProgramBuilder({
           if (session.speaker.bio?.trim()) speakerObj.bio = session.speaker.bio.trim();
           if (session.speaker.email?.trim()) speakerObj.email = session.speaker.email.trim();
           if (session.speaker.photo?.trim()) speakerObj.photo = session.speaker.photo.trim();
+          // Preserve extra fields for mobile speaker modal
+          const s = session.speaker as any;
+          if (s.speakerId) speakerObj.speakerId = s.speakerId;
+          if (s.jobTitle?.trim()) speakerObj.jobTitle = s.jobTitle.trim();
+          if (s.company?.trim()) speakerObj.company = s.company.trim();
+          if (s.linkedInUrl?.trim()) speakerObj.linkedInUrl = s.linkedInUrl.trim();
+          if (s.twitterHandle?.trim()) speakerObj.twitterHandle = s.twitterHandle.trim();
+          if (s.websiteUrl?.trim()) speakerObj.websiteUrl = s.websiteUrl.trim();
 
           if (Object.keys(speakerObj).length > 0) {
             cleaned.speaker = speakerObj;
