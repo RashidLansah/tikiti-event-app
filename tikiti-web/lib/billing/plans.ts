@@ -20,7 +20,7 @@ export interface PlanFeatures {
 export interface Plan {
   id: PlanId;
   name: string;
-  price: number; // in USD
+  price: number; // in GHS
   currency: string;
   interval: 'monthly';
   description: string;
@@ -35,7 +35,7 @@ export const PLANS: Record<PlanId, Plan> = {
     id: 'starter',
     name: 'Free',
     price: 0,
-    currency: 'USD',
+    currency: 'GHS',
     interval: 'monthly',
     description: 'Everything you need for your first event',
     limits: {
@@ -56,8 +56,8 @@ export const PLANS: Record<PlanId, Plan> = {
   pro: {
     id: 'pro',
     name: 'Pro',
-    price: 2.99,
-    currency: 'USD',
+    price: 29,
+    currency: 'GHS',
     interval: 'monthly',
     description: 'Unlimited events for growing organisations',
     limits: {
@@ -139,7 +139,7 @@ export function isUpgrade(fromPlan: string, toPlan: string): boolean {
  */
 export function formatPrice(plan: Plan): string {
   if (plan.price === 0) return 'Free';
-  return `$${plan.price}/mo`;
+  return `GHS ${plan.price}/mo`;
 }
 
 /**

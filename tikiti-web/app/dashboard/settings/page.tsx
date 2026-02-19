@@ -1113,7 +1113,7 @@ export default function SettingsPage() {
                       <p className="text-3xl font-extrabold text-[#333]">Free</p>
                     ) : (
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-extrabold text-[#333]">${plan.price}</span>
+                        <span className="text-3xl font-extrabold text-[#333]">GHS {plan.price}</span>
                         <span className="text-sm font-semibold text-[#86868b]">/mo</span>
                       </div>
                     )}

@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
     // Paystack will charge the plan amount when plan code is provided
     const transaction = await initializeTransaction({
       email: billingEmail,
-      amount: plan.price * 100, // Convert USD to cents
-      currency: 'USD',
+      amount: plan.price * 100, // Convert GHS to pesewas
+      currency: 'GHS',
       callback_url: callbackUrl,
       plan: plan.paystackPlanCode,
       metadata: {
