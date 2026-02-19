@@ -12,13 +12,11 @@ import {
   Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
 const SignInScreen = ({ navigation }) => {
-  const { colors } = useTheme();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,7 +43,7 @@ const SignInScreen = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background.primary }]}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
@@ -60,29 +58,28 @@ const SignInScreen = ({ navigation }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Feather name="arrow-left" size={24} color={colors.primary[500]} />
+          <Feather name="arrow-left" size={24} color={Colors.primary[500]} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text.primary }]}>Welcome Back to Tikiti</Text>
+        <Text style={styles.title}>Welcome Back to Tikiti</Text>
         <View style={styles.headerRight} />
       </View>
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={[styles.subtitle, { color: colors.text.secondary }]}>
+        <Text style={styles.subtitle}>
           Sign in to your account to continue
         </Text>
 
         {/* Email Input */}
         <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text.primary }]}>Email</Text>
+          <Text style={styles.inputLabel}>Email</Text>
           <TextInput
             style={[
               styles.inputField,
-              { color: colors.text.primary },
               focusedField === 'email' && styles.inputFieldFocused
             ]}
             placeholder="Enter your email"
-            placeholderTextColor={colors.text.tertiary}
+            placeholderTextColor={Colors.text.tertiary}
             value={email}
             onChangeText={setEmail}
             onFocus={() => setFocusedField('email')}
@@ -96,16 +93,16 @@ const SignInScreen = ({ navigation }) => {
 
         {/* Password Input */}
         <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text.primary }]}>Password</Text>
+          <Text style={styles.inputLabel}>Password</Text>
           <View style={[
             styles.passwordContainer,
             focusedField === 'password' && styles.inputFieldFocused
           ]}>
             <TextInput
               ref={passwordRef}
-              style={[styles.passwordInput, { color: colors.text.primary }]}
+              style={styles.passwordInput}
               placeholder="Enter your password"
-              placeholderTextColor={colors.text.tertiary}
+              placeholderTextColor={Colors.text.tertiary}
               value={password}
               onChangeText={setPassword}
               onFocus={() => setFocusedField('password')}
@@ -124,10 +121,10 @@ const SignInScreen = ({ navigation }) => {
               style={styles.eyeIcon}
               activeOpacity={0.7}
             >
-              <Feather 
-                name={showPassword ? "eye-off" : "eye"} 
-                size={20} 
-                color={colors.text.tertiary} 
+              <Feather
+                name={showPassword ? "eye-off" : "eye"}
+                size={20}
+                color={Colors.text.tertiary}
               />
             </TouchableOpacity>
           </View>
@@ -137,16 +134,15 @@ const SignInScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[
             styles.signInButton,
-            { backgroundColor: colors.primary[500] },
             loading && styles.disabledButton
           ]}
           onPress={handleSignIn}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color={colors.white} />
+            <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={[styles.signInButtonText, { color: colors.white }]}>
+            <Text style={styles.signInButtonText}>
               Sign In
             </Text>
           )}
@@ -154,18 +150,18 @@ const SignInScreen = ({ navigation }) => {
 
         {/* Forgot Password */}
         <TouchableOpacity style={styles.forgotPassword}>
-          <Text style={[styles.forgotPasswordText, { color: colors.primary[500] }]}>
+          <Text style={styles.forgotPasswordText}>
             Forgot Password?
           </Text>
         </TouchableOpacity>
 
         {/* Create Account Link */}
         <View style={styles.createAccountSection}>
-          <Text style={[styles.createAccountText, { color: colors.text.secondary }]}>
+          <Text style={styles.createAccountText}>
             Don't have an account?{' '}
           </Text>
           <TouchableOpacity onPress={() => navigation.navigate('CreateAccount')}>
-            <Text style={[styles.createAccountLink, { color: colors.primary[500] }]}>
+            <Text style={styles.createAccountLink}>
               Create Account
             </Text>
           </TouchableOpacity>
@@ -179,7 +175,7 @@ const SignInScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background.primary,
   },
   header: {
     flexDirection: 'row',
@@ -188,7 +184,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing[12],
     paddingHorizontal: Spacing[6],
     paddingBottom: Spacing[6],
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background.primary,
   },
   backButton: {
     padding: Spacing[2],
@@ -242,15 +238,10 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     minHeight: 48,
     textAlignVertical: 'center',
-    position: 'relative',
   },
   inputFieldFocused: {
     borderWidth: 2,
     borderColor: Colors.primary[500],
-    shadowColor: Colors.primary[500],
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -262,7 +253,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[4],
     paddingVertical: Spacing[3],
     minHeight: 48,
-    position: 'relative',
   },
   passwordInput: {
     flex: 1,
