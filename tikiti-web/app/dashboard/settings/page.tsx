@@ -22,6 +22,8 @@ import {
   Clock,
   RefreshCw,
   X,
+  Link2,
+  Copy,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastContainer } from '@/components/ui/toast';
@@ -113,42 +115,88 @@ export default function SettingsPage() {
     // Reload invitations
     await loadInvitations();
 
-    toast({
-      title: emailSent ? 'Invitation sent' : 'Invitation created',
-      description: emailSent
-        ? `An invitation has been sent to ${email}`
-        : `Invitation created for ${email}. You can share the invite link manually.`,
-      variant: emailSent ? 'success' : 'default',
-    });
+    // Build invite link for manual sharing
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const inviteLink = `${baseUrl}/invite/${invitation.token}`;
+
+    if (emailSent) {
+      toast({
+        title: 'Invitation sent',
+        description: `An invitation has been sent to ${email}`,
+        variant: 'success',
+      });
+    } else {
+      // Copy link to clipboard automatically when email fails
+      try {
+        await navigator.clipboard.writeText(inviteLink);
+        toast({
+          title: 'Invitation created — link copied!',
+          description: `Email couldn't be sent, but the invite link for ${email} has been copied to your clipboard. Share it manually.`,
+          variant: 'default',
+        });
+      } catch {
+        toast({
+          title: 'Invitation created',
+          description: `Email couldn't be sent. Copy the invite link from the pending invitations list below.`,
+          variant: 'default',
+        });
+      }
+    }
   };
 
   const handleResendInvitation = async (invitationId: string) => {
     try {
       const newInvitation = await invitationService.resend(invitationId);
 
-      // Send invitation email again
+      // Send invitation email (non-blocking — new invitation already created)
       const invitation = invitations.find(inv => inv.id === invitationId);
+      let emailSent = false;
       if (invitation) {
-        await fetch('/api/email/invite', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: invitation.email,
-            orgName: currentOrganization?.name,
-            inviterName: userProfile?.displayName || user?.email || 'Team Admin',
-            role: invitation.role,
-            inviteToken: newInvitation.token
-          })
-        });
+        try {
+          const response = await fetch('/api/email/invite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: invitation.email,
+              orgName: currentOrganization?.name,
+              inviterName: userProfile?.displayName || user?.email || 'Team Admin',
+              role: invitation.role,
+              inviteToken: newInvitation.token
+            })
+          });
+          emailSent = response.ok;
+        } catch (emailError) {
+          console.error('Failed to send resend email:', emailError);
+        }
       }
 
       await loadInvitations();
 
-      toast({
-        title: 'Invitation resent',
-        description: 'A new invitation has been sent',
-        variant: 'success',
-      });
+      if (emailSent) {
+        toast({
+          title: 'Invitation resent',
+          description: 'A new invitation has been sent',
+          variant: 'success',
+        });
+      } else {
+        // Auto-copy invite link when email fails
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+        const inviteLink = `${baseUrl}/invite/${newInvitation.token}`;
+        try {
+          await navigator.clipboard.writeText(inviteLink);
+          toast({
+            title: 'Invitation renewed — link copied!',
+            description: `Email couldn't be sent, but the invite link has been copied to your clipboard.`,
+            variant: 'default',
+          });
+        } catch {
+          toast({
+            title: 'Invitation renewed',
+            description: `Email couldn't be sent. Use the copy link button to share the invite manually.`,
+            variant: 'default',
+          });
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -173,6 +221,33 @@ export default function SettingsPage() {
         title: 'Error',
         description: error.message || 'Failed to cancel invitation',
         variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCopyInviteLink = async (invitation: Invitation) => {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const inviteUrl = `${baseUrl}/invite/${invitation.token}`;
+
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      toast({
+        title: 'Link copied',
+        description: `Invite link for ${invitation.email} copied to clipboard`,
+        variant: 'success',
+      });
+    } catch (error) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = inviteUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      toast({
+        title: 'Link copied',
+        description: `Invite link for ${invitation.email} copied to clipboard`,
+        variant: 'success',
       });
     }
   };
@@ -714,6 +789,13 @@ export default function SettingsPage() {
                         <span className="px-4 py-2 rounded-full text-sm font-semibold bg-amber-100 text-amber-800">
                           Pending
                         </span>
+                        <button
+                          onClick={() => handleCopyInviteLink(invitation)}
+                          className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center hover:bg-blue-100 transition-colors"
+                          title="Copy invite link"
+                        >
+                          <Link2 className="w-5 h-5 text-blue-600" />
+                        </button>
                         <button
                           onClick={() => handleResendInvitation(invitation.id!)}
                           className="w-10 h-10 rounded-full bg-[#f0f0f0] flex items-center justify-center hover:bg-[#e8e8e8] transition-colors"

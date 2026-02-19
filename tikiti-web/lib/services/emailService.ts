@@ -7,6 +7,13 @@ apiInstance.setApiKey(
   process.env.BREVO_API_KEY || ''
 );
 
+// Validate API key type on startup
+if (!process.env.BREVO_API_KEY) {
+  console.warn('⚠️ BREVO_API_KEY is not set. Email sending will fail.');
+} else if (!process.env.BREVO_API_KEY.startsWith('xkeysib-')) {
+  console.warn('⚠️ BREVO_API_KEY does not start with "xkeysib-". Make sure you are using a Transactional API key, not an MCP/Marketing key. Transactional emails require a transactional API key from Brevo SMTP & API settings.');
+}
+
 // Email templates
 const EMAIL_TEMPLATES = {
   welcomeOrganization: {
@@ -616,8 +623,14 @@ export const emailService = {
       await apiInstance.sendTransacEmail(sendSmtpEmail);
       console.log(`Welcome email sent to ${data.email}`);
       return true;
-    } catch (error) {
-      console.error('Error sending welcome email:', error);
+    } catch (error: any) {
+      console.error('Error sending welcome email:', {
+        message: error?.message || error,
+        statusCode: error?.statusCode,
+        body: error?.body,
+        apiKeySet: !!process.env.BREVO_API_KEY,
+        apiKeyPrefix: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.substring(0, 10) + '...' : 'NOT SET',
+      });
       return false;
     }
   },
@@ -655,8 +668,14 @@ export const emailService = {
       await apiInstance.sendTransacEmail(sendSmtpEmail);
       console.log(`Invitation email sent to ${data.email}`);
       return true;
-    } catch (error) {
-      console.error('Error sending invitation email:', error);
+    } catch (error: any) {
+      console.error('Error sending invitation email:', {
+        message: error?.message || error,
+        statusCode: error?.statusCode,
+        body: error?.body,
+        apiKeySet: !!process.env.BREVO_API_KEY,
+        apiKeyPrefix: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.substring(0, 10) + '...' : 'NOT SET',
+      });
       return false;
     }
   },
@@ -728,8 +747,14 @@ export const emailService = {
       await apiInstance.sendTransacEmail(sendSmtpEmail);
       console.log(`Ticket email sent to ${data.email} for event: ${data.eventName}`);
       return true;
-    } catch (error) {
-      console.error('Error sending ticket email:', error);
+    } catch (error: any) {
+      console.error('Error sending ticket email:', {
+        message: error?.message || error,
+        statusCode: error?.statusCode,
+        body: error?.body,
+        apiKeySet: !!process.env.BREVO_API_KEY,
+        apiKeyPrefix: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.substring(0, 10) + '...' : 'NOT SET',
+      });
       return false;
     }
   },
@@ -778,8 +803,14 @@ export const emailService = {
       await apiInstance.sendTransacEmail(sendSmtpEmail);
       console.log(`Speaker invitation email sent to ${data.email}`);
       return true;
-    } catch (error) {
-      console.error('Error sending speaker invitation email:', error);
+    } catch (error: any) {
+      console.error('Error sending speaker invitation email:', {
+        message: error?.message || error,
+        statusCode: error?.statusCode,
+        body: error?.body,
+        apiKeySet: !!process.env.BREVO_API_KEY,
+        apiKeyPrefix: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.substring(0, 10) + '...' : 'NOT SET',
+      });
       return false;
     }
   },
@@ -829,8 +860,14 @@ export const emailService = {
       await apiInstance.sendTransacEmail(sendSmtpEmail);
       console.log(`Event update email sent to ${data.email}`);
       return true;
-    } catch (error) {
-      console.error('Error sending event update email:', error);
+    } catch (error: any) {
+      console.error('Error sending event update email:', {
+        message: error?.message || error,
+        statusCode: error?.statusCode,
+        body: error?.body,
+        apiKeySet: !!process.env.BREVO_API_KEY,
+        apiKeyPrefix: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.substring(0, 10) + '...' : 'NOT SET',
+      });
       return false;
     }
   },
@@ -872,8 +909,14 @@ export const emailService = {
       await apiInstance.sendTransacEmail(sendSmtpEmail);
       console.log(`Event cancellation email sent to ${data.email}`);
       return true;
-    } catch (error) {
-      console.error('Error sending event cancellation email:', error);
+    } catch (error: any) {
+      console.error('Error sending event cancellation email:', {
+        message: error?.message || error,
+        statusCode: error?.statusCode,
+        body: error?.body,
+        apiKeySet: !!process.env.BREVO_API_KEY,
+        apiKeyPrefix: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.substring(0, 10) + '...' : 'NOT SET',
+      });
       return false;
     }
   },
@@ -891,8 +934,14 @@ export const emailService = {
       await accountApi.getAccount();
       console.log('Brevo connection successful');
       return true;
-    } catch (error) {
-      console.error('Brevo connection failed:', error);
+    } catch (error: any) {
+      console.error('Brevo connection failed:', {
+        message: error?.message || error,
+        statusCode: error?.statusCode,
+        body: error?.body,
+        apiKeySet: !!process.env.BREVO_API_KEY,
+        apiKeyPrefix: process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.substring(0, 10) + '...' : 'NOT SET',
+      });
       return false;
     }
   },

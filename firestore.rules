@@ -224,9 +224,10 @@ service cloud.firestore {
 
     // Invitations collection - team member invitations
     match /invitations/{invitationId} {
-      // Organizers can create and manage invitations
+      // Anyone can read invitations (needed for invite acceptance page before user signs in)
+      allow read: if true;
+      // Authenticated users can create, update, and delete invitations
       allow create: if isAuthenticated();
-      allow read: if isAuthenticated();
       allow update: if isAuthenticated();
       allow delete: if isAuthenticated();
     }

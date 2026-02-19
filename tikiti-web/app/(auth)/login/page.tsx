@@ -10,7 +10,7 @@ import LoadingScreen from '@/components/ui/LoadingScreen';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, logout, user, loading: authLoading, hasOrganization, isGateStaff } = useAuth();
+  const { login, logout, user, loading: authLoading, hasOrganization, isGateStaff, refreshOrganizations, userProfile } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +18,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [error, setError] = useState('');
+  const [orgCheckDone, setOrgCheckDone] = useState(false);
 
   // Redirect authenticated users based on their role
   useEffect(() => {
@@ -31,10 +32,15 @@ function LoginForm() {
           router.replace(redirectUrl);
         }
       }
-      // If user is logged in but has no organization, they stay on login page
-      // and should see a message to register or contact their admin
+      // If user is logged in but has no organization, try refreshing first
+      // (they may have just accepted an invite)
+      if (!hasOrganization && userProfile?.organizationId && !orgCheckDone) {
+        refreshOrganizations().finally(() => setOrgCheckDone(true));
+      } else if (!hasOrganization) {
+        setOrgCheckDone(true);
+      }
     }
-  }, [user, authLoading, hasOrganization, isGateStaff, router, searchParams]);
+  }, [user, authLoading, hasOrganization, isGateStaff, router, searchParams, userProfile?.organizationId, orgCheckDone, refreshOrganizations]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +71,8 @@ function LoginForm() {
     return <LoadingScreen onComplete={handleLoadingComplete} duration={1500} />;
   }
 
-  // Show loading while checking auth state
-  if (authLoading) {
+  // Show loading while checking auth state or refreshing organizations
+  if (authLoading || (user && !hasOrganization && !orgCheckDone)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fefff7]">
         <div className="text-center">
@@ -82,8 +88,8 @@ function LoginForm() {
     return null;
   }
 
-  // User is logged in but has no organization - show message
-  if (user && !hasOrganization) {
+  // User is logged in but has no organization - show message (only after org check is done)
+  if (user && !hasOrganization && orgCheckDone) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fefff7] px-4">
         <div className="max-w-md w-full text-center">

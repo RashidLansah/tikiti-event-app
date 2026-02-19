@@ -13,7 +13,7 @@ import { Eye, EyeOff, Ticket, Check, X, Loader2 } from 'lucide-react';
 export default function InvitePage() {
   const params = useParams();
   const router = useRouter();
-  const { user, register, login } = useAuth();
+  const { user, register, login, refreshOrganizations } = useAuth();
   const token = params.token as string;
 
   const [invitation, setInvitation] = useState<Invitation | null>(null);
@@ -102,6 +102,11 @@ export default function InvitePage() {
         currentOrganizationRole: invitation.role,
         updatedAt: serverTimestamp()
       });
+
+      // Refresh auth context so dashboard sees the organization
+      // Small delay to ensure Firestore writes are consistent
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await refreshOrganizations();
 
       // Redirect based on role
       if (invitation.role === 'gate_staff') {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -13,8 +13,9 @@ export function ProtectedRoute({ children, requireOrganization = false }: Protec
   const { user, loading, hasOrganization, userProfile, refreshOrganizations } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [hasRefreshed, setHasRefreshed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshAttempts = useRef(0);
+  const maxRefreshAttempts = 3;
 
   useEffect(() => {
     // Wait for auth to finish loading
@@ -30,23 +31,32 @@ export function ProtectedRoute({ children, requireOrganization = false }: Protec
     }
 
     // If organization is required but user doesn't have one
-    // First try refreshing organizations (user might have just accepted an invite)
-    if (requireOrganization && !hasOrganization && userProfile?.organizationId && !hasRefreshed && !isRefreshing) {
+    // Try refreshing organizations (user might have just accepted an invite)
+    if (requireOrganization && !hasOrganization && userProfile?.organizationId && refreshAttempts.current < maxRefreshAttempts && !isRefreshing) {
       setIsRefreshing(true);
-      setHasRefreshed(true);
-      refreshOrganizations().finally(() => {
-        setIsRefreshing(false);
-      });
+      refreshAttempts.current += 1;
+      const attempt = refreshAttempts.current;
+
+      // Add increasing delay between retries to handle Firestore eventual consistency
+      const delay = attempt === 1 ? 0 : 1000 * attempt;
+      setTimeout(async () => {
+        try {
+          await refreshOrganizations();
+        } catch (error) {
+          console.error(`Org refresh attempt ${attempt} failed:`, error);
+        } finally {
+          setIsRefreshing(false);
+        }
+      }, delay);
       return;
     }
 
-    // If organization is required but user doesn't have one, redirect to register
-    // Users should create an organization during registration
-    if (requireOrganization && !hasOrganization && !isRefreshing) {
+    // If organization is required but user doesn't have one after all retries, redirect to register
+    if (requireOrganization && !hasOrganization && !isRefreshing && refreshAttempts.current >= maxRefreshAttempts) {
       router.push('/register');
       return;
     }
-  }, [user, loading, hasOrganization, requireOrganization, router, pathname, userProfile?.organizationId, hasRefreshed, isRefreshing, refreshOrganizations]);
+  }, [user, loading, hasOrganization, requireOrganization, router, pathname, userProfile?.organizationId, isRefreshing, refreshOrganizations]);
 
   // Show loading state while checking auth or refreshing
   if (loading || isRefreshing) {
