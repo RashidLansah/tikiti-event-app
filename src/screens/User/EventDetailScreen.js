@@ -1041,7 +1041,7 @@ const EventDetailScreen = ({ navigation, route }) => {
         <Modal
           visible={!!selectedSpeaker}
           transparent={true}
-          animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
+          animationType="slide"
           onRequestClose={() => setSelectedSpeaker(null)}
         >
           <View style={registeredStyles.speakerModalOverlay}>
@@ -1055,7 +1055,7 @@ const EventDetailScreen = ({ navigation, route }) => {
               <View style={registeredStyles.speakerModalHandle} />
 
               {/* Speaker Photo */}
-              {selectedSpeaker?.photo || selectedSpeaker?.photoBase64 ? (
+              {(selectedSpeaker?.photo || selectedSpeaker?.photoBase64) ? (
                 <Image
                   source={{
                     uri: (selectedSpeaker.photo || selectedSpeaker.photoBase64 || '').startsWith('data:')
@@ -1075,57 +1075,44 @@ const EventDetailScreen = ({ navigation, route }) => {
                 {selectedSpeaker?.name || 'Speaker'}
               </Text>
 
-              {/* Job Title & Company */}
-              {(selectedSpeaker?.jobTitle || selectedSpeaker?.company) && (
+              {/* Job Title & Company — only if speaker entered them */}
+              {(selectedSpeaker?.jobTitle || selectedSpeaker?.company) ? (
                 <Text style={registeredStyles.speakerModalTitle}>
-                  {[selectedSpeaker?.jobTitle, selectedSpeaker?.company].filter(Boolean).join(' at ')}
+                  {[selectedSpeaker.jobTitle, selectedSpeaker.company].filter(Boolean).join(' at ')}
                 </Text>
-              )}
+              ) : null}
 
-              {/* Bio */}
-              {selectedSpeaker?.bio && (
-                <Text style={registeredStyles.speakerModalBio}>
-                  {selectedSpeaker.bio}
-                </Text>
-              )}
+              {/* Bio — only if speaker entered it */}
+              {selectedSpeaker?.bio ? (
+                <ScrollView style={registeredStyles.speakerModalBioScroll} showsVerticalScrollIndicator={false}>
+                  <Text style={registeredStyles.speakerModalBio}>
+                    {selectedSpeaker.bio}
+                  </Text>
+                </ScrollView>
+              ) : null}
 
-              {/* Social Links — icon-only */}
-              {(selectedSpeaker?.linkedInUrl || selectedSpeaker?.twitterHandle || selectedSpeaker?.websiteUrl || selectedSpeaker?.email) && (
-                <View style={registeredStyles.speakerModalLinks}>
-                  {selectedSpeaker?.linkedInUrl && (
-                    <TouchableOpacity
-                      style={registeredStyles.speakerModalIconButton}
-                      onPress={() => Linking.openURL(selectedSpeaker.linkedInUrl)}
-                    >
-                      <Feather name="linkedin" size={18} color={Colors.primary[500]} />
-                    </TouchableOpacity>
-                  )}
-                  {selectedSpeaker?.twitterHandle && (
-                    <TouchableOpacity
-                      style={registeredStyles.speakerModalIconButton}
-                      onPress={() => Linking.openURL(`https://twitter.com/${selectedSpeaker.twitterHandle.replace('@', '')}`)}
-                    >
-                      <Feather name="twitter" size={18} color={Colors.primary[500]} />
-                    </TouchableOpacity>
-                  )}
-                  {selectedSpeaker?.websiteUrl && (
-                    <TouchableOpacity
-                      style={registeredStyles.speakerModalIconButton}
-                      onPress={() => Linking.openURL(selectedSpeaker.websiteUrl)}
-                    >
-                      <Feather name="globe" size={18} color={Colors.primary[500]} />
-                    </TouchableOpacity>
-                  )}
-                  {selectedSpeaker?.email && (
-                    <TouchableOpacity
-                      style={registeredStyles.speakerModalIconButton}
-                      onPress={() => Linking.openURL(`mailto:${selectedSpeaker.email}`)}
-                    >
-                      <Feather name="mail" size={18} color={Colors.primary[500]} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
+              {/* Social Links — icon-only, only icons for fields the speaker actually provided */}
+              {(() => {
+                const links = [];
+                if (selectedSpeaker?.linkedInUrl) links.push({ icon: 'linkedin', url: selectedSpeaker.linkedInUrl });
+                if (selectedSpeaker?.twitterHandle) links.push({ icon: 'twitter', url: `https://twitter.com/${selectedSpeaker.twitterHandle.replace('@', '')}` });
+                if (selectedSpeaker?.websiteUrl) links.push({ icon: 'globe', url: selectedSpeaker.websiteUrl });
+                if (selectedSpeaker?.email) links.push({ icon: 'mail', url: `mailto:${selectedSpeaker.email}` });
+                if (links.length === 0) return null;
+                return (
+                  <View style={registeredStyles.speakerModalLinks}>
+                    {links.map((link) => (
+                      <TouchableOpacity
+                        key={link.icon}
+                        style={registeredStyles.speakerModalIconButton}
+                        onPress={() => Linking.openURL(link.url)}
+                      >
+                        <Feather name={link.icon} size={18} color={Colors.primary[500]} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                );
+              })()}
 
               {/* Close Button */}
               <TouchableOpacity
@@ -1994,9 +1981,9 @@ const registeredStyles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    paddingBottom: Platform.OS === 'ios' ? 44 : 32,
     alignItems: 'center',
-    maxHeight: '70%',
+    maxHeight: '75%',
   },
   speakerModalHandle: {
     width: 40,
@@ -2034,13 +2021,17 @@ const registeredStyles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
   },
+  speakerModalBioScroll: {
+    maxHeight: 120,
+    width: '100%',
+    marginBottom: 16,
+  },
   speakerModalBio: {
     fontFamily: Typography.fontFamily.regular,
     fontSize: 14,
     color: Colors.text.secondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 16,
     paddingHorizontal: 8,
   },
   speakerModalLinks: {
