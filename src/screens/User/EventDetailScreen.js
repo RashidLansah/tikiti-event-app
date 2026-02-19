@@ -1089,34 +1089,39 @@ const EventDetailScreen = ({ navigation, route }) => {
                 </Text>
               )}
 
-              {/* Social Links */}
-              {(selectedSpeaker?.linkedInUrl || selectedSpeaker?.twitterHandle || selectedSpeaker?.websiteUrl) && (
+              {/* Social Links — icon-only */}
+              {(selectedSpeaker?.linkedInUrl || selectedSpeaker?.twitterHandle || selectedSpeaker?.websiteUrl || selectedSpeaker?.email) && (
                 <View style={registeredStyles.speakerModalLinks}>
                   {selectedSpeaker?.linkedInUrl && (
                     <TouchableOpacity
-                      style={registeredStyles.speakerModalLinkButton}
+                      style={registeredStyles.speakerModalIconButton}
                       onPress={() => Linking.openURL(selectedSpeaker.linkedInUrl)}
                     >
-                      <Feather name="linkedin" size={16} color={Colors.primary[500]} />
-                      <Text style={registeredStyles.speakerModalLinkText}>LinkedIn</Text>
+                      <Feather name="linkedin" size={18} color={Colors.primary[500]} />
                     </TouchableOpacity>
                   )}
                   {selectedSpeaker?.twitterHandle && (
                     <TouchableOpacity
-                      style={registeredStyles.speakerModalLinkButton}
+                      style={registeredStyles.speakerModalIconButton}
                       onPress={() => Linking.openURL(`https://twitter.com/${selectedSpeaker.twitterHandle.replace('@', '')}`)}
                     >
-                      <Feather name="twitter" size={16} color={Colors.primary[500]} />
-                      <Text style={registeredStyles.speakerModalLinkText}>Twitter</Text>
+                      <Feather name="twitter" size={18} color={Colors.primary[500]} />
                     </TouchableOpacity>
                   )}
                   {selectedSpeaker?.websiteUrl && (
                     <TouchableOpacity
-                      style={registeredStyles.speakerModalLinkButton}
+                      style={registeredStyles.speakerModalIconButton}
                       onPress={() => Linking.openURL(selectedSpeaker.websiteUrl)}
                     >
-                      <Feather name="globe" size={16} color={Colors.primary[500]} />
-                      <Text style={registeredStyles.speakerModalLinkText}>Website</Text>
+                      <Feather name="globe" size={18} color={Colors.primary[500]} />
+                    </TouchableOpacity>
+                  )}
+                  {selectedSpeaker?.email && (
+                    <TouchableOpacity
+                      style={registeredStyles.speakerModalIconButton}
+                      onPress={() => Linking.openURL(`mailto:${selectedSpeaker.email}`)}
+                    >
+                      <Feather name="mail" size={18} color={Colors.primary[500]} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -2056,6 +2061,14 @@ const registeredStyles = StyleSheet.create({
     fontFamily: Typography.fontFamily.medium,
     fontSize: 13,
     color: Colors.primary[500],
+  },
+  speakerModalIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   speakerModalClose: {
     backgroundColor: '#333',
