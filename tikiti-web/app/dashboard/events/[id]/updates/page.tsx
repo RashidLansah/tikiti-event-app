@@ -110,10 +110,8 @@ export default function EventUpdatesPage() {
       // Send notifications if requested
       if (formData.sendNotification && event) {
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://tikiti-event-app.vercel.app';
-          
-          // Get attendees - call API endpoint that handles this
-          const response = await fetch(`${baseUrl}/api/notify-event-change`, {
+          // Call API endpoint to send notifications to attendees
+          const response = await fetch('/api/notify-event-change', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
