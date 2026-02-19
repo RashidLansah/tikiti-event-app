@@ -199,6 +199,23 @@ export function SessionEditor({
     // New speakers array (preferred)
     if (selectedSpeakers.length > 0) {
       updates.speakers = selectedSpeakers;
+      // Also write legacy speaker object with first speaker's details for mobile app compatibility
+      const firstSpeaker = availableSpeakers.find(s => s.id === selectedSpeakers[0].speakerId);
+      if (firstSpeaker) {
+        updates.speaker = {
+          name: firstSpeaker.name,
+          bio: firstSpeaker.bio || '',
+          email: firstSpeaker.email || '',
+          photo: firstSpeaker.photoBase64 || firstSpeaker.photoUrl || '',
+          speakerId: firstSpeaker.id,
+          // Extra fields stored for mobile speaker modal (not in TS type but persisted to Firestore)
+          ...(firstSpeaker.jobTitle && { jobTitle: firstSpeaker.jobTitle }),
+          ...(firstSpeaker.company && { company: firstSpeaker.company }),
+          ...(firstSpeaker.linkedInUrl && { linkedInUrl: firstSpeaker.linkedInUrl }),
+          ...(firstSpeaker.twitterHandle && { twitterHandle: firstSpeaker.twitterHandle }),
+          ...(firstSpeaker.websiteUrl && { websiteUrl: firstSpeaker.websiteUrl }),
+        } as any;
+      }
     }
 
     // Legacy speaker object only if no new speakers are selected
