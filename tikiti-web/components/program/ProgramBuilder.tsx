@@ -124,8 +124,8 @@ export function ProgramBuilder({
           cleaned.speakers = session.speakers;
         }
 
-        // Clean legacy speaker object
-        if (session.speaker && !session.speakers?.length) {
+        // Clean legacy speaker object (always include for mobile app compatibility)
+        if (session.speaker) {
           const speakerObj: any = {};
           if (session.speaker.name?.trim()) speakerObj.name = session.speaker.name.trim();
           if (session.speaker.bio?.trim()) speakerObj.bio = session.speaker.bio.trim();
