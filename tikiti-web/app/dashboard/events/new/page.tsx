@@ -728,7 +728,7 @@ export default function CreateEventPage() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-[#fefff7] overflow-hidden"
+      className="fixed inset-0 z-[100] bg-[#fefff7] overflow-y-auto"
       style={{ fontFamily: 'Plus Jakarta Sans, -apple-system, BlinkMacSystemFont, sans-serif' }}
     >
       {/* Progress Bar */}
@@ -761,7 +761,7 @@ export default function CreateEventPage() {
       </header>
 
       {/* Main Content */}
-      <div className="h-full flex flex-col justify-center px-6 lg:px-24 xl:px-32 pt-20 pb-32">
+      <div className="min-h-full flex flex-col justify-center px-6 lg:px-24 xl:px-32 pt-20 pb-32">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={currentStep}
