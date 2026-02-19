@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         quantity: quantity || 1,
       },
     }));
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tikiti-event-app.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || '';
     const ticketUrl = `${baseUrl}/ticket-pdf.html?data=${ticketPdfData}`;
 
     // Build email HTML

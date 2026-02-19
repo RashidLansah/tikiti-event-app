@@ -6,7 +6,10 @@ export async function GET(req: NextRequest) {
   const phoneNumber = searchParams.get('phone') || '233501234567'; // Default test number
   const message = searchParams.get('message') || 'Test SMS from Tikiti';
   
-  const arkeselApiKey = process.env.ARKESEL_API_KEY || 'OjdpMG0zVThlOVJMOHBJWmM=';
+  const arkeselApiKey = process.env.ARKESEL_API_KEY;
+  if (!arkeselApiKey) {
+    return NextResponse.json({ error: 'ARKESEL_API_KEY not configured' }, { status: 500 });
+  }
   const arkeselSenderId = process.env.ARKESEL_SENDER_ID || 'Tikiti';
   const arkeselBaseUrl = 'https://sms.arkesel.com/sms/api';
   

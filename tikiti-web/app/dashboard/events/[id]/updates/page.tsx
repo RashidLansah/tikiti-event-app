@@ -279,22 +279,15 @@ export default function EventUpdatesPage() {
                           Send Email
                         </Label>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 opacity-50">
                         <Checkbox
                           id="sms"
-                          checked={formData.notificationChannels.sms}
-                          onCheckedChange={(checked) =>
-                            setFormData({
-                              ...formData,
-                              notificationChannels: {
-                                ...formData.notificationChannels,
-                                sms: checked as boolean,
-                              },
-                            })
-                          }
+                          checked={false}
+                          disabled
                         />
-                        <Label htmlFor="sms" className="cursor-pointer">
+                        <Label htmlFor="sms" className="cursor-not-allowed">
                           Send SMS
+                          <span className="ml-2 text-xs font-medium bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Coming Soon</span>
                         </Label>
                       </div>
                     </div>

@@ -981,6 +981,21 @@
 
             try {
                 const db = await loadFirebase();
+
+                // Check for duplicate registration by email
+                const existingBookings = await db.collection('bookings')
+                    .where('eventId', '==', currentEvent.id)
+                    .where('userEmail', '==', email)
+                    .where('status', '==', 'confirmed')
+                    .get();
+
+                if (!existingBookings.empty) {
+                    alert('You have already registered for this event with this email address.');
+                    submitButton.textContent = 'Complete Registration';
+                    submitButton.disabled = false;
+                    return;
+                }
+
                 const bookingReference = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
                 const bookingData = {
@@ -1013,6 +1028,16 @@
                     id: firestoreDocId,
                     bookingReference: bookingReference
                 };
+
+                // Atomically update ticket counts on the event
+                try {
+                    await db.collection('events').doc(currentEvent.id).update({
+                        soldTickets: firebase.firestore.FieldValue.increment(1),
+                        availableTickets: firebase.firestore.FieldValue.increment(-1),
+                    });
+                } catch (ticketErr) {
+                    console.error('Error updating ticket counts:', ticketErr);
+                }
 
                 // Send confirmation email
                 try {

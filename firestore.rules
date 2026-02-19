@@ -234,10 +234,23 @@ service cloud.firestore {
 
     // Speaker invitations collection
     match /speakerInvitations/{invitationId} {
-      // Organizers can create and manage speaker invitations
+      // Anyone can read speaker invitations (needed for speaker profile page before authentication)
+      allow read: if true;
+      // Anyone can update (needed for marking invitation as submitted from unauthenticated speaker page)
+      allow update: if true;
+      // Organizers can create and delete speaker invitations
       allow create: if isAuthenticated();
-      allow read: if isAuthenticated();
-      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Speakers collection
+    match /speakers/{speakerId} {
+      // Anyone can read speakers (needed for public event pages)
+      allow read: if true;
+      // Anyone can create/update (needed for unauthenticated speaker profile submission)
+      allow create: if true;
+      allow update: if true;
+      // Only authenticated users can delete speakers
       allow delete: if isAuthenticated();
     }
 

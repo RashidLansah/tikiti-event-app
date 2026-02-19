@@ -15,7 +15,6 @@ function getAnthropicApiKey(): string | undefined {
   const possiblePaths = [
     path.join(process.cwd(), '.env.local'),
     path.join(process.cwd(), 'tikiti-web', '.env.local'),
-    '/Users/macbook/Documents/GitHub/tikiti-event-app/tikiti-web/.env.local',
   ];
 
   for (const envPath of possiblePaths) {

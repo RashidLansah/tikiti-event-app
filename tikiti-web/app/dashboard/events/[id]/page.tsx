@@ -568,10 +568,11 @@ export default function EventDetailPage() {
                   Speakers & Panelists
                 </Link>
               </Button>
-              <Button variant="outline" className="w-full justify-start opacity-60 cursor-not-allowed" disabled>
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Quizzes & Polls
-                <span className="ml-auto text-xs font-medium bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Coming Soon</span>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href={`/dashboard/events/${event.id}/engagement`}>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Quizzes & Polls
+                </Link>
               </Button>
               <Button variant="outline" className="w-full justify-start" asChild>
                 <Link href={`/dashboard/events/${event.id}/surveys`}>

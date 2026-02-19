@@ -196,9 +196,21 @@ export default function EditEventPage() {
   };
 
   const saveEvent = async (sendNotifications: boolean) => {
+    // Validate totalTickets is not below soldTickets
+    const soldTickets = originalEvent?.soldTickets || 0;
+    if (formData.totalTickets < soldTickets) {
+      toast({
+        title: 'Error',
+        description: `Total tickets cannot be less than ${soldTickets} (tickets already sold)`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {
+      const availableTickets = formData.totalTickets - soldTickets;
       await eventService.update(eventId, {
         name: formData.name,
         description: formData.description,
@@ -213,6 +225,7 @@ export default function EditEventPage() {
         type: formData.type,
         price: formData.type === 'paid' ? formData.price : undefined,
         totalTickets: formData.totalTickets,
+        availableTickets,
       });
 
       // Send notifications if requested
@@ -592,13 +605,20 @@ export default function EditEventPage() {
                   <Input
                     id="totalTickets"
                     type="number"
-                    min="1"
+                    min={originalEvent?.soldTickets || 1}
                     value={formData.totalTickets}
-                    onChange={(e) =>
-                      setFormData({ ...formData, totalTickets: parseInt(e.target.value) || 100 })
-                    }
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 1;
+                      const minTickets = originalEvent?.soldTickets || 0;
+                      setFormData({ ...formData, totalTickets: Math.max(value, minTickets) });
+                    }}
                     required
                   />
+                  {originalEvent && (originalEvent.soldTickets || 0) > 0 && (
+                    <p className="text-xs text-gray-500">
+                      Minimum: {originalEvent.soldTickets} (tickets already sold)
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

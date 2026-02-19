@@ -13,6 +13,7 @@ import {
   Image,
   Linking,
   Platform,
+  Modal,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -48,6 +49,7 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [eventSurveys, setEventSurveys] = useState([]);
   const [loadingUpdates, setLoadingUpdates] = useState(false);
   const [loadingSurveys, setLoadingSurveys] = useState(false);
+  const [selectedSpeaker, setSelectedSpeaker] = useState(null);
 
   // Tabs for the registered/post-RSVP view
   const eventTabs = [
@@ -693,12 +695,17 @@ const EventDetailScreen = ({ navigation, route }) => {
                   ) : null}
                   {/* Speaker info */}
                   {session.speaker?.name && (
-                    <View style={registeredStyles.sessionSpeaker}>
-                      <Feather name="user" size={12} color={Colors.text.tertiary} />
-                      <Text style={registeredStyles.sessionSpeakerText}>
+                    <TouchableOpacity
+                      style={registeredStyles.sessionSpeaker}
+                      onPress={() => setSelectedSpeaker(session.speaker)}
+                      activeOpacity={0.7}
+                    >
+                      <Feather name="user" size={12} color={Colors.primary[500]} />
+                      <Text style={[registeredStyles.sessionSpeakerText, { color: Colors.primary[500] }]}>
                         {session.speaker.name}
                       </Text>
-                    </View>
+                      <Feather name="chevron-right" size={12} color={Colors.primary[500]} />
+                    </TouchableOpacity>
                   )}
                   {/* Location */}
                   {session.location?.name && (
@@ -754,8 +761,8 @@ const EventDetailScreen = ({ navigation, route }) => {
                   {timeAgo ? <Text style={registeredStyles.updateTime}>{timeAgo}</Text> : null}
                 </View>
               </View>
-              {update.content ? (
-                <Text style={registeredStyles.updateContent}>{update.content}</Text>
+              {(update.message || update.content) ? (
+                <Text style={registeredStyles.updateContent}>{update.message || update.content}</Text>
               ) : null}
             </View>
           );
@@ -1029,6 +1036,102 @@ const EventDetailScreen = ({ navigation, route }) => {
 
           <View style={{ height: 100 }} />
         </ScrollView>
+
+        {/* Speaker Details Modal */}
+        <Modal
+          visible={!!selectedSpeaker}
+          transparent={true}
+          animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
+          onRequestClose={() => setSelectedSpeaker(null)}
+        >
+          <View style={registeredStyles.speakerModalOverlay}>
+            <TouchableOpacity
+              style={registeredStyles.speakerModalBackdrop}
+              activeOpacity={1}
+              onPress={() => setSelectedSpeaker(null)}
+            />
+            <View style={registeredStyles.speakerModalContainer}>
+              {/* Handle bar */}
+              <View style={registeredStyles.speakerModalHandle} />
+
+              {/* Speaker Photo */}
+              {selectedSpeaker?.photo || selectedSpeaker?.photoBase64 ? (
+                <Image
+                  source={{
+                    uri: (selectedSpeaker.photo || selectedSpeaker.photoBase64 || '').startsWith('data:')
+                      ? (selectedSpeaker.photo || selectedSpeaker.photoBase64)
+                      : `data:image/jpeg;base64,${selectedSpeaker.photo || selectedSpeaker.photoBase64}`,
+                  }}
+                  style={registeredStyles.speakerModalPhoto}
+                />
+              ) : (
+                <View style={registeredStyles.speakerModalPhotoPlaceholder}>
+                  <Feather name="user" size={32} color={Colors.text.tertiary} />
+                </View>
+              )}
+
+              {/* Speaker Name */}
+              <Text style={registeredStyles.speakerModalName}>
+                {selectedSpeaker?.name || 'Speaker'}
+              </Text>
+
+              {/* Job Title & Company */}
+              {(selectedSpeaker?.jobTitle || selectedSpeaker?.company) && (
+                <Text style={registeredStyles.speakerModalTitle}>
+                  {[selectedSpeaker?.jobTitle, selectedSpeaker?.company].filter(Boolean).join(' at ')}
+                </Text>
+              )}
+
+              {/* Bio */}
+              {selectedSpeaker?.bio && (
+                <Text style={registeredStyles.speakerModalBio}>
+                  {selectedSpeaker.bio}
+                </Text>
+              )}
+
+              {/* Social Links */}
+              {(selectedSpeaker?.linkedInUrl || selectedSpeaker?.twitterHandle || selectedSpeaker?.websiteUrl) && (
+                <View style={registeredStyles.speakerModalLinks}>
+                  {selectedSpeaker?.linkedInUrl && (
+                    <TouchableOpacity
+                      style={registeredStyles.speakerModalLinkButton}
+                      onPress={() => Linking.openURL(selectedSpeaker.linkedInUrl)}
+                    >
+                      <Feather name="linkedin" size={16} color={Colors.primary[500]} />
+                      <Text style={registeredStyles.speakerModalLinkText}>LinkedIn</Text>
+                    </TouchableOpacity>
+                  )}
+                  {selectedSpeaker?.twitterHandle && (
+                    <TouchableOpacity
+                      style={registeredStyles.speakerModalLinkButton}
+                      onPress={() => Linking.openURL(`https://twitter.com/${selectedSpeaker.twitterHandle.replace('@', '')}`)}
+                    >
+                      <Feather name="twitter" size={16} color={Colors.primary[500]} />
+                      <Text style={registeredStyles.speakerModalLinkText}>Twitter</Text>
+                    </TouchableOpacity>
+                  )}
+                  {selectedSpeaker?.websiteUrl && (
+                    <TouchableOpacity
+                      style={registeredStyles.speakerModalLinkButton}
+                      onPress={() => Linking.openURL(selectedSpeaker.websiteUrl)}
+                    >
+                      <Feather name="globe" size={16} color={Colors.primary[500]} />
+                      <Text style={registeredStyles.speakerModalLinkText}>Website</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {/* Close Button */}
+              <TouchableOpacity
+                style={registeredStyles.speakerModalClose}
+                onPress={() => setSelectedSpeaker(null)}
+              >
+                <Text style={registeredStyles.speakerModalCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
@@ -1870,6 +1973,102 @@ const registeredStyles = StyleSheet.create({
     fontFamily: Typography.fontFamily.medium,
     fontSize: 12,
     color: Colors.text.tertiary,
+  },
+
+  // ─── Speaker Modal ─────────────────────────────────────
+  speakerModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  speakerModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  speakerModalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    alignItems: 'center',
+    maxHeight: '70%',
+  },
+  speakerModalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ddd',
+    marginBottom: 20,
+  },
+  speakerModalPhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 16,
+  },
+  speakerModalPhotoPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  speakerModalName: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: 20,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  speakerModalTitle: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 14,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  speakerModalBio: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 14,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  speakerModalLinks: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  speakerModalLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  speakerModalLinkText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 13,
+    color: Colors.primary[500],
+  },
+  speakerModalClose: {
+    backgroundColor: '#333',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 24,
+    width: '100%',
+    alignItems: 'center',
+  },
+  speakerModalCloseText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 15,
+    color: '#fff',
   },
 
   // ─── Updates tab ──────────────────────────────────────
