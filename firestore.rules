@@ -222,6 +222,24 @@ service cloud.firestore {
       allow update, delete: if false; // Logs are immutable
     }
 
+    // Invitations collection - team member invitations
+    match /invitations/{invitationId} {
+      // Organizers can create and manage invitations
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Speaker invitations collection
+    match /speakerInvitations/{invitationId} {
+      // Organizers can create and manage speaker invitations
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
     // Default rule - deny all other access
     match /{document=**} {
       allow read, write: if false;
