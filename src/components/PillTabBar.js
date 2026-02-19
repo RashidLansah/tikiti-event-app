@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography } from '../styles/designSystem';
 
@@ -32,11 +32,14 @@ const PillTabBar = ({ tabs, activeTab, onTabPress }) => {
               {tab.icon && (
                 <Feather
                   name={tab.icon}
-                  size={16}
+                  size={14}
                   color={Colors.primary[500]}
                 />
               )}
-              <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
+              <Text
+                style={[styles.tabLabel, isActive && styles.activeTabLabel]}
+                numberOfLines={1}
+              >
                 {tab.label}
               </Text>
             </TouchableOpacity>
@@ -51,30 +54,30 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f0f0f0',
     borderRadius: 40,
-    height: 58,
-    paddingHorizontal: 10,
-    paddingVertical: 11,
+    height: 50,
+    paddingHorizontal: 6,
+    paddingVertical: 7,
   },
   scrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 4,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 30,
-    gap: 9,
+    gap: 5,
   },
   activeTab: {
     backgroundColor: Colors.white,
   },
   tabLabel: {
     fontFamily: Typography.fontFamily.medium,
-    fontSize: 16,
+    fontSize: 13,
     color: Colors.primary[500],
   },
   activeTabLabel: {
