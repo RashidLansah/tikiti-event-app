@@ -91,31 +91,34 @@ export default function SettingsPage() {
       inviterName: userProfile.displayName || user.email || 'Team Admin'
     });
 
-    // Send invitation email
-    const response = await fetch('/api/email/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        orgName: currentOrganization.name,
-        inviterName: userProfile.displayName || user.email || 'Team Admin',
-        role,
-        inviteToken: invitation.token
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to send invitation email');
+    // Send invitation email (non-blocking — invitation is already created)
+    let emailSent = false;
+    try {
+      const response = await fetch('/api/email/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          orgName: currentOrganization.name,
+          inviterName: userProfile.displayName || user.email || 'Team Admin',
+          role,
+          inviteToken: invitation.token
+        })
+      });
+      emailSent = response.ok;
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
     }
 
     // Reload invitations
     await loadInvitations();
 
     toast({
-      title: 'Invitation sent',
-      description: `An invitation has been sent to ${email}`,
-      variant: 'success',
+      title: emailSent ? 'Invitation sent' : 'Invitation created',
+      description: emailSent
+        ? `An invitation has been sent to ${email}`
+        : `Invitation created for ${email}. You can share the invite link manually.`,
+      variant: emailSent ? 'success' : 'default',
     });
   };
 
