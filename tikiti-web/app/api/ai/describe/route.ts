@@ -34,6 +34,10 @@ function getAnthropicApiKey(): string | undefined {
   return undefined;
 }
 
+import { getAdminFirestore } from '@/lib/firebase/admin';
+import { canUseAI, getUpgradeMessage } from '@/lib/billing/featureGate';
+import type { Organization } from '@/lib/services/organizationService';
+
 interface RequestBody {
   eventName?: string;
   currentDescription?: string;
@@ -46,6 +50,7 @@ interface RequestBody {
     price?: number;
   };
   action: 'improve' | 'generate';
+  orgId?: string; // For feature gating
 }
 
 export async function POST(req: NextRequest) {
@@ -60,7 +65,28 @@ export async function POST(req: NextRequest) {
     }
 
     const body: RequestBody = await req.json();
-    const { eventName, currentDescription, eventDetails, action } = body;
+    const { eventName, currentDescription, eventDetails, action, orgId } = body;
+
+    // Feature gate: check if org can use AI
+    if (orgId) {
+      try {
+        const db = getAdminFirestore();
+        const orgDoc = await db.collection('organizations').doc(orgId).get();
+        if (orgDoc.exists) {
+          const org = orgDoc.data() as Organization;
+          const aiCheck = canUseAI(org);
+          if (!aiCheck.allowed) {
+            return NextResponse.json(
+              { error: getUpgradeMessage(aiCheck.requiredPlan!), upgradeRequired: true, requiredPlan: aiCheck.requiredPlan },
+              { status: 403 }
+            );
+          }
+        }
+      } catch (gateError) {
+        console.error('Feature gate check failed:', gateError);
+        // Don't block on gate check failure — allow through
+      }
+    }
 
     if (!eventName && !currentDescription) {
       return NextResponse.json(

@@ -100,9 +100,9 @@ export default function LandingPage() {
             <div className="hidden md:flex items-center gap-8">
               <a href="#events" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Events</a>
               <a href="#features" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Features</a>
+              <a href="#pricing" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Pricing</a>
               <a href="#dashboard" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Dashboard</a>
               <a href="#mobile" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Mobile App</a>
-              <a href="#how-it-works" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">How It Works</a>
             </div>
 
             {/* CTA Buttons */}
@@ -136,9 +136,9 @@ export default function LandingPage() {
           <div className="md:hidden bg-[#fefff7] border-t border-black/5 px-6 py-6 space-y-4">
             <a href="#events" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Events</a>
             <a href="#features" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Features</a>
+            <a href="#pricing" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
             <a href="#dashboard" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Dashboard</a>
             <a href="#mobile" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Mobile App</a>
-            <a href="#how-it-works" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>How It Works</a>
             <div className="pt-4 flex flex-col gap-3">
               <Link href="/login" className="text-center text-[15px] font-semibold text-[#333] px-6 py-3 rounded-full border border-black/10">
                 Sign In
@@ -160,19 +160,18 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-[#f0f0f0] rounded-full px-4 py-2 mb-8">
             <Zap size={14} className="text-[#333]" />
-            <span className="text-[13px] font-semibold text-[#333]">Event management, reimagined</span>
+            <span className="text-[13px] font-semibold text-[#333]">Free to start</span>
           </div>
 
           {/* Headline */}
           <h1 className="text-[48px] md:text-[72px] lg:text-[88px] font-extrabold text-[#333] leading-[0.95] tracking-tight mb-6">
-            Create events<br />
-            <span className="text-[#a3a3a3]">people remember.</span>
+            Run professional events<br />
+            <span className="text-[#a3a3a3]">without the chaos.</span>
           </h1>
 
           {/* Subheadline */}
-          <p className="text-[18px] md:text-[20px] text-[#86868b] max-w-[600px] mx-auto mb-10 leading-relaxed">
-            One platform for organizers to manage events and attendees to discover them.
-            Dashboard to app, everything stays in sync.
+          <p className="text-[18px] md:text-[20px] text-[#86868b] max-w-[640px] mx-auto mb-10 leading-relaxed">
+            Everything you need to plan, promote, and manage your event — from speaker coordination to check-in day. Free to start.
           </p>
 
           {/* CTA Buttons */}
@@ -209,64 +208,57 @@ export default function LandingPage() {
 
 
       {/* ════════════════════════════════════════════════════
-          PLATFORM OVERVIEW — Two columns
+          VALUE PROPS — Plan it, Fill it, Run it
       ════════════════════════════════════════════════════ */}
       <section className="py-20 px-6 lg:px-12">
         <div className="max-w-[1280px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Organizer Card */}
-            <div className="bg-[#333] rounded-[32px] p-10 md:p-14 text-white relative overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Plan it */}
+            <div className="bg-[#333] rounded-[32px] p-10 text-white relative overflow-hidden">
               <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 mb-6">
-                  <Monitor size={14} />
-                  <span className="text-[13px] font-semibold">For Organizers</span>
+                <div className="w-[56px] h-[56px] bg-white/10 rounded-[18px] flex items-center justify-center mb-6">
+                  <Calendar size={24} className="text-white" />
                 </div>
-                <h2 className="text-[32px] md:text-[40px] font-extrabold leading-tight mb-4">
-                  Web Dashboard
-                </h2>
-                <p className="text-[16px] text-white/60 mb-8 max-w-[400px] leading-relaxed">
-                  Create events, manage attendees, scan tickets, send messages, and track analytics — all from one powerful dashboard.
+                <h3 className="text-[28px] md:text-[32px] font-extrabold leading-tight mb-3">
+                  Plan it
+                </h3>
+                <p className="text-[15px] text-white/50 leading-relaxed">
+                  Program builder, speaker invitations, team collaboration. Set up every detail before doors open.
                 </p>
-                <Link
-                  href="/register"
-                  className="inline-flex items-center gap-2 bg-white text-[#333] text-[15px] font-semibold px-6 py-3 rounded-full hover:bg-white/90 transition-colors"
-                >
-                  Create your first event <ArrowRight size={16} />
-                </Link>
               </div>
-              {/* Decorative */}
-              <div className="absolute -bottom-20 -right-20 w-[200px] h-[200px] bg-white/5 rounded-full" />
-              <div className="absolute -top-10 -right-10 w-[100px] h-[100px] bg-white/5 rounded-full" />
+              <div className="absolute -bottom-16 -right-16 w-[160px] h-[160px] bg-white/5 rounded-full" />
             </div>
 
-            {/* Attendee Card */}
-            <div className="bg-[#f0f0f0] rounded-[32px] p-10 md:p-14 relative overflow-hidden">
+            {/* Fill it */}
+            <div className="bg-[#f0f0f0] rounded-[32px] p-10 relative overflow-hidden">
               <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 mb-6">
-                  <Smartphone size={14} className="text-[#333]" />
-                  <span className="text-[13px] font-semibold text-[#333]">For Attendees</span>
+                <div className="w-[56px] h-[56px] bg-white rounded-[18px] flex items-center justify-center mb-6">
+                  <Ticket size={24} className="text-[#333]" />
                 </div>
-                <h2 className="text-[32px] md:text-[40px] font-extrabold text-[#333] leading-tight mb-4">
-                  Mobile App
-                </h2>
-                <p className="text-[16px] text-[#86868b] mb-8 max-w-[400px] leading-relaxed">
-                  Discover events, register instantly, get your QR ticket, receive real-time updates, and never miss a moment.
+                <h3 className="text-[28px] md:text-[32px] font-extrabold text-[#333] leading-tight mb-3">
+                  Fill it
+                </h3>
+                <p className="text-[15px] text-[#86868b] leading-relaxed">
+                  Beautiful event pages, QR tickets, email confirmations. Make it easy for people to show up.
                 </p>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <a
-                    href="https://apps.apple.com/gh/app/tikiti/id6751210748"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-[#333] text-white text-[15px] font-semibold px-6 py-3 rounded-full hover:bg-[#1a1a1a] transition-colors"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                    Download on iOS
-                  </a>
-                  <span className="text-[13px] text-[#86868b] font-medium">Android coming soon</span>
-                </div>
               </div>
-              {/* Decorative */}
-              <div className="absolute -bottom-20 -right-20 w-[200px] h-[200px] bg-black/5 rounded-full" />
+              <div className="absolute -bottom-16 -right-16 w-[160px] h-[160px] bg-black/5 rounded-full" />
+            </div>
+
+            {/* Run it */}
+            <div className="bg-[#333] rounded-[32px] p-10 text-white relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="w-[56px] h-[56px] bg-white/10 rounded-[18px] flex items-center justify-center mb-6">
+                  <BarChart3 size={24} className="text-white" />
+                </div>
+                <h3 className="text-[28px] md:text-[32px] font-extrabold leading-tight mb-3">
+                  Run it
+                </h3>
+                <p className="text-[15px] text-white/50 leading-relaxed">
+                  QR check-in, live attendee tracking, real-time analytics. Stay in control on the big day.
+                </p>
+              </div>
+              <div className="absolute -bottom-16 -right-16 w-[160px] h-[160px] bg-white/5 rounded-full" />
             </div>
           </div>
         </div>
@@ -285,10 +277,11 @@ export default function LandingPage() {
               <span className="text-[13px] font-semibold text-[#333]">Features</span>
             </div>
             <h2 className="text-[36px] md:text-[48px] font-extrabold text-[#333] leading-tight mb-4">
-              Everything you need,<br />nothing you don&apos;t.
+              Everything you need,<br />
+              <span className="text-[#a3a3a3]">nothing you don&apos;t.</span>
             </h2>
-            <p className="text-[16px] text-[#86868b] max-w-[500px] mx-auto">
-              From event creation to post-event feedback, Tikiti covers the entire event lifecycle.
+            <p className="text-[16px] text-[#86868b] max-w-[520px] mx-auto">
+              From event creation to post-event analytics — every feature is included on the free plan. No paywalls, no surprises.
             </p>
           </div>
 
@@ -353,6 +346,131 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+
+      {/* ════════════════════════════════════════════════════
+          PRICING SECTION
+      ════════════════════════════════════════════════════ */}
+      <section id="pricing" className="py-24 px-6 lg:px-12 bg-[#f0f0f0]">
+        <div className="max-w-[1280px] mx-auto">
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 mb-6">
+              <Zap size={14} className="text-[#333]" />
+              <span className="text-[13px] font-semibold text-[#333]">Simple Pricing</span>
+            </div>
+            <h2 className="text-[36px] md:text-[48px] font-extrabold text-[#333] leading-tight mb-4">
+              All features free.<br />
+              <span className="text-[#a3a3a3]">Upgrade when you grow.</span>
+            </h2>
+            <p className="text-[16px] text-[#86868b] max-w-[520px] mx-auto">
+              No feature walls. Every tool is available on the free plan.
+              Only upgrade when you need more than one active event.
+            </p>
+          </div>
+
+          {/* Pricing Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[800px] mx-auto">
+            {/* Free Plan */}
+            <div className="bg-white rounded-[24px] p-8 relative">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-[48px] h-[48px] bg-[#f0f0f0] rounded-[16px] flex items-center justify-center">
+                  <Zap size={22} className="text-[#333]" />
+                </div>
+                <div>
+                  <h3 className="text-[20px] font-bold text-[#333]">Free</h3>
+                  <p className="text-[13px] text-[#86868b]">Everything you need to get started</p>
+                </div>
+              </div>
+              <div className="mb-6">
+                <span className="text-[48px] font-extrabold text-[#333]">$0</span>
+                <span className="text-[16px] text-[#86868b] font-medium">/forever</span>
+              </div>
+              <div className="space-y-3 mb-8">
+                {[
+                  '1 active event',
+                  'Unlimited attendees',
+                  'Unlimited team members',
+                  'QR ticketing & check-in',
+                  'Attendee messaging',
+                  'AI event descriptions',
+                  'Analytics & reports',
+                  'Bulk email',
+                  'Custom branding',
+                ].map((feature) => (
+                  <div key={feature} className="flex items-center gap-3">
+                    <div className="w-[20px] h-[20px] bg-[#f0f0f0] rounded-full flex items-center justify-center shrink-0">
+                      <Check size={12} className="text-[#333]" />
+                    </div>
+                    <span className="text-[14px] text-[#555]">{feature}</span>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href="/register"
+                className="block w-full text-center bg-[#f0f0f0] text-[#333] text-[15px] font-semibold py-3.5 rounded-full hover:bg-[#e5e5e5] transition-colors"
+              >
+                Get started free
+              </Link>
+            </div>
+
+            {/* Pro Plan */}
+            <div className="bg-[#333] rounded-[24px] p-8 relative text-white">
+              {/* Recommended Badge */}
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span className="bg-[#333] text-white text-[12px] font-bold uppercase tracking-wider px-4 py-1.5 rounded-full border-2 border-[#f0f0f0]">
+                  Most Popular
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-[48px] h-[48px] bg-white/10 rounded-[16px] flex items-center justify-center">
+                  <Star size={22} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-[20px] font-bold">Pro</h3>
+                  <p className="text-[13px] text-white/50">For growing organisations</p>
+                </div>
+              </div>
+              <div className="mb-6">
+                <span className="text-[48px] font-extrabold">$2.99</span>
+                <span className="text-[16px] text-white/50 font-medium">/month</span>
+              </div>
+              <div className="space-y-3 mb-8">
+                {[
+                  'Unlimited active events',
+                  'Unlimited attendees',
+                  'Unlimited team members',
+                  'QR ticketing & check-in',
+                  'Attendee messaging',
+                  'AI event descriptions',
+                  'Analytics & reports',
+                  'Bulk email',
+                  'Custom branding',
+                  'Priority support',
+                ].map((feature) => (
+                  <div key={feature} className="flex items-center gap-3">
+                    <div className="w-[20px] h-[20px] bg-white/10 rounded-full flex items-center justify-center shrink-0">
+                      <Check size={12} className="text-white" />
+                    </div>
+                    <span className="text-[14px] text-white/70">{feature}</span>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href="/register"
+                className="block w-full text-center bg-white text-[#333] text-[15px] font-semibold py-3.5 rounded-full hover:bg-white/90 transition-colors"
+              >
+                Start with Pro
+              </Link>
+            </div>
+          </div>
+
+          {/* Bottom note */}
+          <p className="text-center text-[13px] text-[#86868b] mt-8 max-w-[400px] mx-auto">
+            No credit card required for the free plan. Upgrade or downgrade anytime.
+          </p>
         </div>
       </section>
 
@@ -794,8 +912,8 @@ export default function LandingPage() {
           <h2 className="text-[36px] md:text-[56px] font-extrabold text-[#333] leading-tight mb-6">
             Ready to create your<br />next event?
           </h2>
-          <p className="text-[18px] text-[#86868b] max-w-[500px] mx-auto mb-10">
-            Join organizers who trust Tikiti to manage their events. Sign up free and create your first event in minutes.
+          <p className="text-[18px] text-[#86868b] max-w-[540px] mx-auto mb-10">
+            Join organizers who use Tikiti to plan, promote, and run professional events. All features included — free to start.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

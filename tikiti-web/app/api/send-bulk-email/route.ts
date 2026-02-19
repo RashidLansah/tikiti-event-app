@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { emailService } from '@/lib/services/emailService';
+import { getAdminFirestore } from '@/lib/firebase/admin';
+import { canSendBulkEmail, getUpgradeMessage } from '@/lib/billing/featureGate';
+import type { Organization } from '@/lib/services/organizationService';
 
 interface Recipient {
   email: string;
@@ -11,12 +14,34 @@ interface RequestBody {
   subject: string;
   message: string;
   eventName: string;
+  orgId?: string; // For feature gating
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: RequestBody = await request.json();
-    const { recipients, subject, message, eventName } = body;
+    const { recipients, subject, message, eventName, orgId } = body;
+
+    // Feature gate: check if org can send bulk emails
+    if (orgId) {
+      try {
+        const db = getAdminFirestore();
+        const orgDoc = await db.collection('organizations').doc(orgId).get();
+        if (orgDoc.exists) {
+          const org = orgDoc.data() as Organization;
+          const emailCheck = canSendBulkEmail(org);
+          if (!emailCheck.allowed) {
+            return NextResponse.json(
+              { error: getUpgradeMessage(emailCheck.requiredPlan!), upgradeRequired: true, requiredPlan: emailCheck.requiredPlan },
+              { status: 403 }
+            );
+          }
+        }
+      } catch (gateError) {
+        console.error('Feature gate check failed:', gateError);
+        // Don't block on gate check failure — allow through
+      }
+    }
 
     if (!recipients || recipients.length === 0) {
       return NextResponse.json(

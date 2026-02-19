@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { organizationService, Organization } from '@/lib/services/organizationService';
 import { invitationService, Invitation } from '@/lib/services/invitationService';
+import { getAllPlans, normalizePlanId, formatLimit, type Plan, type PlanId } from '@/lib/billing/plans';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -24,6 +26,11 @@ import {
   X,
   Link2,
   Copy,
+  Star,
+  Zap,
+  Loader2,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastContainer } from '@/components/ui/toast';
@@ -32,6 +39,7 @@ import InviteMemberModal from '@/components/InviteMemberModal';
 export default function SettingsPage() {
   const { currentOrganization, currentOrgRole, refreshOrganizations, user, userProfile } = useAuth();
   const { toast, toasts, dismiss } = useToast();
+  const searchParams = useSearchParams();
   const [saving, setSaving] = useState(false);
   const [orgData, setOrgData] = useState<Partial<Organization>>({});
   const [members, setMembers] = useState<any[]>([]);
@@ -39,7 +47,13 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [showInviteModal, setShowInviteModal] = useState(false);
 
+  // Billing state
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+
   const isOwnerOrAdmin = currentOrgRole === 'owner' || currentOrgRole === 'admin';
+  const isOwner = currentOrgRole === 'owner';
 
   useEffect(() => {
     if (currentOrganization) {
@@ -76,6 +90,162 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Error loading invitations:', error);
     }
+  };
+
+  // Handle Paystack callback — verify payment when redirected back
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const billing = searchParams.get('billing');
+    const trxref = searchParams.get('trxref') || searchParams.get('reference');
+
+    if (tab === 'subscription') {
+      setActiveTab('subscription');
+    }
+
+    if (billing === 'verify' && trxref && currentOrganization?.id) {
+      verifyPayment(trxref);
+    }
+  }, [searchParams, currentOrganization?.id]);
+
+  const verifyPayment = async (reference: string) => {
+    setVerifyingPayment(true);
+    try {
+      const response = await fetch('/api/billing/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference,
+          orgId: currentOrganization?.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: 'Subscription activated!',
+          description: data.message || `You're now on the ${data.planName} plan.`,
+          variant: 'success',
+        });
+        // Refresh org data to get updated subscription
+        await refreshOrganizations();
+      } else {
+        toast({
+          title: 'Payment verification failed',
+          description: data.error || 'Please contact support if you were charged.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to verify payment. Please contact support.',
+        variant: 'destructive',
+      });
+    } finally {
+      setVerifyingPayment(false);
+      // Clean URL params
+      window.history.replaceState({}, '', '/dashboard/settings?tab=subscription');
+    }
+  };
+
+  const handleUpgrade = async (planId: PlanId) => {
+    if (!currentOrganization?.id || !isOwner) return;
+
+    if (!currentOrganization.email) {
+      toast({
+        title: 'Email required',
+        description: 'Please add an organization email in the General tab before upgrading.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setBillingLoading(true);
+    try {
+      const response = await fetch('/api/billing/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId,
+          orgId: currentOrganization.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.authorizationUrl) {
+        // Redirect to Paystack checkout
+        window.location.href = data.authorizationUrl;
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to initialize payment.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Upgrade error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to start upgrade. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!currentOrganization?.id || !isOwner) return;
+
+    setBillingLoading(true);
+    try {
+      const response = await fetch('/api/billing/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cancel',
+          orgId: currentOrganization.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: 'Subscription cancelled',
+          description: data.message,
+          variant: 'success',
+        });
+        setShowCancelModal(false);
+        await refreshOrganizations();
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to cancel subscription.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Cancel subscription error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to cancel subscription. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  // Get current plan info
+  const currentPlanId = normalizePlanId(currentOrganization?.subscription?.plan);
+  const plans = getAllPlans();
+  const planIcons: Record<PlanId, React.ReactNode> = {
+    starter: <Zap className="w-6 h-6" />,
+    pro: <Star className="w-6 h-6" />,
   };
 
   const handleInviteMember = async (email: string, role: string) => {
@@ -821,59 +991,273 @@ export default function SettingsPage() {
       )}
 
       {activeTab === 'subscription' && (
-        <div className="bg-white border border-black/10 rounded-[24px] p-8">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-14 h-14 rounded-[16px] bg-[#f0f0f0] flex items-center justify-center">
-              <CreditCard className="w-7 h-7 text-[#333]" />
+        <div className="space-y-5">
+          {/* Payment verification banner */}
+          {verifyingPayment && (
+            <div className="bg-blue-50 border border-blue-200 rounded-[24px] p-6 flex items-center gap-4">
+              <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+              <div>
+                <p className="text-base font-semibold text-blue-900">Verifying your payment...</p>
+                <p className="text-sm text-blue-700">Please wait while we confirm your subscription.</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-[#333]">Current Subscription</h2>
-              <p className="text-base text-[#333]">View your plan and usage</p>
-            </div>
-          </div>
+          )}
 
-          <div className="flex items-center justify-between p-6 bg-[#f0f0f0] rounded-[24px] mb-6 max-w-lg">
-            <div>
-              <p className="text-sm text-[#86868b]">Current Plan</p>
-              <p className="text-2xl font-semibold text-[#333] capitalize">
-                {currentOrganization?.subscription?.plan || 'Free'} Plan
-              </p>
+          {/* Past due warning */}
+          {currentOrganization?.subscription?.status === 'past_due' && (
+            <div className="bg-red-50 border border-red-200 rounded-[24px] p-6 flex items-center gap-4">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+              <div>
+                <p className="text-base font-semibold text-red-900">Payment failed</p>
+                <p className="text-sm text-red-700">Your last payment failed. Please update your payment method to keep your plan active.</p>
+              </div>
             </div>
-            <span className={`px-4 py-2 rounded-full text-base font-semibold ${
-              currentOrganization?.subscription?.status === 'active'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-[#f0f0f0] text-[#86868b]'
-            }`}>
-              {currentOrganization?.subscription?.status || 'Active'}
-            </span>
-          </div>
+          )}
 
-          <div className="space-y-4 max-w-lg">
-            <p className="text-base font-semibold text-[#333]">Plan Features</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              {[
-                'Unlimited events',
-                'Team collaboration',
-                'Analytics dashboard',
-                'Custom branding',
-                'Priority support',
-                'API access'
-              ].map((feature, index) => (
-                <div key={index} className="flex items-center gap-3 text-base text-[#333]">
-                  <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                    <Check className="w-4 h-4 text-green-600" />
-                  </div>
-                  {feature}
+          {/* Current plan summary */}
+          <div className="bg-white border border-black/10 rounded-[24px] p-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-14 h-14 rounded-[16px] bg-[#f0f0f0] flex items-center justify-center">
+                <CreditCard className="w-7 h-7 text-[#333]" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-[#333]">Subscription</h2>
+                <p className="text-base text-[#86868b]">Manage your plan and billing</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-6 bg-[#f0f0f0] rounded-[20px] mb-2">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-[14px] bg-white flex items-center justify-center text-[#333]">
+                  {planIcons[currentPlanId]}
                 </div>
-              ))}
+                <div>
+                  <p className="text-sm text-[#86868b]">Current Plan</p>
+                  <p className="text-2xl font-bold text-[#333] capitalize">
+                    {currentPlanId === 'starter' ? 'Free' : 'Pro'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {(currentOrganization?.subscription as any)?.cancelAtPeriodEnd && (
+                  <span className="px-4 py-2 rounded-full text-sm font-semibold bg-amber-100 text-amber-800">
+                    Cancels at period end
+                  </span>
+                )}
+                <span className={`px-4 py-2 rounded-full text-base font-semibold ${
+                  currentOrganization?.subscription?.status === 'active'
+                    ? 'bg-green-100 text-green-800'
+                    : currentOrganization?.subscription?.status === 'past_due'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-[#e8e8e8] text-[#86868b]'
+                }`}>
+                  {currentOrganization?.subscription?.status === 'past_due' ? 'Past Due' :
+                   currentOrganization?.subscription?.status || 'Active'}
+                </span>
+              </div>
             </div>
+
+            {/* Billing info for paid plans */}
+            {currentPlanId !== 'starter' && currentOrganization?.subscription?.nextPaymentDate && (
+              <div className="flex items-center gap-6 px-6 py-3 text-sm text-[#86868b]">
+                <span>Next billing: {new Date(currentOrganization.subscription.nextPaymentDate?.seconds ? currentOrganization.subscription.nextPaymentDate.seconds * 1000 : currentOrganization.subscription.nextPaymentDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+            )}
           </div>
 
-          <button className="mt-8 inline-flex items-center gap-2 bg-[#f0f0f0] text-[#333] px-6 py-3 rounded-full text-base font-semibold hover:bg-[#e8e8e8] transition-colors">
-            <CreditCard className="w-5 h-5" />
-            Upgrade Plan
-            <ArrowRight className="w-5 h-5" />
-          </button>
+          {/* Plan comparison cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl">
+            {plans.map((plan) => {
+              const isCurrent = plan.id === currentPlanId;
+              const isUpgrade = plans.indexOf(plan) > plans.findIndex(p => p.id === currentPlanId);
+              const isDowngrade = plans.indexOf(plan) < plans.findIndex(p => p.id === currentPlanId);
+
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative bg-white border rounded-[24px] p-6 flex flex-col ${
+                    plan.highlighted && !isCurrent
+                      ? 'border-[#333] border-2'
+                      : isCurrent
+                      ? 'border-green-300 border-2 bg-green-50/30'
+                      : 'border-black/10'
+                  }`}
+                >
+                  {/* Recommended badge */}
+                  {plan.highlighted && !isCurrent && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="inline-flex items-center gap-1.5 bg-[#333] text-white px-4 py-1.5 rounded-full text-xs font-bold">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Recommended
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Current plan badge */}
+                  {isCurrent && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="inline-flex items-center gap-1.5 bg-green-600 text-white px-4 py-1.5 rounded-full text-xs font-bold">
+                        <Check className="w-3.5 h-3.5" />
+                        Current Plan
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Plan header */}
+                  <div className="flex items-center gap-3 mb-4 mt-2">
+                    <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center ${
+                      isCurrent ? 'bg-green-100 text-green-700' : 'bg-[#f0f0f0] text-[#333]'
+                    }`}>
+                      {planIcons[plan.id]}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-[#333]">{plan.name}</h3>
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  <div className="mb-4">
+                    {plan.price === 0 ? (
+                      <p className="text-3xl font-extrabold text-[#333]">Free</p>
+                    ) : (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-extrabold text-[#333]">${plan.price}</span>
+                        <span className="text-sm font-semibold text-[#86868b]">/mo</span>
+                      </div>
+                    )}
+                    <p className="text-sm text-[#86868b] mt-1">{plan.description}</p>
+                  </div>
+
+                  {/* Limits */}
+                  <div className="space-y-3 mb-6 flex-1">
+                    <p className="text-xs font-bold text-[#86868b] uppercase tracking-wider">Limits</p>
+                    <div className="space-y-2">
+                      {[
+                        { label: 'Active events', value: plan.limits.maxActiveEvents },
+                        { label: 'Attendees/event', value: plan.limits.maxAttendeesPerEvent },
+                        { label: 'Team members', value: plan.limits.maxTeamMembers },
+                        { label: 'Speakers/event', value: plan.limits.maxSpeakersPerEvent },
+                      ].map((limit) => (
+                        <div key={limit.label} className="flex items-center justify-between text-sm">
+                          <span className="text-[#86868b]">{limit.label}</span>
+                          <span className="font-semibold text-[#333]">{formatLimit(limit.value)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-xs font-bold text-[#86868b] uppercase tracking-wider pt-2">Features</p>
+                    <div className="space-y-2">
+                      {[
+                        { label: 'AI description', enabled: plan.features.aiDescription },
+                        { label: 'Bulk email', enabled: plan.features.bulkEmail },
+                        { label: 'Analytics export', enabled: plan.features.analyticsExport },
+                        { label: 'Custom branding', enabled: plan.features.customBranding },
+                        { label: 'Priority support', enabled: plan.features.prioritySupport },
+                      ].map((feature) => (
+                        <div key={feature.label} className="flex items-center gap-2 text-sm">
+                          {feature.enabled ? (
+                            <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                              <Check className="w-3 h-3 text-green-600" />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-[#f0f0f0] flex items-center justify-center">
+                              <X className="w-3 h-3 text-[#ccc]" />
+                            </div>
+                          )}
+                          <span className={feature.enabled ? 'text-[#333]' : 'text-[#ccc]'}>
+                            {feature.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action button */}
+                  <div className="mt-auto">
+                    {isCurrent ? (
+                      currentPlanId !== 'starter' && isOwner ? (
+                        <button
+                          onClick={() => setShowCancelModal(true)}
+                          disabled={billingLoading}
+                          className="w-full py-3 rounded-full text-sm font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                        >
+                          Cancel Plan
+                        </button>
+                      ) : (
+                        <div className="w-full py-3 rounded-full text-sm font-semibold text-center text-[#86868b] bg-[#f0f0f0]">
+                          Current Plan
+                        </div>
+                      )
+                    ) : isUpgrade && isOwner ? (
+                      <button
+                        onClick={() => handleUpgrade(plan.id)}
+                        disabled={billingLoading}
+                        className={`w-full py-3 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 ${
+                          plan.highlighted
+                            ? 'bg-[#333] text-white hover:bg-[#444]'
+                            : 'bg-[#f0f0f0] text-[#333] hover:bg-[#e8e8e8]'
+                        }`}
+                      >
+                        {billingLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            Upgrade to {plan.name}
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    ) : !isOwner ? (
+                      <div className="w-full py-3 rounded-full text-sm font-semibold text-center text-[#86868b] bg-[#f0f0f0]">
+                        Only owners can manage billing
+                      </div>
+                    ) : (
+                      <div className="w-full py-3 rounded-full text-sm font-semibold text-center text-[#86868b] bg-[#f0f0f0]">
+                        {plan.name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Cancel confirmation modal */}
+          {showCancelModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-[24px] p-8 max-w-md w-full mx-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-[#333]">Cancel Subscription?</h3>
+                </div>
+                <p className="text-base text-[#86868b] mb-6">
+                  Your plan will be downgraded to the Free plan at the end of your current billing period.
+                  You&apos;ll be limited to 1 active event and won&apos;t have access to priority support.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCancelModal(false)}
+                    className="flex-1 py-3 rounded-full text-sm font-semibold bg-[#f0f0f0] text-[#333] hover:bg-[#e8e8e8] transition-colors"
+                  >
+                    Keep My Plan
+                  </button>
+                  <button
+                    onClick={handleCancelSubscription}
+                    disabled={billingLoading}
+                    className="flex-1 py-3 rounded-full text-sm font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {billingLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      'Yes, Cancel'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

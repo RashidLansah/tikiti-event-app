@@ -94,10 +94,17 @@ export interface Organization {
   email?: string;
   phone?: string;
   subscription: {
-    plan: 'free' | 'starter' | 'pro' | 'enterprise';
-    status: 'active' | 'trial' | 'expired';
+    plan: 'free' | 'starter' | 'pro' | 'enterprise' | 'business';
+    status: 'active' | 'trial' | 'expired' | 'past_due';
     startDate: any;
     endDate: any;
+    // Paystack billing fields
+    paystackCustomerCode?: string;
+    paystackSubscriptionCode?: string;
+    paystackAuthorizationCode?: string;
+    paystackEmailToken?: string;
+    lastPaymentDate?: any;
+    nextPaymentDate?: any;
   };
   settings: {
     branding: {
