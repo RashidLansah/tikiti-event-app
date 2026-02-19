@@ -434,7 +434,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="mb-6">
-                <span className="text-[48px] font-extrabold">GHS 29</span>
+                <span className="text-[48px] font-extrabold">$1.99</span>
                 <span className="text-[16px] text-white/50 font-medium">/month</span>
               </div>
               <div className="space-y-3 mb-8">

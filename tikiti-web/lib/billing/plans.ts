@@ -20,8 +20,10 @@ export interface PlanFeatures {
 export interface Plan {
   id: PlanId;
   name: string;
-  price: number; // in GHS
-  currency: string;
+  price: number; // actual charge amount in billing currency (GHS)
+  currency: string; // billing currency for Paystack (GHS)
+  displayPrice: number; // price shown in UI (USD equivalent)
+  displayCurrency: string; // currency shown in UI (USD)
   interval: 'monthly';
   description: string;
   limits: PlanLimits;
@@ -36,6 +38,8 @@ export const PLANS: Record<PlanId, Plan> = {
     name: 'Free',
     price: 0,
     currency: 'GHS',
+    displayPrice: 0,
+    displayCurrency: 'USD',
     interval: 'monthly',
     description: 'Everything you need for your first event',
     limits: {
@@ -58,6 +62,8 @@ export const PLANS: Record<PlanId, Plan> = {
     name: 'Pro',
     price: 29,
     currency: 'GHS',
+    displayPrice: 1.99,
+    displayCurrency: 'USD',
     interval: 'monthly',
     description: 'Unlimited events for growing organisations',
     limits: {
@@ -138,8 +144,8 @@ export function isUpgrade(fromPlan: string, toPlan: string): boolean {
  * Format price for display
  */
 export function formatPrice(plan: Plan): string {
-  if (plan.price === 0) return 'Free';
-  return `GHS ${plan.price}/mo`;
+  if (plan.displayPrice === 0) return 'Free';
+  return `$${plan.displayPrice}/mo`;
 }
 
 /**
