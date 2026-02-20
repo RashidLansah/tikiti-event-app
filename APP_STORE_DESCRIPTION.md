@@ -1,58 +1,49 @@
 # Tikiti - App Store Description
 
 ## App Name
-Tikiti - Event Discovery & Management
+Tikiti - Event Discovery & Tickets
 
 ## Subtitle
-Discover events, create experiences, manage tickets
+Discover events, register, get QR tickets
+
+## Promotional Text
+Discover events near you. Register instantly, get QR tickets, follow the program, and join virtual events — all in one app. Your next experience starts here.
 
 ## Description
 
 **Discover Amazing Events Near You**
 
-Tikiti is the modern event platform that connects event organizers with attendees, making it easier than ever to discover, create, and manage events in your area.
+Tikiti makes it easy to find, register for, and attend events — whether in-person, virtual, or hybrid. Browse events, grab your tickets instantly, and get everything you need for event day.
 
-**For Event Attendees:**
-• Discover local events across all categories - music, food, sports, networking, and more
-• Browse events with beautiful, detailed descriptions and photos
-• RSVP or purchase tickets seamlessly within the app
-• Download digital tickets with QR codes for easy entry
-• Get personalized event recommendations based your interests
-• Share events with friends and family
-• Track your event history and upcoming events
+**Discover & Register:**
+• Browse events by category — music, food, sports, networking, and more
+• Filter by Live Now, Today, This Week, or This Month
+• Register for free events or purchase tickets seamlessly
+• Get instant digital QR tickets — no printing needed
+
+**Stay in the Loop:**
+• View the full event program with sessions, times, and speakers
+• Get real-time updates and announcements from organizers
+• Submit feedback and surveys after the event
+
+**Virtual & Hybrid Events:**
+• Join online events via Zoom, Google Meet, or Microsoft Teams
+• Attend hybrid events with both in-person and virtual options
+• Access meeting links directly from the app
+
+**Your Tickets, Your Way:**
+• QR code tickets for seamless check-in
+• Share tickets and event details with friends
+• Track upcoming and past events in My Events
+• Cancel registrations anytime
 
 **For Event Organizers:**
-• Create and publish events with rich media and detailed information
-• Manage ticket sales and track attendee registrations
-• Scan QR codes for quick ticket validation at event entry
-• View real-time analytics and attendee insights
-• Send updates and notifications to attendees
-• Export attendee lists and manage event logistics
-• Professional dashboard for managing multiple events
+Create and manage events through our web dashboard at tikiti.com — with tools for speaker coordination, attendee tracking, QR check-in, and real-time analytics.
 
-**Key Features:**
-✨ Beautiful, intuitive interface designed for both organizers and attendees
-🎫 Digital tickets with secure QR codes
-📊 Real-time analytics and reporting
-🔍 Smart event discovery and search
-📱 Offline ticket viewing and scanning
-🔐 Secure payment processing
-📧 Automated email confirmations and reminders
-🌍 Location-based event recommendations
-
-**Why Choose Tikiti?**
-• **User-Friendly**: Clean, modern design that's easy to navigate
-• **Secure**: Enterprise-grade security for all transactions and data
-• **Reliable**: Built with cutting-edge technology for smooth performance
-• **Comprehensive**: Everything you need for events in one app
-• **Support**: Dedicated customer support team
-
-Whether you're looking to discover your next favorite event or organize memorable experiences for others, Tikiti provides all the tools you need in one powerful, easy-to-use platform.
-
-Download Tikiti today and join thousands of event enthusiasts in your area!
+Download Tikiti today and never miss an event again!
 
 ## Keywords
-events, tickets, event management, local events, event discovery, QR codes, event organizer, RSVP, concerts, festivals, networking, meetups
+events, tickets, QR tickets, virtual events, hybrid events, event discovery, speakers, conferences
 
 ## App Category
 **Primary**: Lifestyle
@@ -61,25 +52,20 @@ events, tickets, event management, local events, event discovery, QR codes, even
 ## Age Rating
 4+ (Suitable for all ages)
 
-## App Store Screenshots Needed
-1. **Event Discovery Screen** - Showing beautiful event cards
-2. **Event Detail Screen** - Rich event information and RSVP button
-3. **Ticket Screen** - Digital ticket with QR code
-4. **Organizer Dashboard** - Event management interface
-5. **QR Scanner** - Ticket validation screen
-6. **Create Event** - Event creation form
+## App Store Screenshots
+1. **Events** - Event discovery and browsing screen
+2. **Event Detail (Before Registration)** - Event info with register button
+3. **Event Detail (After Registration)** - Ticket, program, updates, and feedback tabs
+4. **Profile** - User profile with ticket stats
 
-## What's New (Version 1.0.0)
-🎉 Welcome to Tikiti!
-
-• Discover amazing local events
-• Create and manage your own events
-• Digital tickets with QR codes
-• Real-time event analytics
-• Beautiful, modern design
-• Secure payment processing
-
-This is our initial release - we're excited to help you discover and create amazing events!
+## What's New (Version 1.8.0)
+• Redesigned UI — fresh new look across the entire app
+• Virtual & hybrid event support with Zoom, Google Meet, and Teams
+• Event program tab — view sessions, speakers, and schedules
+• Real-time organizer updates and announcements
+• Post-event feedback and surveys
+• Smoother event browsing and registration
+• Bug fixes and performance improvements
 
 ## Support Information
 - **Support Email**: support@tikiti.com
@@ -92,7 +78,7 @@ This is our initial release - we're excited to help you discover and create amaz
 - **SKU**: tikiti-event-app-001
 - **Price**: Free (with optional in-app purchases for premium features)
 - **Availability**: All countries and regions
-- **App Review Information**: 
+- **App Review Information**:
   - Contact: [Your Name]
   - Phone: [Your Phone]
   - Email: [Your Email]
