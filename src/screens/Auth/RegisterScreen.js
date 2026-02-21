@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  InteractionManager,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
@@ -18,14 +17,57 @@ import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 import logger from '../../utils/logger';
 
+// Memoized password field component to prevent re-renders from parent state changes
+// On Android, any re-render of a component containing secureTextEntry TextInputs
+// causes the native EditText to be recreated, resulting in focus loss/blink
+const PasswordField = memo(({
+  label,
+  placeholder,
+  value,
+  onChangeText,
+  showPassword,
+  onTogglePassword,
+  inputRef
+}) => {
+  return (
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.inputContainer}>
+        <Feather name="lock" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
+        <TextInput
+          ref={inputRef}
+          style={styles.input}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={Colors.text.tertiary}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+        />
+        <TouchableOpacity
+          onPress={onTogglePassword}
+          style={styles.eyeIcon}
+          activeOpacity={0.7}
+        >
+          <Feather
+            name={showPassword ? 'eye-off' : 'eye'}
+            size={20}
+            color={Colors.text.tertiary}
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
 const RegisterScreen = ({ navigation, route }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
-    confirmPassword: '',
   });
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,6 +75,21 @@ const RegisterScreen = ({ navigation, route }) => {
   const [focusedInput, setFocusedInput] = useState(null);
   const passwordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
+
+  // Stable callbacks for password fields to prevent PasswordField re-renders
+  const handleTogglePassword = useCallback(() => {
+    setShowPassword(prev => !prev);
+    if (Platform.OS === 'android') {
+      setTimeout(() => passwordRef.current?.focus(), 100);
+    }
+  }, []);
+
+  const handleToggleConfirmPassword = useCallback(() => {
+    setShowConfirmPassword(prev => !prev);
+    if (Platform.OS === 'android') {
+      setTimeout(() => confirmPasswordRef.current?.focus(), 100);
+    }
+  }, []);
 
   const { register } = useAuth();
   const accountType = selectedAccountType;
@@ -43,17 +100,21 @@ const RegisterScreen = ({ navigation, route }) => {
 
   const handleInputFocus = (inputName) => {
     if (Platform.OS === 'android') {
-      InteractionManager.runAfterInteractions(() => {
-        setFocusedInput(inputName);
-      });
-    } else {
-      setFocusedInput(inputName);
+      return; // Skip focus styling on Android to prevent secureTextEntry re-render blink
     }
+    setFocusedInput(inputName);
+  };
+
+  const handleInputBlur = () => {
+    if (Platform.OS === 'android') {
+      return; // Skip blur styling on Android to match
+    }
+    setFocusedInput(null);
   };
 
   const validateForm = () => {
-    const { firstName, lastName, email, password, confirmPassword } = formData;
-    
+    const { firstName, lastName, email } = formData;
+
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return false;
@@ -84,7 +145,7 @@ const RegisterScreen = ({ navigation, route }) => {
     setLoading(true);
     
     try {
-      const { firstName, lastName, email, password } = formData;
+      const { firstName, lastName, email } = formData;
       const displayName = `${firstName} ${lastName}`;
       
       // Create user profile data
@@ -113,12 +174,12 @@ const RegisterScreen = ({ navigation, route }) => {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -252,7 +313,7 @@ const RegisterScreen = ({ navigation, route }) => {
                   placeholderTextColor={Colors.text.tertiary}
                   autoCapitalize="words"
                   onFocus={() => handleInputFocus('firstName')}
-                  onBlur={() => setFocusedInput(null)}
+                  onBlur={handleInputBlur}
                 />
               </View>
             </View>
@@ -272,7 +333,7 @@ const RegisterScreen = ({ navigation, route }) => {
                   placeholderTextColor={Colors.text.tertiary}
                   autoCapitalize="words"
                   onFocus={() => handleInputFocus('lastName')}
-                  onBlur={() => setFocusedInput(null)}
+                  onBlur={handleInputBlur}
                 />
               </View>
             </View>
@@ -296,88 +357,32 @@ const RegisterScreen = ({ navigation, route }) => {
                 autoCapitalize="none"
                 autoCorrect={false}
                 onFocus={() => handleInputFocus('email')}
-                onBlur={() => setFocusedInput(null)}
+                onBlur={handleInputBlur}
               />
             </View>
           </View>
 
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={[
-              styles.inputContainer,
-              focusedInput === 'password' && styles.inputContainerFocused
-            ]}>
-              <Feather name="lock" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
-              <TextInput
-                ref={passwordRef}
-                style={styles.input}
-                value={formData.password}
-                onChangeText={(value) => updateFormData('password', value)}
-                placeholder="Create a password"
-                placeholderTextColor={Colors.text.tertiary}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                onFocus={() => handleInputFocus('password')}
-                onBlur={() => setFocusedInput(null)}
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  setShowPassword(!showPassword);
-                  if (Platform.OS === 'android') {
-                    setTimeout(() => passwordRef.current?.focus(), 100);
-                  }
-                }}
-                style={styles.eyeIcon}
-                activeOpacity={0.7}
-              >
-                <Feather 
-                  name={showPassword ? 'eye-off' : 'eye'} 
-                  size={20} 
-                  color={Colors.text.tertiary} 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
+          {/* Password Input - Memoized to prevent Android secureTextEntry blink */}
+          <PasswordField
+            label="Password"
+            placeholder="Create a password"
+            value={password}
+            onChangeText={setPassword}
+            showPassword={showPassword}
+            onTogglePassword={handleTogglePassword}
+            inputRef={passwordRef}
+          />
 
-          {/* Confirm Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <View style={[
-              styles.inputContainer,
-              focusedInput === 'confirmPassword' && styles.inputContainerFocused
-            ]}>
-              <Feather name="lock" size={20} color={Colors.text.tertiary} style={styles.inputIcon} />
-              <TextInput
-                ref={confirmPasswordRef}
-                style={styles.input}
-                value={formData.confirmPassword}
-                onChangeText={(value) => updateFormData('confirmPassword', value)}
-                placeholder="Confirm your password"
-                placeholderTextColor={Colors.text.tertiary}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                onFocus={() => handleInputFocus('confirmPassword')}
-                onBlur={() => setFocusedInput(null)}
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  setShowConfirmPassword(!showConfirmPassword);
-                  if (Platform.OS === 'android') {
-                    setTimeout(() => confirmPasswordRef.current?.focus(), 100);
-                  }
-                }}
-                style={styles.eyeIcon}
-                activeOpacity={0.7}
-              >
-                <Feather 
-                  name={showConfirmPassword ? 'eye-off' : 'eye'} 
-                  size={20} 
-                  color={Colors.text.tertiary} 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
+          {/* Confirm Password Input - Memoized to prevent Android secureTextEntry blink */}
+          <PasswordField
+            label="Confirm Password"
+            placeholder="Confirm your password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            showPassword={showConfirmPassword}
+            onTogglePassword={handleToggleConfirmPassword}
+            inputRef={confirmPasswordRef}
+          />
 
           {/* Register Button */}
           <TouchableOpacity
@@ -469,7 +474,6 @@ const styles = StyleSheet.create({
   },
   inputContainerFocused: {
     ...Components.input.focused,
-    ...(Platform.OS === 'android' ? { elevation: 0 } : {}),
   },
   inputIcon: {
     marginRight: Spacing[3],

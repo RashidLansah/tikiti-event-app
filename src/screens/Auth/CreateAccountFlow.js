@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,64 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 
+// Memoized password field to prevent re-renders from parent state changes.
+// On Android, any re-render of a secureTextEntry TextInput recreates the native
+// EditText, causing focus loss and the blink/flash bug.
+const PasswordFieldInput = memo(({
+  inputRef,
+  placeholder,
+  value,
+  onChangeText,
+  showPassword,
+  onTogglePassword,
+  colors,
+  matchIndicator,
+}) => {
+  // Local focused state — kept inside the memoized component so it only
+  // re-renders THIS field, not the parent or sibling password field.
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <View style={[
+      styles.typeformPasswordContainer,
+      { borderColor: colors.border.medium },
+      isFocused && {
+        borderColor: colors.primary[500],
+        borderWidth: 2,
+        borderBottomWidth: 3,
+        borderBottomColor: colors.primary[400],
+      },
+    ]}>
+      <TextInput
+        ref={inputRef}
+        style={[styles.typeformPasswordInput, { color: colors.text.primary }]}
+        placeholder={placeholder}
+        placeholderTextColor={colors.text.tertiary}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={!showPassword}
+        autoCorrect={false}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+      />
+      <View style={styles.passwordIconsContainer}>
+        {matchIndicator}
+        <TouchableOpacity
+          onPress={onTogglePassword}
+          style={styles.eyeIcon}
+          activeOpacity={0.7}
+        >
+          <Feather
+            name={showPassword ? "eye-off" : "eye"}
+            size={20}
+            color={colors.text.tertiary}
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
 const CreateAccountFlow = ({ navigation }) => {
   const { colors } = useTheme();
   const { register } = useAuth();
@@ -29,17 +87,34 @@ const CreateAccountFlow = ({ navigation }) => {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const passwordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
-  
-  // Form data
+
+  // Form data — password fields kept SEPARATE to avoid secureTextEntry blink on Android.
+  // When formData object is recreated via updateFormData, it triggers a re-render of ALL
+  // children. On Android this remounts secureTextEntry TextInputs, causing focus loss.
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
-    confirmPassword: '',
     country: '',
     interests: [],
   });
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Stable callbacks for memoized PasswordFieldInput — prevents unnecessary re-renders
+  const handleTogglePassword = useCallback(() => {
+    setShowPassword(prev => !prev);
+    if (Platform.OS === 'android') {
+      setTimeout(() => passwordRef.current?.focus(), 100);
+    }
+  }, []);
+
+  const handleToggleConfirmPassword = useCallback(() => {
+    setShowConfirmPassword(prev => !prev);
+    if (Platform.OS === 'android') {
+      setTimeout(() => confirmPasswordRef.current?.focus(), 100);
+    }
+  }, []);
 
   const totalSteps = 6;
 
@@ -61,6 +136,11 @@ const CreateAccountFlow = ({ navigation }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  };
+
   const nextStep = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
@@ -74,7 +154,7 @@ const CreateAccountFlow = ({ navigation }) => {
   };
 
   const handleRegister = async () => {
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
@@ -91,7 +171,7 @@ const CreateAccountFlow = ({ navigation }) => {
 
       await register(
         formData.email,
-        formData.password,
+        password,
         `${formData.firstName} ${formData.lastName}`, // displayName parameter
         {
           firstName: formData.firstName,
@@ -197,151 +277,88 @@ const CreateAccountFlow = ({ navigation }) => {
     </View>
   );
 
-  const renderStep2 = () => (
-    <View style={styles.typeformContainer}>
-      <Text style={[styles.typeformQuestion, { color: colors.text.primary }]}>
-        What's your email?
-      </Text>
-      
-      <TextInput
-        style={[
-          styles.typeformInput,
-          { color: colors.text.primary, borderColor: colors.border.medium },
-          focusedField === 'email' && { 
-            borderColor: colors.primary[500], 
-            borderWidth: 2,
-            shadowColor: colors.primary[500],
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 2,
-            borderBottomWidth: 3,
-            borderBottomColor: colors.primary[400],
-          }
-        ]}
-        placeholder="your@email.com"
-        placeholderTextColor={colors.text.tertiary}
-        value={formData.email}
-        onChangeText={(value) => updateFormData('email', value)}
-        onFocus={() => setFocusedField('email')}
-        onBlur={() => setFocusedField(null)}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="done"
-      />
-    </View>
-  );
+  const renderStep2 = () => {
+    const emailValue = formData.email.trim();
+    const showEmailError = emailValue.length > 0 && !isValidEmail(emailValue);
+
+    return (
+      <View style={styles.typeformContainer}>
+        <Text style={[styles.typeformQuestion, { color: colors.text.primary }]}>
+          What's your email?
+        </Text>
+
+        <TextInput
+          style={[
+            styles.typeformInput,
+            { color: colors.text.primary, borderColor: colors.border.medium },
+            focusedField === 'email' && {
+              borderColor: colors.primary[500],
+              borderWidth: 2,
+              borderBottomWidth: 3,
+              borderBottomColor: colors.primary[400],
+            },
+            showEmailError && {
+              borderColor: colors.error?.[500] || '#EF4444',
+              borderWidth: 2,
+            }
+          ]}
+          placeholder="your@email.com"
+          placeholderTextColor={colors.text.tertiary}
+          value={formData.email}
+          onChangeText={(value) => updateFormData('email', value)}
+          onFocus={() => setFocusedField('email')}
+          onBlur={() => setFocusedField(null)}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="done"
+        />
+        {showEmailError && (
+          <Text style={styles.emailErrorText}>
+            Please enter a valid email address
+          </Text>
+        )}
+      </View>
+    );
+  };
 
   const renderStep3 = () => (
     <View style={styles.typeformContainer}>
       <Text style={[styles.typeformQuestion, { color: colors.text.primary }]}>
         Create a password
       </Text>
-      
+
       <View style={styles.typeformInputsContainer}>
-        <View style={[
-          styles.typeformPasswordContainer,
-          { borderColor: colors.border.medium },
-          focusedField === 'password' && { 
-            borderColor: colors.primary[500], 
-            borderWidth: 2,
-            shadowColor: colors.primary[500],
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 2,
-            borderBottomWidth: 3,
-            borderBottomColor: colors.primary[400],
-          }
-        ]}>
-          <TextInput
-            ref={passwordRef}
-            style={[styles.typeformPasswordInput, { color: colors.text.primary }]}
-            placeholder="Password"
-            placeholderTextColor={colors.text.tertiary}
-            value={formData.password}
-            onChangeText={(value) => updateFormData('password', value)}
-            onFocus={() => setFocusedField('password')}
-            onBlur={() => setFocusedField(null)}
-            secureTextEntry={!showPassword}
-            autoCorrect={false}
-            returnKeyType="next"
-          />
-          <TouchableOpacity
-            onPress={() => {
-              setShowPassword(!showPassword);
-              if (Platform.OS === 'android') {
-                setTimeout(() => passwordRef.current?.focus(), 100);
-              }
-            }}
-            style={styles.eyeIcon}
-            activeOpacity={0.7}
-          >
-            <Feather 
-              name={showPassword ? "eye-off" : "eye"} 
-              size={20} 
-              color={colors.text.tertiary} 
-            />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={[
-          styles.typeformPasswordContainer,
-          { borderColor: colors.border.medium },
-          focusedField === 'confirmPassword' && { 
-            borderColor: colors.primary[500], 
-            borderWidth: 2,
-            shadowColor: colors.primary[500],
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 2,
-            borderBottomWidth: 3,
-            borderBottomColor: colors.primary[400],
-          },
-          formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && { borderColor: colors.success[500], borderWidth: 2 }
-        ]}>
-          <TextInput
-            ref={confirmPasswordRef}
-            style={[styles.typeformPasswordInput, { color: colors.text.primary }]}
-            placeholder="Confirm password"
-            placeholderTextColor={colors.text.tertiary}
-            value={formData.confirmPassword}
-            onChangeText={(value) => updateFormData('confirmPassword', value)}
-            onFocus={() => setFocusedField('confirmPassword')}
-            onBlur={() => setFocusedField(null)}
-            secureTextEntry={!showConfirmPassword}
-            autoCorrect={false}
-            returnKeyType="done"
-          />
-          <View style={styles.passwordIconsContainer}>
-            {formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && (
+        <PasswordFieldInput
+          inputRef={passwordRef}
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          showPassword={showPassword}
+          onTogglePassword={handleTogglePassword}
+          colors={colors}
+          matchIndicator={null}
+        />
+
+        <PasswordFieldInput
+          inputRef={confirmPasswordRef}
+          placeholder="Confirm password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          showPassword={showConfirmPassword}
+          onTogglePassword={handleToggleConfirmPassword}
+          colors={colors}
+          matchIndicator={
+            password && confirmPassword && password === confirmPassword ? (
               <Feather
                 name="check-circle"
                 size={20}
                 color={colors.success[500]}
                 style={styles.passwordMatchIcon}
               />
-            )}
-            <TouchableOpacity
-              onPress={() => {
-                setShowConfirmPassword(!showConfirmPassword);
-                if (Platform.OS === 'android') {
-                  setTimeout(() => confirmPasswordRef.current?.focus(), 100);
-                }
-              }}
-              style={styles.eyeIcon}
-              activeOpacity={0.7}
-            >
-              <Feather 
-                name={showConfirmPassword ? "eye-off" : "eye"} 
-                size={20} 
-                color={colors.text.tertiary} 
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+            ) : null
+          }
+        />
       </View>
     </View>
   );
@@ -492,8 +509,8 @@ const CreateAccountFlow = ({ navigation }) => {
   const canProceed = () => {
     switch (currentStep) {
       case 1: return formData.firstName.trim() && formData.lastName.trim();
-      case 2: return formData.email.trim();
-      case 3: return formData.password.trim() && formData.confirmPassword.trim();
+      case 2: return isValidEmail(formData.email);
+      case 3: return password.trim() && confirmPassword.trim();
       case 4: return formData.country.trim();
       case 5: return true; // Optional step
       case 6: return true;
@@ -502,9 +519,9 @@ const CreateAccountFlow = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background.primary }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -940,6 +957,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[8],
     lineHeight: 22,
     opacity: 0.8,
+  },
+  emailErrorText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
+    color: '#EF4444',
+    marginTop: Spacing[2],
   },
   typeformInputsContainer: {
     gap: Spacing[4],
