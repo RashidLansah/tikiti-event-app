@@ -469,6 +469,7 @@ const styles = StyleSheet.create({
   },
   inputContainerFocused: {
     ...Components.input.focused,
+    ...(Platform.OS === 'android' ? { elevation: 0 } : {}),
   },
   inputIcon: {
     marginRight: Spacing[3],
