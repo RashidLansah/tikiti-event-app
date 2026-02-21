@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  InteractionManager,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
@@ -38,6 +39,16 @@ const RegisterScreen = ({ navigation, route }) => {
 
   const updateFormData = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleInputFocus = (inputName) => {
+    if (Platform.OS === 'android') {
+      InteractionManager.runAfterInteractions(() => {
+        setFocusedInput(inputName);
+      });
+    } else {
+      setFocusedInput(inputName);
+    }
   };
 
   const validateForm = () => {
@@ -240,7 +251,7 @@ const RegisterScreen = ({ navigation, route }) => {
                   placeholder="First name"
                   placeholderTextColor={Colors.text.tertiary}
                   autoCapitalize="words"
-                  onFocus={() => setFocusedInput('firstName')}
+                  onFocus={() => handleInputFocus('firstName')}
                   onBlur={() => setFocusedInput(null)}
                 />
               </View>
@@ -260,7 +271,7 @@ const RegisterScreen = ({ navigation, route }) => {
                   placeholder="Last name"
                   placeholderTextColor={Colors.text.tertiary}
                   autoCapitalize="words"
-                  onFocus={() => setFocusedInput('lastName')}
+                  onFocus={() => handleInputFocus('lastName')}
                   onBlur={() => setFocusedInput(null)}
                 />
               </View>
@@ -284,7 +295,7 @@ const RegisterScreen = ({ navigation, route }) => {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                onFocus={() => setFocusedInput('email')}
+                onFocus={() => handleInputFocus('email')}
                 onBlur={() => setFocusedInput(null)}
               />
             </View>
@@ -307,7 +318,7 @@ const RegisterScreen = ({ navigation, route }) => {
                 placeholderTextColor={Colors.text.tertiary}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                onFocus={() => setFocusedInput('password')}
+                onFocus={() => handleInputFocus('password')}
                 onBlur={() => setFocusedInput(null)}
               />
               <TouchableOpacity
@@ -346,7 +357,7 @@ const RegisterScreen = ({ navigation, route }) => {
                 placeholderTextColor={Colors.text.tertiary}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
-                onFocus={() => setFocusedInput('confirmPassword')}
+                onFocus={() => handleInputFocus('confirmPassword')}
                 onBlur={() => setFocusedInput(null)}
               />
               <TouchableOpacity
