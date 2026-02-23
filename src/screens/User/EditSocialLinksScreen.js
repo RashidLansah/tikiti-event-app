@@ -155,7 +155,7 @@ const EditSocialLinksScreen = ({ navigation }) => {
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            style={[styles.saveButton, { backgroundColor: colors.primary[500] }, saving && styles.saveButtonDisabled]}
             onPress={handleSave}
             disabled={saving}
             activeOpacity={0.8}

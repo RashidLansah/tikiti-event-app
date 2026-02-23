@@ -90,7 +90,7 @@ const SocialCardScreen = ({ navigation }) => {
         <View style={[styles.card, { backgroundColor: colors.background.secondary, borderColor: isDarkMode ? colors.border.light : 'rgba(0,0,0,0.1)' }]}>
           {/* Avatar */}
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
+            <View style={[styles.avatar, { backgroundColor: colors.primary[500] }]}>
               <Text style={styles.avatarText}>{getInitials()}</Text>
             </View>
           </View>
@@ -144,7 +144,7 @@ const SocialCardScreen = ({ navigation }) => {
         {/* Buttons */}
         <View style={styles.buttonsContainer}>
           <TouchableOpacity
-            style={[styles.primaryButton]}
+            style={[styles.primaryButton, { backgroundColor: colors.primary[500] }]}
             onPress={handleShare}
             activeOpacity={0.8}
           >

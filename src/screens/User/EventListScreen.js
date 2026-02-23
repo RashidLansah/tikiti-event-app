@@ -348,7 +348,7 @@ const EventListScreen = ({ navigation }) => {
     return (
       <Animated.View style={cardTransform}>
         <TouchableOpacity
-          style={styles.eventCard}
+          style={[styles.eventCard, { backgroundColor: colors.background.secondary }]}
           onPress={() => navigation.navigate('EventDetail', { event })}
           activeOpacity={0.9}
         >
@@ -372,35 +372,35 @@ const EventListScreen = ({ navigation }) => {
 
             {/* Attendee count badge on image */}
             {attendeeCount > 0 && (
-              <View style={styles.attendeeBadge}>
-                <Feather name="users" size={12} color={Colors.text.primary} />
+              <View style={[styles.attendeeBadge, { backgroundColor: colors.background.primary }]}>
+                <Feather name="users" size={12} color={colors.text.primary} />
                 <Text style={styles.attendeeBadgeText}>{attendeeCount}</Text>
               </View>
             )}
           </View>
 
           {/* Event Title */}
-          <Text style={styles.eventName} numberOfLines={2}>{event.name}</Text>
+          <Text style={[styles.eventName, { color: colors.text.primary }]} numberOfLines={2}>{event.name}</Text>
 
           {/* Date, Time, Location pills */}
           <View style={styles.cardPillsContainer}>
             <View style={styles.cardPillRow}>
-              <View style={styles.cardPill}>
-                <Text style={styles.cardPillText}>{getCardFormattedDate(event.date)}</Text>
+              <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
+                <Text style={[styles.cardPillText, { color: colors.text.primary }]}>{getCardFormattedDate(event.date)}</Text>
               </View>
               {eventTime ? (
-                <View style={styles.cardPill}>
-                  <Text style={styles.cardPillText}>{eventTime}</Text>
+                <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
+                  <Text style={[styles.cardPillText, { color: colors.text.primary }]}>{eventTime}</Text>
                 </View>
               ) : null}
             </View>
             <View style={styles.cardPillRow}>
-              <View style={styles.cardPill}>
-                <Text style={styles.cardPillText}>{getCardLocationString(event.location)}</Text>
+              <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
+                <Text style={[styles.cardPillText, { color: colors.text.primary }]}>{getCardLocationString(event.location)}</Text>
               </View>
               {attendeeCount > 0 && (
-                <View style={styles.cardPill}>
-                  <Text style={styles.cardPillText}>{attendeeCount} going</Text>
+                <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
+                  <Text style={[styles.cardPillText, { color: colors.text.primary }]}>{attendeeCount} going</Text>
                 </View>
               )}
             </View>
@@ -426,10 +426,10 @@ const EventListScreen = ({ navigation }) => {
             <Text style={[styles.title, { color: colors.text.primary }]}>Events near you</Text>
           </View>
           <TouchableOpacity
-            style={styles.notificationButton}
+            style={[styles.notificationButton, { backgroundColor: colors.background.tertiary }]}
             onPress={() => navigation.navigate('NotificationCenter')}
           >
-            <Feather name="bell" size={24} color={Colors.text.primary} />
+            <Feather name="bell" size={24} color={colors.text.primary} />
             {unreadNotifications > 0 && (
               <View style={[styles.notificationBadge, { backgroundColor: colors.primary[500] }]}>
                 <Text style={styles.badgeText}>
@@ -445,7 +445,8 @@ const EventListScreen = ({ navigation }) => {
           style={[
             styles.searchContainer,
             {
-              borderColor: isSearchFocused ? colors.primary[500] : 'rgba(0,0,0,0.1)',
+              backgroundColor: colors.background.secondary,
+              borderColor: isSearchFocused ? colors.primary[500] : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'),
             },
           ]}
           activeOpacity={1}
@@ -453,12 +454,12 @@ const EventListScreen = ({ navigation }) => {
             searchInputRef.current?.focus();
           }}
         >
-          <Feather name="search" size={24} color={isSearchFocused ? colors.primary[500] : 'rgba(0,0,0,0.56)'} />
+          <Feather name="search" size={24} color={isSearchFocused ? colors.primary[500] : colors.text.tertiary} />
           <TextInput
             ref={searchInputRef}
             style={[styles.searchInput, { color: colors.text.primary }]}
             placeholder="Search events..,"
-            placeholderTextColor="rgba(0,0,0,0.56)"
+            placeholderTextColor={colors.text.tertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onFocus={() => setIsSearchFocused(true)}
@@ -507,11 +508,11 @@ const EventListScreen = ({ navigation }) => {
       >
         {/* Time-based Event Sections */}
         {timeFilteredEvents.length === 0 ? (
-          <View style={styles.noEventsContainer}>
-            <Feather name="calendar" size={24} color={Colors.text.tertiary} />
+          <View style={[styles.noEventsContainer, { backgroundColor: colors.background.secondary }]}>
+            <Feather name="calendar" size={24} color={colors.text.tertiary} />
             <View style={styles.noEventsTextContainer}>
-              <Text style={styles.noEventsText}>No events found</Text>
-              <Text style={styles.noEventsSubtext}>
+              <Text style={[styles.noEventsText, { color: colors.text.primary }]}>No events found</Text>
+              <Text style={[styles.noEventsSubtext, { color: colors.text.secondary }]}>
                 {events.length === 0
                   ? 'No events available yet. Check back later'
                   : 'Try adjusting your search criteria'
@@ -519,7 +520,7 @@ const EventListScreen = ({ navigation }) => {
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.refreshButton}
+              style={[styles.refreshButton, { backgroundColor: colors.primary[500] }]}
               onPress={onRefresh}
               disabled={refreshing}
             >

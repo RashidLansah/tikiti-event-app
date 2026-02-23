@@ -550,15 +550,15 @@ const EventDetailScreen = ({ navigation, route }) => {
       <View style={registeredStyles.ticketTabContainer}>
         {/* Days left counter */}
         {daysLeft !== null && daysLeft >= 0 && (
-          <View style={registeredStyles.daysLeftCard}>
-            <View style={registeredStyles.daysLeftIconContainer}>
-              <Feather name="clock" size={20} color={Colors.primary[500]} />
+          <View style={[registeredStyles.daysLeftCard, { backgroundColor: colors.background.secondary }]}>
+            <View style={[registeredStyles.daysLeftIconContainer, { backgroundColor: colors.background.primary }]}>
+              <Feather name="clock" size={20} color={colors.primary[500]} />
             </View>
             <View style={registeredStyles.daysLeftContent}>
-              <Text style={registeredStyles.daysLeftValue}>
+              <Text style={[registeredStyles.daysLeftValue, { color: colors.text.primary }]}>
                 {daysLeft === 0 ? 'Today' : daysLeft === 1 ? '1 day' : `${daysLeft} days`}
               </Text>
-              <Text style={registeredStyles.daysLeftLabel}>
+              <Text style={[registeredStyles.daysLeftLabel, { color: colors.text.secondary }]}>
                 {daysLeft === 0 ? 'Event is happening today!' : 'until the event'}
               </Text>
             </View>
@@ -566,9 +566,9 @@ const EventDetailScreen = ({ navigation, route }) => {
         )}
 
         {/* QR Code Section */}
-        <View style={registeredStyles.qrSection}>
-          <Text style={registeredStyles.qrSectionTitle}>Your Ticket</Text>
-          <Text style={registeredStyles.qrSectionSubtitle}>Show this QR code at the venue entrance</Text>
+        <View style={[registeredStyles.qrSection, { backgroundColor: colors.background.secondary }]}>
+          <Text style={[registeredStyles.qrSectionTitle, { color: colors.text.primary }]}>Your Ticket</Text>
+          <Text style={[registeredStyles.qrSectionSubtitle, { color: colors.text.secondary }]}>Show this QR code at the venue entrance</Text>
 
           <View style={registeredStyles.qrCodeWrapper}>
             <QRCode
@@ -581,39 +581,39 @@ const EventDetailScreen = ({ navigation, route }) => {
           </View>
 
           <View style={registeredStyles.qrLabelContainer}>
-            <Feather name="camera" size={16} color={Colors.text.tertiary} style={{ marginRight: 8 }} />
-            <Text style={registeredStyles.qrLabel}>Scan at venue entrance</Text>
+            <Feather name="camera" size={16} color={colors.text.tertiary} style={{ marginRight: 8 }} />
+            <Text style={[registeredStyles.qrLabel, { color: colors.text.tertiary }]}>Scan at venue entrance</Text>
           </View>
 
           {/* Ticket ID */}
-          <View style={registeredStyles.ticketIdContainer}>
-            <Feather name="hash" size={12} color={Colors.text.tertiary} style={{ marginRight: 4 }} />
-            <Text style={registeredStyles.ticketIdText}>{ticketId}</Text>
+          <View style={[registeredStyles.ticketIdContainer, { backgroundColor: colors.background.primary }]}>
+            <Feather name="hash" size={12} color={colors.text.tertiary} style={{ marginRight: 4 }} />
+            <Text style={[registeredStyles.ticketIdText, { color: colors.text.tertiary }]}>{ticketId}</Text>
           </View>
         </View>
 
         {/* Ticket details */}
-        <View style={registeredStyles.ticketDetails}>
+        <View style={[registeredStyles.ticketDetails, { backgroundColor: colors.background.secondary }]}>
           <View style={registeredStyles.ticketDetailRow}>
-            <Text style={registeredStyles.ticketDetailLabel}>Attendee</Text>
-            <Text style={registeredStyles.ticketDetailValue}>
+            <Text style={[registeredStyles.ticketDetailLabel, { color: colors.text.tertiary }]}>Attendee</Text>
+            <Text style={[registeredStyles.ticketDetailValue, { color: colors.text.primary }]}>
               {user?.displayName || user?.email || 'Attendee'}
             </Text>
           </View>
           <View style={registeredStyles.ticketDetailRow}>
-            <Text style={registeredStyles.ticketDetailLabel}>Quantity</Text>
-            <Text style={registeredStyles.ticketDetailValue}>
+            <Text style={[registeredStyles.ticketDetailLabel, { color: colors.text.tertiary }]}>Quantity</Text>
+            <Text style={[registeredStyles.ticketDetailValue, { color: colors.text.primary }]}>
               {userBooking?.quantity || 1} ticket{(userBooking?.quantity || 1) > 1 ? 's' : ''}
             </Text>
           </View>
           <View style={registeredStyles.ticketDetailRow}>
-            <Text style={registeredStyles.ticketDetailLabel}>Type</Text>
-            <Text style={registeredStyles.ticketDetailValue}>
+            <Text style={[registeredStyles.ticketDetailLabel, { color: colors.text.tertiary }]}>Type</Text>
+            <Text style={[registeredStyles.ticketDetailValue, { color: colors.text.primary }]}>
               {userBooking?.registrationType === 'rsvp' ? 'Free RSVP' : 'Paid Ticket'}
             </Text>
           </View>
           <View style={registeredStyles.ticketDetailRow}>
-            <Text style={registeredStyles.ticketDetailLabel}>Status</Text>
+            <Text style={[registeredStyles.ticketDetailLabel, { color: colors.text.tertiary }]}>Status</Text>
             <Text style={[registeredStyles.ticketDetailValue, { color: Colors.success[500] }]}>
               Confirmed
             </Text>
@@ -622,7 +622,7 @@ const EventDetailScreen = ({ navigation, route }) => {
 
         {/* Share event button */}
         <TouchableOpacity
-          style={registeredStyles.shareTicketButton}
+          style={[registeredStyles.shareTicketButton, { backgroundColor: colors.primary[500] }]}
           onPress={() => {
             const eventUrl = generateEventShareUrl(event.id, event.name);
             Share.share({
@@ -631,8 +631,8 @@ const EventDetailScreen = ({ navigation, route }) => {
             });
           }}
         >
-          <Feather name="share-2" size={18} color={Colors.white} />
-          <Text style={registeredStyles.shareTicketButtonText}>Share Event</Text>
+          <Feather name="share-2" size={18} color={isDarkMode ? Colors.black : Colors.white} />
+          <Text style={[registeredStyles.shareTicketButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>Share Event</Text>
         </TouchableOpacity>
       </View>
     );
@@ -662,16 +662,16 @@ const EventDetailScreen = ({ navigation, route }) => {
       <View style={registeredStyles.programContainer}>
         {Object.entries(sessionsByDate).map(([dateKey, sessions]) => (
           <View key={dateKey}>
-            <Text style={registeredStyles.programDateHeader}>{dateKey}</Text>
+            <Text style={[registeredStyles.programDateHeader, { color: colors.text.tertiary }]}>{dateKey}</Text>
             {sessions.map((session, index) => (
-              <View key={session.id || index} style={registeredStyles.sessionCard}>
+              <View key={session.id || index} style={[registeredStyles.sessionCard, { backgroundColor: colors.background.secondary }]}>
                 {/* Time column */}
                 <View style={registeredStyles.sessionTimeColumn}>
-                  <Text style={registeredStyles.sessionTime}>
+                  <Text style={[registeredStyles.sessionTime, { color: colors.primary[500] }]}>
                     {session.startTime || 'TBA'}
                   </Text>
                   {session.endTime && (
-                    <Text style={registeredStyles.sessionEndTime}>
+                    <Text style={[registeredStyles.sessionEndTime, { color: colors.text.tertiary }]}>
                       {session.endTime}
                     </Text>
                   )}
@@ -681,15 +681,15 @@ const EventDetailScreen = ({ navigation, route }) => {
                 <View style={registeredStyles.sessionContent}>
                   {/* Type badge */}
                   {session.type && session.type !== 'session' && (
-                    <View style={registeredStyles.sessionTypeBadge}>
-                      <Text style={registeredStyles.sessionTypeBadgeText}>
+                    <View style={[registeredStyles.sessionTypeBadge, { backgroundColor: colors.background.primary }]}>
+                      <Text style={[registeredStyles.sessionTypeBadgeText, { color: colors.primary[500] }]}>
                         {session.type.charAt(0).toUpperCase() + session.type.slice(1)}
                       </Text>
                     </View>
                   )}
-                  <Text style={registeredStyles.sessionTitle}>{session.title}</Text>
+                  <Text style={[registeredStyles.sessionTitle, { color: colors.text.primary }]}>{session.title}</Text>
                   {session.description ? (
-                    <Text style={registeredStyles.sessionDescription} numberOfLines={2}>
+                    <Text style={[registeredStyles.sessionDescription, { color: colors.text.secondary }]} numberOfLines={2}>
                       {session.description}
                     </Text>
                   ) : null}
@@ -700,18 +700,18 @@ const EventDetailScreen = ({ navigation, route }) => {
                       onPress={() => setSelectedSpeaker(session.speaker)}
                       activeOpacity={0.7}
                     >
-                      <Feather name="user" size={12} color={Colors.primary[500]} />
-                      <Text style={[registeredStyles.sessionSpeakerText, { color: Colors.primary[500] }]}>
+                      <Feather name="user" size={12} color={colors.primary[500]} />
+                      <Text style={[registeredStyles.sessionSpeakerText, { color: colors.primary[500] }]}>
                         {session.speaker.name}
                       </Text>
-                      <Feather name="chevron-right" size={12} color={Colors.primary[500]} />
+                      <Feather name="chevron-right" size={12} color={colors.primary[500]} />
                     </TouchableOpacity>
                   )}
                   {/* Location */}
                   {session.location?.name && (
                     <View style={registeredStyles.sessionSpeaker}>
-                      <Feather name="map-pin" size={12} color={Colors.text.tertiary} />
-                      <Text style={registeredStyles.sessionSpeakerText}>
+                      <Feather name="map-pin" size={12} color={colors.text.tertiary} />
+                      <Text style={[registeredStyles.sessionSpeakerText, { color: colors.text.tertiary }]}>
                         {session.location.name}
                       </Text>
                     </View>
@@ -729,9 +729,9 @@ const EventDetailScreen = ({ navigation, route }) => {
   const renderUpdatesContent = () => {
     if (loadingUpdates) {
       return (
-        <View style={registeredStyles.emptyState}>
-          <ActivityIndicator size="small" color={Colors.primary[500]} />
-          <Text style={registeredStyles.emptyStateTitle}>Loading updates...</Text>
+        <View style={[registeredStyles.emptyState, { backgroundColor: colors.background.secondary }]}>
+          <ActivityIndicator size="small" color={colors.primary[500]} />
+          <Text style={[registeredStyles.emptyStateTitle, { color: colors.text.primary }]}>Loading updates...</Text>
         </View>
       );
     }
@@ -747,22 +747,22 @@ const EventDetailScreen = ({ navigation, route }) => {
           const timeAgo = createdAt ? getTimeAgo(createdAt) : '';
 
           return (
-            <View key={update.id} style={registeredStyles.updateCard}>
+            <View key={update.id} style={[registeredStyles.updateCard, { backgroundColor: colors.background.secondary }]}>
               <View style={registeredStyles.updateHeader}>
-                <View style={registeredStyles.updateIconCircle}>
+                <View style={[registeredStyles.updateIconCircle, { backgroundColor: colors.background.primary }]}>
                   <Feather
                     name={update.type === 'important' ? 'alert-circle' : 'bell'}
                     size={14}
-                    color={update.type === 'important' ? Colors.error[500] : Colors.primary[500]}
+                    color={update.type === 'important' ? Colors.error[500] : colors.primary[500]}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={registeredStyles.updateTitle}>{update.title}</Text>
-                  {timeAgo ? <Text style={registeredStyles.updateTime}>{timeAgo}</Text> : null}
+                  <Text style={[registeredStyles.updateTitle, { color: colors.text.primary }]}>{update.title}</Text>
+                  {timeAgo ? <Text style={[registeredStyles.updateTime, { color: colors.text.tertiary }]}>{timeAgo}</Text> : null}
                 </View>
               </View>
               {(update.message || update.content) ? (
-                <Text style={registeredStyles.updateContent}>{update.message || update.content}</Text>
+                <Text style={[registeredStyles.updateContent, { color: colors.text.secondary }]}>{update.message || update.content}</Text>
               ) : null}
             </View>
           );
@@ -792,11 +792,11 @@ const EventDetailScreen = ({ navigation, route }) => {
     // If event hasn't passed, show "coming soon" state
     if (daysLeft !== null && daysLeft > 0) {
       return (
-        <View style={registeredStyles.emptyState}>
-          <Feather name="message-circle" size={24} color={Colors.text.tertiary} />
+        <View style={[registeredStyles.emptyState, { backgroundColor: colors.background.secondary }]}>
+          <Feather name="message-circle" size={24} color={colors.text.tertiary} />
           <View style={registeredStyles.emptyStateText}>
-            <Text style={registeredStyles.emptyStateTitle}>Feedback opens after the event</Text>
-            <Text style={registeredStyles.emptyStateSubtitle}>
+            <Text style={[registeredStyles.emptyStateTitle, { color: colors.text.primary }]}>Feedback opens after the event</Text>
+            <Text style={[registeredStyles.emptyStateSubtitle, { color: colors.text.primary }]}>
               You'll be able to share your experience once the event has concluded.
             </Text>
           </View>
@@ -806,20 +806,20 @@ const EventDetailScreen = ({ navigation, route }) => {
 
     if (loadingSurveys) {
       return (
-        <View style={registeredStyles.emptyState}>
-          <ActivityIndicator size="small" color={Colors.primary[500]} />
-          <Text style={registeredStyles.emptyStateTitle}>Loading feedback...</Text>
+        <View style={[registeredStyles.emptyState, { backgroundColor: colors.background.secondary }]}>
+          <ActivityIndicator size="small" color={colors.primary[500]} />
+          <Text style={[registeredStyles.emptyStateTitle, { color: colors.text.primary }]}>Loading feedback...</Text>
         </View>
       );
     }
 
     if (!eventSurveys || eventSurveys.length === 0) {
       return (
-        <View style={registeredStyles.emptyState}>
-          <Feather name="message-circle" size={24} color={Colors.text.tertiary} />
+        <View style={[registeredStyles.emptyState, { backgroundColor: colors.background.secondary }]}>
+          <Feather name="message-circle" size={24} color={colors.text.tertiary} />
           <View style={registeredStyles.emptyStateText}>
-            <Text style={registeredStyles.emptyStateTitle}>No feedback forms</Text>
-            <Text style={registeredStyles.emptyStateSubtitle}>
+            <Text style={[registeredStyles.emptyStateTitle, { color: colors.text.primary }]}>No feedback forms</Text>
+            <Text style={[registeredStyles.emptyStateSubtitle, { color: colors.text.primary }]}>
               The organizer hasn't created any feedback surveys for this event yet.
             </Text>
           </View>
@@ -830,16 +830,16 @@ const EventDetailScreen = ({ navigation, route }) => {
     return (
       <View style={registeredStyles.updatesContainer}>
         {eventSurveys.map((survey) => (
-          <TouchableOpacity key={survey.id} style={registeredStyles.surveyCard}>
+          <TouchableOpacity key={survey.id} style={[registeredStyles.surveyCard, { backgroundColor: colors.background.secondary }]}>
             <View style={registeredStyles.surveyHeader}>
-              <Feather name="clipboard" size={18} color={Colors.primary[500]} />
+              <Feather name="clipboard" size={18} color={colors.primary[500]} />
               <View style={{ flex: 1 }}>
-                <Text style={registeredStyles.surveyTitle}>{survey.title || 'Event Feedback'}</Text>
-                <Text style={registeredStyles.surveySubtitle}>
+                <Text style={[registeredStyles.surveyTitle, { color: colors.text.primary }]}>{survey.title || 'Event Feedback'}</Text>
+                <Text style={[registeredStyles.surveySubtitle, { color: colors.text.tertiary }]}>
                   {survey.questions?.length || 0} questions
                 </Text>
               </View>
-              <Feather name="chevron-right" size={18} color={Colors.text.tertiary} />
+              <Feather name="chevron-right" size={18} color={colors.text.tertiary} />
             </View>
           </TouchableOpacity>
         ))}
@@ -851,14 +851,14 @@ const EventDetailScreen = ({ navigation, route }) => {
   const renderEmptyState = (tabKey) => {
     const emptyState = tabEmptyStates[tabKey] || tabEmptyStates.program;
     return (
-      <View style={registeredStyles.emptyState}>
-        <Feather name={emptyState.icon} size={24} color={Colors.text.tertiary} />
+      <View style={[registeredStyles.emptyState, { backgroundColor: colors.background.secondary }]}>
+        <Feather name={emptyState.icon} size={24} color={colors.text.tertiary} />
         <View style={registeredStyles.emptyStateText}>
-          <Text style={registeredStyles.emptyStateTitle}>{emptyState.title}</Text>
-          <Text style={registeredStyles.emptyStateSubtitle}>{emptyState.subtitle}</Text>
+          <Text style={[registeredStyles.emptyStateTitle, { color: colors.text.primary }]}>{emptyState.title}</Text>
+          <Text style={[registeredStyles.emptyStateSubtitle, { color: colors.text.primary }]}>{emptyState.subtitle}</Text>
         </View>
         <TouchableOpacity
-          style={registeredStyles.refreshButton}
+          style={[registeredStyles.refreshButton, { backgroundColor: colors.primary[500] }]}
           onPress={() => {
             if (event?.id) {
               eventService.getById(event.id).then(updatedEvent => {
@@ -867,8 +867,8 @@ const EventDetailScreen = ({ navigation, route }) => {
             }
           }}
         >
-          <Feather name="refresh-cw" size={18} color={Colors.white} />
-          <Text style={registeredStyles.refreshButtonText}>Refresh</Text>
+          <Feather name="refresh-cw" size={18} color={isDarkMode ? Colors.black : Colors.white} />
+          <Text style={[registeredStyles.refreshButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>Refresh</Text>
         </TouchableOpacity>
       </View>
     );
@@ -906,14 +906,14 @@ const EventDetailScreen = ({ navigation, route }) => {
   if (userBooking) {
     return (
       <View style={[registeredStyles.container, { backgroundColor: colors.background.primary }]}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.background.primary} />
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.background.primary} />
 
         {/* Header */}
         <View style={registeredStyles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={registeredStyles.backButton}>
-            <Feather name="arrow-left" size={24} color={Colors.text.primary} />
+            <Feather name="arrow-left" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={registeredStyles.headerTitle}>Events details</Text>
+          <Text style={[registeredStyles.headerTitle, { color: colors.text.primary }]}>Events details</Text>
         </View>
 
         <ScrollView
@@ -921,7 +921,7 @@ const EventDetailScreen = ({ navigation, route }) => {
           contentContainerStyle={registeredStyles.scrollContent}
         >
           {/* Event Card */}
-          <View style={registeredStyles.eventCard}>
+          <View style={[registeredStyles.eventCard, { backgroundColor: colors.background.secondary }]}>
             {/* Event Image */}
             <View style={registeredStyles.imageContainer}>
               {event.imageBase64 ? (
@@ -941,40 +941,40 @@ const EventDetailScreen = ({ navigation, route }) => {
               )}
 
               {/* Going badge */}
-              <View style={registeredStyles.goingBadge}>
-                <Text style={registeredStyles.goingBadgeText}>Going</Text>
+              <View style={[registeredStyles.goingBadge, { backgroundColor: colors.background.primary }]}>
+                <Text style={[registeredStyles.goingBadgeText, { color: colors.text.primary }]}>Going</Text>
               </View>
             </View>
 
             {/* Event Title */}
-            <Text style={registeredStyles.eventTitle}>{event.name}</Text>
+            <Text style={[registeredStyles.eventTitle, { color: colors.text.primary }]}>{event.name}</Text>
 
             {/* Date, Time, Location pills */}
             <View style={registeredStyles.pillsContainer}>
               <View style={registeredStyles.pillRow}>
-                <View style={registeredStyles.pill}>
-                  <Text style={registeredStyles.pillText}>{getFormattedDate()}</Text>
+                <View style={[registeredStyles.pill, { backgroundColor: colors.background.primary }]}>
+                  <Text style={[registeredStyles.pillText, { color: colors.text.primary }]}>{getFormattedDate()}</Text>
                 </View>
-                <View style={registeredStyles.pill}>
-                  <Text style={registeredStyles.pillText}>{getFormattedTime()}</Text>
+                <View style={[registeredStyles.pill, { backgroundColor: colors.background.primary }]}>
+                  <Text style={[registeredStyles.pillText, { color: colors.text.primary }]}>{getFormattedTime()}</Text>
                 </View>
               </View>
-              <View style={registeredStyles.pill}>
-                <Text style={registeredStyles.pillText}>{getLocationString()}</Text>
+              <View style={[registeredStyles.pill, { backgroundColor: colors.background.primary }]}>
+                <Text style={[registeredStyles.pillText, { color: colors.text.primary }]}>{getLocationString()}</Text>
               </View>
             </View>
           </View>
 
           {/* Meeting link for virtual/hybrid events */}
           {(event.venueType === 'virtual' || event.venueType === 'hybrid') && (
-            <View style={registeredStyles.meetingLinkCard}>
+            <View style={[registeredStyles.meetingLinkCard, { backgroundColor: colors.background.secondary }]}>
               <View style={registeredStyles.meetingLinkHeader}>
-                <Feather name="video" size={18} color={Colors.primary[500]} />
-                <Text style={registeredStyles.meetingLinkTitle}>
+                <Feather name="video" size={18} color={colors.primary[500]} />
+                <Text style={[registeredStyles.meetingLinkTitle, { color: colors.text.primary }]}>
                   {event.venueType === 'hybrid' ? 'Join Online (Hybrid)' : 'Join Virtual Event'}
                 </Text>
               </View>
-              <Text style={registeredStyles.meetingPlatform}>
+              <Text style={[registeredStyles.meetingPlatform, { color: colors.text.secondary }]}>
                 {event.meetingPlatform === 'google_meet' ? 'Google Meet' :
                  event.meetingPlatform === 'zoom' ? 'Zoom' :
                  event.meetingPlatform === 'teams' ? 'Microsoft Teams' :
@@ -982,14 +982,14 @@ const EventDetailScreen = ({ navigation, route }) => {
               </Text>
               {event.meetingLink ? (
                 <TouchableOpacity
-                  style={registeredStyles.joinMeetingButton}
+                  style={[registeredStyles.joinMeetingButton, { backgroundColor: colors.primary[500] }]}
                   onPress={() => Linking.openURL(event.meetingLink)}
                 >
-                  <Feather name="external-link" size={16} color={Colors.white} />
-                  <Text style={registeredStyles.joinMeetingButtonText}>Join Meeting</Text>
+                  <Feather name="external-link" size={16} color={isDarkMode ? Colors.black : Colors.white} />
+                  <Text style={[registeredStyles.joinMeetingButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>Join Meeting</Text>
                 </TouchableOpacity>
               ) : (
-                <Text style={registeredStyles.meetingLinkPending}>
+                <Text style={[registeredStyles.meetingLinkPending, { color: colors.text.tertiary }]}>
                   Meeting link will be shared by the organizer
                 </Text>
               )}
@@ -998,9 +998,9 @@ const EventDetailScreen = ({ navigation, route }) => {
 
           {/* Days left indicator */}
           {getDaysLeft() !== null && getDaysLeft() >= 0 && (
-            <View style={registeredStyles.daysLeftPill}>
-              <Feather name="clock" size={14} color={Colors.primary[500]} />
-              <Text style={registeredStyles.daysLeftPillText}>{getDaysLeftLabel()}</Text>
+            <View style={[registeredStyles.daysLeftPill, { backgroundColor: colors.background.tertiary }]}>
+              <Feather name="clock" size={14} color={colors.primary[500]} />
+              <Text style={[registeredStyles.daysLeftPillText, { color: colors.primary[500] }]}>{getDaysLeftLabel()}</Text>
             </View>
           )}
 
@@ -1050,9 +1050,9 @@ const EventDetailScreen = ({ navigation, route }) => {
               activeOpacity={1}
               onPress={() => setSelectedSpeaker(null)}
             />
-            <View style={registeredStyles.speakerModalContainer}>
+            <View style={[registeredStyles.speakerModalContainer, { backgroundColor: colors.background.primary }]}>
               {/* Handle bar */}
-              <View style={registeredStyles.speakerModalHandle} />
+              <View style={[registeredStyles.speakerModalHandle, { backgroundColor: colors.border.medium }]} />
 
               {/* Speaker Photo */}
               {(selectedSpeaker?.photo || selectedSpeaker?.photoBase64) ? (
@@ -1065,19 +1065,19 @@ const EventDetailScreen = ({ navigation, route }) => {
                   style={registeredStyles.speakerModalPhoto}
                 />
               ) : (
-                <View style={registeredStyles.speakerModalPhotoPlaceholder}>
-                  <Feather name="user" size={32} color={Colors.text.tertiary} />
+                <View style={[registeredStyles.speakerModalPhotoPlaceholder, { backgroundColor: colors.background.secondary }]}>
+                  <Feather name="user" size={32} color={colors.text.tertiary} />
                 </View>
               )}
 
               {/* Speaker Name */}
-              <Text style={registeredStyles.speakerModalName}>
+              <Text style={[registeredStyles.speakerModalName, { color: colors.text.primary }]}>
                 {selectedSpeaker?.name || 'Speaker'}
               </Text>
 
               {/* Job Title & Company — only if speaker entered them */}
               {(selectedSpeaker?.jobTitle || selectedSpeaker?.company) ? (
-                <Text style={registeredStyles.speakerModalTitle}>
+                <Text style={[registeredStyles.speakerModalTitle, { color: colors.text.secondary }]}>
                   {[selectedSpeaker.jobTitle, selectedSpeaker.company].filter(Boolean).join(' at ')}
                 </Text>
               ) : null}
@@ -1085,7 +1085,7 @@ const EventDetailScreen = ({ navigation, route }) => {
               {/* Bio — only if speaker entered it */}
               {selectedSpeaker?.bio ? (
                 <ScrollView style={registeredStyles.speakerModalBioScroll} showsVerticalScrollIndicator={false}>
-                  <Text style={registeredStyles.speakerModalBio}>
+                  <Text style={[registeredStyles.speakerModalBio, { color: colors.text.secondary }]}>
                     {selectedSpeaker.bio}
                   </Text>
                 </ScrollView>
@@ -1104,10 +1104,10 @@ const EventDetailScreen = ({ navigation, route }) => {
                     {links.map((link) => (
                       <TouchableOpacity
                         key={link.icon}
-                        style={registeredStyles.speakerModalIconButton}
+                        style={[registeredStyles.speakerModalIconButton, { backgroundColor: colors.background.secondary }]}
                         onPress={() => Linking.openURL(link.url)}
                       >
-                        <Feather name={link.icon} size={18} color={Colors.primary[500]} />
+                        <Feather name={link.icon} size={18} color={colors.primary[500]} />
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -1116,10 +1116,10 @@ const EventDetailScreen = ({ navigation, route }) => {
 
               {/* Close Button */}
               <TouchableOpacity
-                style={registeredStyles.speakerModalClose}
+                style={[registeredStyles.speakerModalClose, { backgroundColor: colors.primary[500] }]}
                 onPress={() => setSelectedSpeaker(null)}
               >
-                <Text style={registeredStyles.speakerModalCloseText}>Close</Text>
+                <Text style={[registeredStyles.speakerModalCloseText, { color: isDarkMode ? Colors.black : Colors.white }]}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1167,10 +1167,10 @@ const EventDetailScreen = ({ navigation, route }) => {
 
           {/* Close button */}
           <TouchableOpacity
-            style={styles.closeButton}
+            style={[styles.closeButton, { backgroundColor: isDarkMode ? colors.background.tertiary : '#f0f0f0' }]}
             onPress={() => navigation.goBack()}
           >
-            <Feather name="x" size={16} color={Colors.black} />
+            <Feather name="x" size={16} color={colors.text.primary} />
           </TouchableOpacity>
 
           {/* Content overlaid on hero */}

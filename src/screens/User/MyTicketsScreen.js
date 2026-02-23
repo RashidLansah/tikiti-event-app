@@ -203,7 +203,7 @@ const MyTicketsScreen = ({ navigation }) => {
     return (
       <Animated.View style={cardTransform}>
         <TouchableOpacity
-          style={styles.eventCard}
+          style={[styles.eventCard, { backgroundColor: colors.background.secondary }]}
           onPress={() => {
             // Navigate to event detail with the full event data
             const eventData = event.id
@@ -242,47 +242,47 @@ const MyTicketsScreen = ({ navigation }) => {
             )}
 
             {/* Going badge */}
-            <View style={styles.goingBadge}>
-              <Text style={styles.goingBadgeText}>Going</Text>
+            <View style={[styles.goingBadge, { backgroundColor: colors.background.primary }]}>
+              <Text style={[styles.goingBadgeText, { color: colors.text.primary }]}>Going</Text>
             </View>
 
             {/* Days left badge */}
             {daysLeft !== null && daysLeft >= 0 && (
-              <View style={styles.daysLeftBadge}>
-                <Feather name="clock" size={12} color={Colors.text.primary} />
-                <Text style={styles.daysLeftBadgeText}>{daysLeftLabel}</Text>
+              <View style={[styles.daysLeftBadge, { backgroundColor: colors.background.primary }]}>
+                <Feather name="clock" size={12} color={colors.text.primary} />
+                <Text style={[styles.daysLeftBadgeText, { color: colors.text.primary }]}>{daysLeftLabel}</Text>
               </View>
             )}
           </View>
 
           {/* Event Title */}
-          <Text style={styles.eventName} numberOfLines={2}>
+          <Text style={[styles.eventName, { color: colors.text.primary }]} numberOfLines={2}>
             {booking.eventName}
           </Text>
 
           {/* Date, Time, Location pills */}
           <View style={styles.cardPillsContainer}>
             <View style={styles.cardPillRow}>
-              <View style={styles.cardPill}>
-                <Text style={styles.cardPillText}>
+              <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
+                <Text style={[styles.cardPillText, { color: colors.text.primary }]}>
                   {getCardFormattedDate(booking.eventDate)}
                 </Text>
               </View>
               {eventTime ? (
-                <View style={styles.cardPill}>
-                  <Text style={styles.cardPillText}>{eventTime}</Text>
+                <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
+                  <Text style={[styles.cardPillText, { color: colors.text.primary }]}>{eventTime}</Text>
                 </View>
               ) : null}
             </View>
             <View style={styles.cardPillRow}>
-              <View style={styles.cardPill}>
-                <Text style={styles.cardPillText}>
+              <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
+                <Text style={[styles.cardPillText, { color: colors.text.primary }]}>
                   {getLocationString(eventLocation)}
                 </Text>
               </View>
               {booking.quantity > 1 && (
-                <View style={styles.cardPill}>
-                  <Text style={styles.cardPillText}>
+                <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
+                  <Text style={[styles.cardPillText, { color: colors.text.primary }]}>
                     {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
                   </Text>
                 </View>
@@ -295,17 +295,17 @@ const MyTicketsScreen = ({ navigation }) => {
   };
 
   const EmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <Feather name="calendar" size={24} color={Colors.text.tertiary} />
+    <View style={[styles.emptyContainer, { backgroundColor: colors.background.secondary }]}>
+      <Feather name="calendar" size={24} color={colors.text.tertiary} />
       <View style={styles.emptyTextContainer}>
-        <Text style={styles.emptyTitle}>
+        <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
           {activeFilter === 'active'
             ? 'No upcoming events'
             : activeFilter === 'attended'
             ? 'No past events'
             : 'No registered events'}
         </Text>
-        <Text style={styles.emptySubtitle}>
+        <Text style={[styles.emptySubtitle, { color: colors.text.secondary }]}>
           {activeFilter === 'active'
             ? "You haven't registered for any upcoming events yet. Discover events and RSVP!"
             : activeFilter === 'attended'
@@ -314,7 +314,7 @@ const MyTicketsScreen = ({ navigation }) => {
         </Text>
       </View>
       <TouchableOpacity
-        style={styles.browseButton}
+        style={[styles.browseButton, { backgroundColor: colors.primary[500] }]}
         onPress={() => navigation.navigate('Events')}
       >
         <Feather name="search" size={18} color={Colors.white} />
@@ -352,7 +352,7 @@ const MyTicketsScreen = ({ navigation }) => {
       </View>
 
       <ScrollView
-        style={styles.eventsList}
+        style={[styles.eventsList, { backgroundColor: colors.background.primary }]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.eventsListContent}
         refreshControl={

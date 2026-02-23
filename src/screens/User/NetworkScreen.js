@@ -258,8 +258,8 @@ const NetworkScreen = ({ navigation }) => {
           onPress={() => navigation.navigate('ScanConnection')}
           activeOpacity={0.8}
         >
-          <Feather name="camera" size={20} color={Colors.white} style={{ marginRight: 8 }} />
-          <Text style={styles.scanButtonText}>Scan QR Code</Text>
+          <Feather name="camera" size={20} color={isDarkMode ? Colors.black : Colors.white} style={{ marginRight: 8 }} />
+          <Text style={[styles.scanButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>Scan QR Code</Text>
         </TouchableOpacity>
       </View>
     );

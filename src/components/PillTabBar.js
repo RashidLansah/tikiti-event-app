@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography } from '../styles/designSystem';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * PillTabBar — Horizontal scrollable pill tab component
@@ -12,8 +13,10 @@ import { Colors, Typography } from '../styles/designSystem';
  * @param {function} onTabPress - Callback when a tab is pressed
  */
 const PillTabBar = ({ tabs, activeTab, onTabPress }) => {
+  const { colors, isDarkMode } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background.tertiary }]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -25,7 +28,10 @@ const PillTabBar = ({ tabs, activeTab, onTabPress }) => {
           return (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.tab, isActive && styles.activeTab]}
+              style={[
+                styles.tab,
+                isActive && [styles.activeTab, { backgroundColor: colors.background.primary }],
+              ]}
               onPress={() => onTabPress(tab.key)}
               activeOpacity={0.7}
             >
@@ -33,11 +39,15 @@ const PillTabBar = ({ tabs, activeTab, onTabPress }) => {
                 <Feather
                   name={tab.icon}
                   size={14}
-                  color={Colors.primary[500]}
+                  color={isActive ? colors.primary[500] : colors.text.tertiary}
                 />
               )}
               <Text
-                style={[styles.tabLabel, isActive && styles.activeTabLabel]}
+                style={[
+                  styles.tabLabel,
+                  { color: isActive ? colors.primary[500] : colors.text.tertiary },
+                  isActive && styles.activeTabLabel,
+                ]}
                 numberOfLines={1}
               >
                 {tab.label}

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Shadows } from '../styles/designSystem';
+import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 
@@ -10,6 +11,7 @@ const HIDDEN_ON_SCREENS = ['EventDetail', 'Ticket', 'NotificationCenter', 'ScanC
 
 const FloatingTabBar = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
+  const { colors, isDarkMode } = useTheme();
 
   // Check if the currently focused tab's nested stack screen should hide the tab bar
   const focusedRoute = state.routes[state.index];
@@ -31,7 +33,7 @@ const FloatingTabBar = ({ state, descriptors, navigation }) => {
 
   return (
     <View style={[styles.wrapper, { bottom: Math.max(insets.bottom, 20) }]}>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background.primary, borderColor: colors.border.light }]}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
@@ -72,10 +74,10 @@ const FloatingTabBar = ({ state, descriptors, navigation }) => {
                 accessibilityLabel={options.tabBarAccessibilityLabel}
                 onPress={onPress}
                 onLongPress={onLongPress}
-                style={styles.activeTab}
+                style={[styles.activeTab, { backgroundColor: isDarkMode ? colors.background.secondary : Colors.white }]}
               >
-                <Feather name={iconName} size={16} color={Colors.primary[500]} />
-                <Text style={styles.activeLabel}>{label}</Text>
+                <Feather name={iconName} size={16} color={colors.primary[500]} />
+                <Text style={[styles.activeLabel, { color: colors.primary[500] }]}>{label}</Text>
               </TouchableOpacity>
             );
           }
@@ -90,7 +92,7 @@ const FloatingTabBar = ({ state, descriptors, navigation }) => {
               onLongPress={onLongPress}
               style={styles.inactiveTab}
             >
-              <Feather name={iconName} size={24} color={Colors.text.tertiary} />
+              <Feather name={iconName} size={24} color={colors.text.tertiary} />
             </TouchableOpacity>
           );
         })}
