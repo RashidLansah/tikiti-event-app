@@ -299,7 +299,7 @@ Thank you!`;
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}
             onPress={() => navigation.navigate('My Tickets')}
           >
@@ -309,6 +309,28 @@ Thank you!`;
             <View style={styles.menuContent}>
               <Text style={[styles.menuTitle, { color: colors.text.primary }]}>My Tickets</Text>
               <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>View your event tickets</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}
+            onPress={() => {
+              const hasSocials = userProfile?.socialLinks &&
+                Object.values(userProfile.socialLinks).some(v => v && v.trim());
+              navigation.navigate(hasSocials ? 'SocialCard' : 'EditSocialLinks');
+            }}
+          >
+            <View style={styles.menuIcon}>
+              <Feather name="share-2" size={20} color={getSubtleIconColor(colors.primary[500])} />
+            </View>
+            <View style={styles.menuContent}>
+              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Share My Card</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>
+                {userProfile?.socialLinks && Object.values(userProfile.socialLinks).some(v => v && v.trim())
+                  ? 'Your QR social card'
+                  : 'Set up your social links'}
+              </Text>
             </View>
             <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
           </TouchableOpacity>

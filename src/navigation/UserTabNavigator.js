@@ -35,6 +35,11 @@ import TicketScreen from '../screens/User/TicketScreen';
 import MyTicketsScreen from '../screens/User/MyTicketsScreen';
 import ProfileScreen from '../screens/User/ProfileScreen';
 import NotificationCenterScreen from '../screens/User/NotificationCenterScreen';
+import SocialCardScreen from '../screens/User/SocialCardScreen';
+import EditSocialLinksScreen from '../screens/User/EditSocialLinksScreen';
+import NetworkScreen from '../screens/User/NetworkScreen';
+import ScanConnectionScreen from '../screens/User/ScanConnectionScreen';
+import ConnectionDetailScreen from '../screens/User/ConnectionDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -90,6 +95,32 @@ const MyTicketsStack = () => (
   >
     <Stack.Screen name="MyTicketsList" component={MyTicketsScreen} />
     <Stack.Screen name="Ticket" component={TicketScreen} />
+  </Stack.Navigator>
+);
+
+// Stack navigator for Network (connections + QR scanning)
+const NetworkStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+    }}
+  >
+    <Stack.Screen name="NetworkMain" component={NetworkScreen} />
+    <Stack.Screen name="ScanConnection" component={ScanConnectionScreen} />
+    <Stack.Screen name="ConnectionDetail" component={ConnectionDetailScreen} />
+  </Stack.Navigator>
+);
+
+// Stack navigator for Profile (social card + edit links)
+const ProfileStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+    }}
+  >
+    <Stack.Screen name="ProfileMain" component={ProfileScreen} />
+    <Stack.Screen name="SocialCard" component={SocialCardScreen} />
+    <Stack.Screen name="EditSocialLinks" component={EditSocialLinksScreen} />
   </Stack.Navigator>
 );
 
@@ -158,11 +189,28 @@ const UserTabNavigator = () => {
         })}
       />
       <Tab.Screen
+        name="Network"
+        component={NetworkStack}
+        options={{
+          tabBarLabel: 'Network',
+        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            navigation.navigate('Network', { screen: 'NetworkMain' });
+          },
+        })}
+      />
+      <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStack}
         options={{
           tabBarLabel: 'Profile',
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            navigation.navigate('Profile', { screen: 'ProfileMain' });
+          },
+        })}
       />
     </Tab.Navigator>
   );

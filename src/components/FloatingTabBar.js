@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 
 // Screens where the tab bar should be hidden
-const HIDDEN_ON_SCREENS = ['EventDetail', 'Ticket', 'NotificationCenter'];
+const HIDDEN_ON_SCREENS = ['EventDetail', 'Ticket', 'NotificationCenter', 'ScanConnection', 'ConnectionDetail', 'SocialCard', 'EditSocialLinks'];
 
 const FloatingTabBar = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
@@ -23,6 +23,7 @@ const FloatingTabBar = ({ state, descriptors, navigation }) => {
   const iconMap = {
     'Events': 'calendar',
     'My Tickets': 'heart',
+    'Network': 'globe',
     'Profile': 'user',
     'Dashboard': 'grid',
     'Scanner': 'camera',

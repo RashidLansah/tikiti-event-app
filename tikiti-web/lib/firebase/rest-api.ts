@@ -79,6 +79,58 @@ function convertFirestoreData(fields: Record<string, any>): Record<string, unkno
   return result;
 }
 
+export interface UserSocialCardData {
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    linkedin?: string;
+    phone?: string;
+    [key: string]: string | undefined;
+  };
+}
+
+/**
+ * Fetch user social card data from Firestore via REST API (no SDK needed).
+ * Returns only safe public fields. Returns null if user not found or request fails.
+ */
+export async function fetchUserSocialCard(userId: string): Promise<UserSocialCardData | null> {
+  try {
+    const url = `${FIRESTORE_BASE_URL}/users/${userId}`;
+    const response = await fetch(url, {
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!response.ok) {
+      console.log(`[rest-api] User not found: ${userId} (status ${response.status})`);
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data.fields) {
+      return null;
+    }
+
+    const allFields = convertFirestoreData(data.fields) as Record<string, unknown>;
+
+    // Return only safe public fields
+    const safeData: UserSocialCardData = {};
+    if (allFields.displayName) safeData.displayName = allFields.displayName as string;
+    if (allFields.firstName) safeData.firstName = allFields.firstName as string;
+    if (allFields.lastName) safeData.lastName = allFields.lastName as string;
+    if (allFields.socialLinks && typeof allFields.socialLinks === 'object') {
+      safeData.socialLinks = allFields.socialLinks as UserSocialCardData['socialLinks'];
+    }
+
+    return safeData;
+  } catch (error) {
+    console.error('[rest-api] Error fetching user social card:', error);
+    return null;
+  }
+}
+
 /**
  * Extract a human-readable location string from the event's location field.
  * Handles both string and nested object formats.

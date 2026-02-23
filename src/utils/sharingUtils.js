@@ -125,6 +125,41 @@ export const validateEventUrl = (url) => {
   }
 };
 
+/**
+ * Generate a shareable social card URL for a user
+ * @param {string} userId - The user's Firebase UID
+ * @returns {string} - The shareable URL
+ */
+export const generateSocialCardUrl = (userId) => {
+  const baseUrl = getBaseUrl();
+  return `${baseUrl}/u/${userId}`;
+};
+
+/**
+ * Validate if a URL is a valid Tikiti social card URL
+ * @param {string} url - The URL to validate
+ * @returns {Object} - { isValid: boolean, userId: string | null }
+ */
+export const validateSocialCardUrl = (url) => {
+  try {
+    const urlObj = new URL(url);
+    const tikitiDomains = ['gettikiti.com', 'www.gettikiti.com'];
+
+    if (!tikitiDomains.includes(urlObj.hostname)) {
+      return { isValid: false, userId: null };
+    }
+
+    const match = urlObj.pathname.match(/^\/u\/(.+)$/);
+    if (match) {
+      return { isValid: true, userId: match[1] };
+    }
+
+    return { isValid: false, userId: null };
+  } catch (error) {
+    return { isValid: false, userId: null };
+  }
+};
+
 export default {
   generateEventShareUrl,
   generateOrganizerShareUrl,
@@ -133,5 +168,7 @@ export default {
   generateEventShareText,
   generateOrganizerShareText,
   validateEventUrl,
+  generateSocialCardUrl,
+  validateSocialCardUrl,
   getBaseUrl
 };

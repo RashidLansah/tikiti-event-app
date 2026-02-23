@@ -54,7 +54,8 @@ export const COLLECTIONS = {
   EVENTS: 'events',
   TICKETS: 'tickets',
   BOOKINGS: 'bookings',
-  CATEGORIES: 'categories'
+  CATEGORIES: 'categories',
+  CONNECTIONS: 'connections', // subcollection under users/{userId}/connections
 };
 
 // User Management
@@ -914,4 +915,64 @@ export const categoryService = {
       throw error;
     }
   }
+};
+
+// Connection Management (for social card networking)
+export const connectionService = {
+  // Save a new connection
+  saveConnection: async (userId, connectionData) => {
+    try {
+      const connectionsRef = collection(db, COLLECTIONS.USERS, userId, COLLECTIONS.CONNECTIONS);
+
+      // Check for duplicate (same connectedUserId + eventId)
+      const q = query(
+        connectionsRef,
+        where('connectedUserId', '==', connectionData.connectedUserId),
+        where('eventId', '==', connectionData.eventId)
+      );
+      const existing = await getDocs(q);
+      if (!existing.empty) {
+        throw new Error('You already saved this connection for this event.');
+      }
+
+      const docRef = await addDoc(connectionsRef, {
+        ...connectionData,
+        createdAt: serverTimestamp(),
+      });
+
+      return { id: docRef.id, ...connectionData };
+    } catch (error) {
+      logger.error('Error saving connection:', error);
+      throw error;
+    }
+  },
+
+  // Get all connections for a user
+  getConnections: async (userId) => {
+    try {
+      const connectionsRef = collection(db, COLLECTIONS.USERS, userId, COLLECTIONS.CONNECTIONS);
+      const q = query(connectionsRef, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error) {
+      logger.error('Error getting connections:', error);
+      throw error;
+    }
+  },
+
+  // Delete a connection
+  deleteConnection: async (userId, connectionId) => {
+    try {
+      const connectionRef = doc(db, COLLECTIONS.USERS, userId, COLLECTIONS.CONNECTIONS, connectionId);
+      await deleteDoc(connectionRef);
+      return true;
+    } catch (error) {
+      logger.error('Error deleting connection:', error);
+      throw error;
+    }
+  },
 };

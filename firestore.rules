@@ -24,9 +24,14 @@ service cloud.firestore {
     match /users/{userId} {
       // Users can read and write their own profile
       allow read, write: if isOwner(userId);
-      
+
       // Other authenticated users can read basic profile info (for event organizers)
       allow read: if isAuthenticated();
+
+      // Connections subcollection - users can only manage their own connections
+      match /connections/{connectionId} {
+        allow read, write: if isOwner(userId);
+      }
     }
     
     // Events collection
