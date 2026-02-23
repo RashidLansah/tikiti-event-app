@@ -667,12 +667,11 @@ export const bookingService = {
         logger.log('⚠️ User not authenticated, returning empty attendees list');
         return [];
       }
-      
+
       const bookingsRef = collection(db, COLLECTIONS.BOOKINGS);
       const q = query(
-        bookingsRef, 
-        where('eventId', '==', eventId),
-        orderBy('createdAt', 'desc')
+        bookingsRef,
+        where('eventId', '==', eventId)
       );
       const querySnapshot = await getDocs(q);
       

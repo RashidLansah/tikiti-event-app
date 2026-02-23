@@ -15,6 +15,7 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import notificationService from '../../services/notificationService';
+import { NotificationSkeleton } from '../../components/Skeleton';
 
 const NotificationCenterScreen = ({ navigation }) => {
   const { colors, isDarkMode } = useTheme();
@@ -239,12 +240,7 @@ const NotificationCenterScreen = ({ navigation }) => {
   );
 
   if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background.primary, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.text.primary} />
-        <Text style={{ marginTop: 12, fontSize: 14, color: colors.text.secondary }}>Loading notifications...</Text>
-      </View>
-    );
+    return <NotificationSkeleton />;
   }
 
   return (

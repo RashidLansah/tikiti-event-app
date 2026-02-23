@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Linking from 'expo-linking';
-import { Platform, View, Text, ActivityIndicator } from 'react-native';
+import { Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { Colors } from '../styles/designSystem';
+import TikitiLoader from '../components/TikitiLoader';
 
 // Import tab navigators
 import UserTabNavigator from './UserTabNavigator';
@@ -44,14 +44,9 @@ const AppNavigator = () => {
   // Show loading if we're still loading auth state, OR if we have a user but no profile yet
   const shouldShowLoading = loading || (user && !userProfile);
 
-  // Show loading screen while authentication state is being determined
+  // Show branded loading screen while authentication state is being determined
   if (shouldShowLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background.primary }}>
-        <ActivityIndicator size="large" color={Colors.primary[500]} />
-        <Text style={{ marginTop: 16, color: Colors.text.secondary }}>Loading...</Text>
-      </View>
-    );
+    return <TikitiLoader duration={2000} />;
   }
 
   // Determine the initial route

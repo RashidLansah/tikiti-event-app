@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import { connectionService } from '../../services/firestoreService';
+import { NetworkSkeleton } from '../../components/Skeleton';
 
 const NetworkScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -266,17 +267,7 @@ const NetworkScreen = ({ navigation }) => {
   };
 
   if (loading) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
-        <View style={[styles.header, { backgroundColor: colors.background.primary, borderBottomColor: colors.border.light }]}>
-          <Text style={[styles.headerTitle, { color: colors.text.primary }]}>Network</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color={colors.primary[500]} />
-        </View>
-      </View>
-    );
+    return <NetworkSkeleton />;
   }
 
   return (

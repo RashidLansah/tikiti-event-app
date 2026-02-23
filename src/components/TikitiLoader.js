@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet, Dimensions } from 'react-native';
 import { Colors, Typography } from '../styles/designSystem';
+import { useTheme } from '../context/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -13,6 +14,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
  * @param {string} message - Optional message below progress bar
  */
 const TikitiLoader = ({ duration = 2000, onComplete, message }) => {
+  const { colors } = useTheme();
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -32,18 +34,18 @@ const TikitiLoader = ({ duration = 2000, onComplete, message }) => {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
       <View style={styles.content}>
         {/* Logo Text */}
-        <Text style={styles.logo}>Tikiti</Text>
+        <Text style={[styles.logo, { color: colors.text.primary }]}>Tikiti</Text>
 
         {/* Progress Bar */}
-        <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
+        <View style={[styles.progressTrack, { backgroundColor: colors.background.tertiary }]}>
+          <Animated.View style={[styles.progressFill, { width: progressWidth, backgroundColor: colors.text.primary }]} />
         </View>
 
         {/* Optional message */}
-        {message && <Text style={styles.message}>{message}</Text>}
+        {message && <Text style={[styles.message, { color: colors.text.secondary }]}>{message}</Text>}
       </View>
     </View>
   );

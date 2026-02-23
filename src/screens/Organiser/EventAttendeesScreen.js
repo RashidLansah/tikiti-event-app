@@ -17,7 +17,7 @@ import { Feather } from '@expo/vector-icons';
 import { bookingService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
-import TikitiLoader from '../../components/TikitiLoader';
+import { AttendeesSkeleton } from '../../components/Skeleton';
 import pdfExportService from '../../services/pdfExportService';
 
 const EventAttendeesScreen = ({ navigation, route }) => {
@@ -322,12 +322,7 @@ const EventAttendeesScreen = ({ navigation, route }) => {
   };
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor={Colors.background.primary} />
-        <TikitiLoader duration={1500} message="Loading attendees..." />
-      </SafeAreaView>
-    );
+    return <AttendeesSkeleton />;
   }
 
   if (error) {

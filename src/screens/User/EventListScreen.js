@@ -17,7 +17,6 @@ import { Feather } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import PillTabBar from '../../components/PillTabBar';
 import { EventListSkeleton } from '../../components/Skeleton';
-import TikitiLoader from '../../components/TikitiLoader';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { eventService, bookingService, getFirestoreErrorMessage } from '../../services/firestoreService';
@@ -411,7 +410,7 @@ const EventListScreen = ({ navigation }) => {
   };
 
   if (loading) {
-    return <TikitiLoader duration={1500} message="Loading events..." />;
+    return <EventListSkeleton />;
   }
 
   return (
