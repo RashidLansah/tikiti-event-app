@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Linking from 'expo-linking';
+import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import TikitiLoader from '../components/TikitiLoader';
@@ -29,7 +30,50 @@ const Stack = createStackNavigator();
 // Main App Navigator
 const AppNavigator = () => {
   const { user, userProfile, loading } = useAuth();
-  
+  const navigationRef = useRef(null);
+  const notificationResponseListener = useRef(null);
+
+  // Handle notification taps (navigate to relevant screen)
+  useEffect(() => {
+    notificationResponseListener.current =
+      Notifications.addNotificationResponseReceivedListener(response => {
+        const data = response.notification.request.content.data;
+
+        if (data?.eventId) {
+          const eventTypes = ['rsvp_confirmation', 'event_update', 'event_cancelled', 'check_in', 'new_event'];
+          if (eventTypes.includes(data.type)) {
+            setTimeout(() => {
+              if (navigationRef.current) {
+                navigationRef.current.navigate('UserFlow', {
+                  screen: 'Events',
+                  params: {
+                    screen: 'EventDetail',
+                    params: { event: { id: data.eventId } },
+                  },
+                });
+              }
+            }, 500);
+          }
+        }
+
+        if (data?.type === 'connection_made') {
+          setTimeout(() => {
+            if (navigationRef.current) {
+              navigationRef.current.navigate('UserFlow', {
+                screen: 'Network',
+              });
+            }
+          }, 500);
+        }
+      });
+
+    return () => {
+      if (notificationResponseListener.current) {
+        Notifications.removeNotificationSubscription(notificationResponseListener.current);
+      }
+    };
+  }, []);
+
   // Debug logging
   logger.log('🔍 AppNavigator Debug:');
   logger.log('  - User:', user?.email);
@@ -76,6 +120,7 @@ const AppNavigator = () => {
 
   return (
     <NavigationContainer
+      ref={navigationRef}
       linking={linkingConfig}
       onReady={() => {
         // Handle any pending deep links when navigation is ready

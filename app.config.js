@@ -38,7 +38,10 @@ export default {
       permissions: [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "SCHEDULE_EXACT_ALARM"
       ],
       edgeToEdgeEnabled: true
     },
@@ -49,7 +52,14 @@ export default {
     plugins: [
       "expo-camera",
       "expo-image-picker",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/icon.png",
+          color: "#333333",
+        }
+      ]
     ],
     scheme: "tikiti",
     intentFilters: [

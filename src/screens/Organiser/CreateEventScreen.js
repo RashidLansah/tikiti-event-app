@@ -14,6 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { eventService } from '../../services/firestoreService';
+import notificationService from '../../services/notificationService';
 import { imageUploadService } from '../../services/imageUploadService';
 import { imageOptimization } from '../../utils/imageOptimization';
 import { useAuth } from '../../context/AuthContext';
@@ -205,7 +206,12 @@ const CreateEventScreen = ({ navigation, route }) => {
       if (isEdit && existingEvent?.id) {
         // Update existing event
         await eventService.update(existingEvent.id, eventData);
-        
+
+        // Notify attendees about the update
+        notificationService.sendEventUpdateToAllAttendees(
+          existingEvent.id, eventName.trim(), 'event_details_changed'
+        ).catch(err => console.warn('Failed to send event update notifications:', err));
+
         Alert.alert(
           'Success',
           `Event "${eventName}" updated successfully!`,
@@ -221,7 +227,12 @@ const CreateEventScreen = ({ navigation, route }) => {
       } else {
         // Create new event
         const docRef = await eventService.create(eventData, user.uid);
-        
+
+        // Notify users about the new event (location-filtered)
+        notificationService.sendNewEventNotification(
+          docRef.id, eventName.trim(), eventData.location
+        ).catch(err => console.warn('Failed to send new event notifications:', err));
+
         Alert.alert(
           'Success',
           `Free event "${eventName}" created successfully!`,

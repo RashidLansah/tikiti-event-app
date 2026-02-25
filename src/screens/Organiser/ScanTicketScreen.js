@@ -13,6 +13,7 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather } from '@expo/vector-icons';
 import { bookingService } from '../../services/firestoreService';
+import notificationService from '../../services/notificationService';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import logger from '../../utils/logger';
@@ -207,9 +208,18 @@ const ScanTicketScreen = ({ navigation }) => {
       // Update stats
       loadTodayStats();
       
-      // If valid, mark ticket as used
+      // If valid, mark ticket as used and notify attendee
       if (isValid) {
         await markTicketAsUsed(ticketData.purchaseId);
+
+        // Send check-in confirmation push notification to attendee
+        if (ticketData.userId) {
+          notificationService.sendCheckInConfirmation(
+            ticketData.userId,
+            ticketData.eventName || 'the event',
+            ticketData.eventId || ''
+          ).catch(err => console.warn('Failed to send check-in notification:', err));
+        }
       }
       
     } catch (error) {

@@ -20,6 +20,7 @@ import ShareButton from '../../components/ShareButton';
 import CopyLinkButton from '../../components/CopyLinkButton';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { eventService, bookingService } from '../../services/firestoreService';
+import notificationService from '../../services/notificationService';
 
 const { width } = Dimensions.get('window');
 
@@ -98,7 +99,16 @@ const EventDetailScreen = ({ navigation, route }) => {
       
       // Update local state
       setIsActive(newIsActive);
-      
+
+      // Notify attendees if event is being deactivated
+      if (!newIsActive) {
+        notificationService.sendEventUpdateToAllAttendees(
+          event.id,
+          eventData.name,
+          'event_deactivated'
+        ).catch(err => console.warn('Failed to send deactivation notifications:', err));
+      }
+
       Alert.alert(
         'Event Status Updated',
         `Event has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`
@@ -176,7 +186,10 @@ const EventDetailScreen = ({ navigation, route }) => {
   const confirmDeleteEvent = async () => {
     try {
       setIsDeleting(true);
-      
+
+      // Notify all attendees before deleting (must happen before event data is removed)
+      await notificationService.sendEventCancelledToAllAttendees(event.id, eventData.name);
+
       // Use permanent delete - completely removes the event from Firestore
       await eventService.deletePermanently(event.id);
       

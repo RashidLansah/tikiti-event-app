@@ -138,6 +138,14 @@ const NotificationCenterScreen = ({ navigation }) => {
         return 'user-plus';
       case 'event_update':
         return 'edit';
+      case 'event_cancelled':
+        return 'x-circle';
+      case 'check_in':
+        return 'log-in';
+      case 'connection_made':
+        return 'users';
+      case 'new_event':
+        return 'calendar';
       case 'welcome':
         return 'star';
       default:
@@ -154,6 +162,14 @@ const NotificationCenterScreen = ({ navigation }) => {
       case 'new_rsvp':
         return colors.primary[500];
       case 'event_update':
+        return colors.info[500];
+      case 'event_cancelled':
+        return colors.error[500];
+      case 'check_in':
+        return colors.success[500];
+      case 'connection_made':
+        return colors.primary[500];
+      case 'new_event':
         return colors.info[500];
       case 'welcome':
         return colors.primary[500];

@@ -43,6 +43,11 @@ export const AuthProvider = ({ children }) => {
             logger.log('🔍 Fetched user profile:', profileData);
             setUserProfile(profileData);
 
+            // Register push token for notifications (non-blocking)
+            notificationService.registerPushToken(firebaseUser.uid).catch(err => {
+              logger.error('Failed to register push token:', err);
+            });
+
             // Background archive past events for organisers (once per session)
             if (
               !hasArchivedThisSession &&

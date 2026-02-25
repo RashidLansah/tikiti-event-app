@@ -17,6 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import { connectionService, bookingService, userService } from '../../services/firestoreService';
+import notificationService from '../../services/notificationService';
 import { validateSocialCardUrl } from '../../utils/sharingUtils';
 
 const { width, height } = Dimensions.get('window');
@@ -170,6 +171,20 @@ const ScanConnectionScreen = ({ navigation }) => {
         eventName: selectedEvent.eventName,
         eventDate: selectedEvent.eventDate || null,
       });
+
+      // Send connection notification to both users
+      const myName = userProfile?.displayName || user?.displayName || 'Someone';
+      const theirName = scannedProfile.displayName ||
+        `${scannedProfile.firstName || ''} ${scannedProfile.lastName || ''}`.trim() ||
+        'Someone';
+
+      notificationService.sendConnectionMadeNotification(
+        user.uid, theirName, selectedEvent.eventName
+      ).catch(err => console.warn('Failed to send connection notification:', err));
+
+      notificationService.sendConnectionMadeNotification(
+        scannedUserId, myName, selectedEvent.eventName
+      ).catch(err => console.warn('Failed to send connection notification:', err));
 
       Alert.alert('Connection Saved', 'You have successfully saved this connection.', [
         {
