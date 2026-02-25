@@ -2,7 +2,7 @@ export default {
   expo: {
     name: "Tikiti",
     slug: "tikiti",
-    version: "1.8.0",
+    version: "1.8.1",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
