@@ -25,11 +25,14 @@ import {
   Loader2,
   UserPlus,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export default function EventSpeakersPage() {
   const params = useParams();
   const eventId = params.id as string;
   const { user, currentOrganization } = useAuth();
+  const { toast } = useToast();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
@@ -39,6 +42,7 @@ export default function EventSpeakersPage() {
   const [editingSpeaker, setEditingSpeaker] = useState<Speaker | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     if (eventId) {
@@ -115,26 +119,30 @@ export default function EventSpeakersPage() {
       setInvitations((prev) => [newInvitation, ...prev]);
     } catch (error) {
       console.error('Error resending invitation:', error);
-      alert('Failed to resend invitation');
+      toast({ title: 'Error', description: 'Failed to resend invitation', variant: 'destructive' });
     } finally {
       setResendingId(null);
     }
   };
 
-  const handleCancel = async (invitationId: string) => {
-    if (!confirm('Are you sure you want to cancel this invitation?')) return;
+  const handleCancel = (invitationId: string) => {
+    setCancelConfirmId(invitationId);
+  };
 
+  const confirmCancelInvitation = async () => {
+    if (!cancelConfirmId) return;
     try {
-      setCancellingId(invitationId);
-      await speakerInvitationService.cancel(invitationId);
+      setCancellingId(cancelConfirmId);
+      await speakerInvitationService.cancel(cancelConfirmId);
       setInvitations((prev) =>
         prev.map((inv) =>
-          inv.id === invitationId ? { ...inv, status: 'cancelled' as const } : inv
+          inv.id === cancelConfirmId ? { ...inv, status: 'cancelled' as const } : inv
         )
       );
+      toast({ title: 'Invitation cancelled', variant: 'success' });
     } catch (error) {
       console.error('Error cancelling invitation:', error);
-      alert('Failed to cancel invitation');
+      toast({ title: 'Error', description: 'Failed to cancel invitation', variant: 'destructive' });
     } finally {
       setCancellingId(null);
     }
@@ -334,6 +342,15 @@ export default function EventSpeakersPage() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!cancelConfirmId}
+        onOpenChange={(open) => !open && setCancelConfirmId(null)}
+        title="Cancel Invitation"
+        description="Are you sure you want to cancel this speaker invitation?"
+        confirmLabel="Cancel Invitation"
+        onConfirm={confirmCancelInvitation}
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Eye, Save } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Survey, SurveyQuestion } from '@/types/engagement';
 import { SurveyQuestionEditor } from './SurveyQuestionEditor';
 import { SurveyPreview } from './SurveyPreview';
@@ -19,6 +20,7 @@ interface SurveyBuilderProps {
 }
 
 export function SurveyBuilder({ initialSurvey, eventId, onSave, onCancel }: SurveyBuilderProps) {
+  const { toast } = useToast();
   const [survey, setSurvey] = useState<Survey>(
     initialSurvey || {
       title: '',
@@ -81,16 +83,16 @@ export function SurveyBuilder({ initialSurvey, eventId, onSave, onCancel }: Surv
   const handleSave = () => {
     // Validate
     if (!survey.title.trim()) {
-      alert('Please enter a title for the survey.');
+      toast({ title: 'Missing title', description: 'Please enter a title for the survey.', variant: 'destructive' });
       return;
     }
     if (survey.questions.length === 0) {
-      alert('Please add at least one question.');
+      toast({ title: 'No questions', description: 'Please add at least one question.', variant: 'destructive' });
       return;
     }
     const invalidQuestions = survey.questions.filter((q) => !q.question.trim());
     if (invalidQuestions.length > 0) {
-      alert('Please complete all question texts before saving.');
+      toast({ title: 'Incomplete questions', description: 'Please complete all question texts before saving.', variant: 'destructive' });
       return;
     }
     onSave(survey);

@@ -32,7 +32,7 @@ interface Change {
 export default function EditEventPage() {
   const params = useParams();
   const router = useRouter();
-  const { toast, toasts } = useToast();
+  const { toast } = useToast();
   const eventId = params.id as string;
   const { currentOrganization, user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -648,22 +648,6 @@ export default function EditEventPage() {
         />
       )}
 
-      {/* Toast Notifications */}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`p-4 rounded-lg shadow-lg max-w-sm ${
-              t.variant === 'destructive'
-                ? 'bg-red-50 text-red-900 border border-red-200'
-                : 'bg-green-50 text-green-900 border border-green-200'
-            }`}
-          >
-            {t.title && <p className="font-semibold">{t.title}</p>}
-            {t.description && <p className="text-sm">{t.description}</p>}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

@@ -10,10 +10,12 @@ import { Calendar, MapPin, Clock, Users, DollarSign, Tag, Share2, ExternalLink }
 import Image from 'next/image';
 import Link from 'next/link';
 import { eventCategories } from '@/lib/data/categories';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EventPreviewPage() {
   const params = useParams();
   const eventId = params.id as string;
+  const { toast } = useToast();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -78,7 +80,7 @@ export default function EventPreviewPage() {
     } else {
       // Fallback: copy to clipboard
       await navigator.clipboard.writeText(url);
-      alert('Event link copied to clipboard!');
+      toast({ title: 'Link copied to clipboard', variant: 'success' });
     }
   };
 

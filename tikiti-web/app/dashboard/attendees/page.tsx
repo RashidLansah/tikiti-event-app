@@ -27,7 +27,7 @@ import { TableSkeleton } from '@/components/ui/Skeleton';
 
 export default function AttendeesPage() {
   const { currentOrganization } = useAuth();
-  const { toast, toasts } = useToast();
+  const { toast } = useToast();
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -342,22 +342,6 @@ export default function AttendeesPage() {
         )}
       </div>
 
-      {/* Toast Notifications */}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`p-5 rounded-[16px] shadow-lg max-w-sm ${
-              t.variant === 'destructive'
-                ? 'bg-red-50 text-red-900 border border-red-200'
-                : 'bg-green-50 text-green-900 border border-green-200'
-            }`}
-          >
-            {t.title && <p className="font-semibold text-base">{t.title}</p>}
-            {t.description && <p className="text-sm mt-1">{t.description}</p>}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

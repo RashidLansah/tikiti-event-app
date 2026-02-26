@@ -19,12 +19,14 @@ import {
   Loader2,
   QrCode,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CheckInPage() {
   const params = useParams();
   const router = useRouter();
   const eventId = params.id as string;
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState<Event | null>(null);
@@ -115,7 +117,7 @@ export default function CheckInPage() {
       }));
     } catch (error) {
       console.error('Error checking in:', error);
-      alert('Failed to check in attendee');
+      toast({ title: 'Error', description: 'Failed to check in attendee', variant: 'destructive' });
     } finally {
       setCheckingIn(null);
     }
@@ -149,7 +151,7 @@ export default function CheckInPage() {
       }));
     } catch (error) {
       console.error('Error undoing check-in:', error);
-      alert('Failed to undo check-in');
+      toast({ title: 'Error', description: 'Failed to undo check-in', variant: 'destructive' });
     } finally {
       setCheckingIn(null);
     }

@@ -33,12 +33,11 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { ToastContainer } from '@/components/ui/toast';
 import InviteMemberModal from '@/components/InviteMemberModal';
 
 export default function SettingsPage() {
   const { currentOrganization, currentOrgRole, refreshOrganizations, user, userProfile } = useAuth();
-  const { toast, toasts, dismiss } = useToast();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const [saving, setSaving] = useState(false);
   const [orgData, setOrgData] = useState<Partial<Organization>>({});
@@ -1261,8 +1260,6 @@ export default function SettingsPage() {
         organizationName={currentOrganization?.name || 'your organization'}
       />
 
-      {/* Toast Notifications - Centered */}
-      <ToastContainer toasts={toasts} onDismiss={dismiss} position="top-center" />
     </div>
   );
 }

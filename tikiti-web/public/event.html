@@ -564,6 +564,94 @@
                 padding: 1.5rem 1.25rem;
             }
         }
+
+        /* ─── Custom Modal ───────────────────────────────── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-box {
+            background: #fff;
+            border-radius: 24px;
+            padding: 2rem;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            animation: slideUp 0.25s ease;
+        }
+
+        .modal-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .modal-icon.success { background: #DCFCE7; }
+        .modal-icon.error { background: #FEE2E2; }
+        .modal-icon.warning { background: #FEF3C7; }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #141414;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-message {
+            font-size: 0.9rem;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-button {
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            padding: 0.75rem 2rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        .modal-button:hover {
+            background: #1a1a1a;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -706,6 +794,16 @@
         </div>
     </div>
 
+    <!-- Custom Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal-box">
+            <div class="modal-icon" id="modalIcon"></div>
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-message" id="modalMessage"></div>
+            <button class="modal-button" onclick="closeModal()">OK</button>
+        </div>
+    </div>
+
     <!-- Bottom Action Bar -->
     <div class="bottom-action">
         <div class="action-content">
@@ -726,6 +824,25 @@
 
 
     <script>
+        // Modal functions
+        const modalIcons = {
+            success: '<svg width="24" height="24" fill="none" stroke="#16A34A" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>',
+            error: '<svg width="24" height="24" fill="none" stroke="#DC2626" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>',
+            warning: '<svg width="24" height="24" fill="none" stroke="#D97706" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M12 3l9.66 16.5H2.34L12 3z"/></svg>'
+        };
+
+        function showModal(title, message, type = 'success') {
+            document.getElementById('modalIcon').innerHTML = modalIcons[type] || modalIcons.success;
+            document.getElementById('modalIcon').className = 'modal-icon ' + type;
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
         // Firebase configuration
         const firebaseConfig = {
             apiKey: 'AIzaSyBxY-IGHevGAi7tvOGZ9V4VwFhU28zCKQc',
@@ -918,9 +1035,9 @@
                 navigator.share({ title: currentEvent?.name || 'Event', text: `${text} ${url}` });
             } else if (navigator.clipboard) {
                 navigator.clipboard.writeText(`${text} ${url}`);
-                alert('Event details copied to clipboard!');
+                showModal('Copied!', 'Event details copied to clipboard.', 'success');
             } else {
-                alert(`Share this link: ${url}`);
+                showModal('Share Event', `Share this link: ${url}`, 'success');
             }
         }
 
@@ -950,8 +1067,8 @@
             const isActive = (eventStatus === 'published' || eventStatus === 'active') && currentEvent?.isActive !== false;
             const isFull = typeof currentEvent?.availableTickets === 'number' ? currentEvent.availableTickets <= 0 : false;
 
-            if (!isActive) { alert('This event is no longer accepting registrations.'); return; }
-            if (isFull) { alert('This event is fully booked.'); return; }
+            if (!isActive) { showModal('Registration Closed', 'This event is no longer accepting registrations.', 'error'); return; }
+            if (isFull) { showModal('Fully Booked', 'This event is fully booked.', 'error'); return; }
 
             const firstName = document.getElementById('firstName').value.trim();
             const lastName = document.getElementById('lastName').value.trim();
@@ -959,7 +1076,7 @@
             let phoneNumber = document.getElementById('phoneNumber').value.trim();
 
             if (!firstName || !lastName || !email || !phoneNumber || !selectedGender) {
-                alert('Please fill in all required fields.');
+                showModal('Missing Fields', 'Please fill in all required fields.', 'warning');
                 return;
             }
 
@@ -971,7 +1088,7 @@
             }
 
             if (phoneNumber.length < 12 || phoneNumber.length > 15) {
-                alert('Please enter a valid phone number (e.g., 0244123456 or +233244123456)');
+                showModal('Invalid Phone Number', 'Please enter a valid phone number (e.g., 0244123456 or +233244123456).', 'warning');
                 return;
             }
 
@@ -982,15 +1099,16 @@
             try {
                 const db = await loadFirebase();
 
-                // Check for duplicate registration by email
+                // Check for duplicate registration by email (source filter required by Firestore rules)
                 const existingBookings = await db.collection('bookings')
                     .where('eventId', '==', currentEvent.id)
                     .where('userEmail', '==', email)
                     .where('status', '==', 'confirmed')
+                    .where('source', '==', 'web')
                     .get();
 
                 if (!existingBookings.empty) {
-                    alert('You have already registered for this event with this email address.');
+                    showModal('Already Registered', 'You have already registered for this event with this email address.', 'warning');
                     submitButton.textContent = 'Complete Registration';
                     submitButton.disabled = false;
                     return;
@@ -1079,11 +1197,11 @@
                     }
                 }
 
-                alert(`Thank you ${firstName}! You have successfully registered for ${currentEvent.name}. A confirmation email has been sent to ${email}.`);
+                showModal('Registration Confirmed', `Thank you ${firstName}! You have successfully registered for ${currentEvent.name}. A confirmation email has been sent to ${email}.`, 'success');
 
             } catch (error) {
                 console.error('Error submitting RSVP:', error);
-                alert('There was an error processing your registration. Please try again.');
+                showModal('Registration Failed', 'There was an error processing your registration. Please try again.', 'error');
             } finally {
                 submitButton.textContent = 'Complete Registration';
                 submitButton.disabled = false;
@@ -1093,7 +1211,7 @@
         // Download ticket
         async function downloadTicket() {
             if (!userBooking) {
-                alert('No booking found. Please complete registration first.');
+                showModal('No Booking Found', 'Please complete registration first.', 'error');
                 return;
             }
 
@@ -1228,12 +1346,12 @@
                 URL.revokeObjectURL(url);
 
                 setTimeout(() => {
-                    alert('Your ticket has been downloaded. Open it in any browser or print it for the event.');
+                    showModal('Ticket Downloaded', 'Your ticket has been downloaded. Open it in any browser or print it for the event.', 'success');
                 }, 500);
 
             } catch (error) {
                 console.error('Error generating ticket:', error);
-                alert('Error generating your ticket. Please try again.');
+                showModal('Download Failed', 'Error generating your ticket. Please try again.', 'error');
             }
         }
 

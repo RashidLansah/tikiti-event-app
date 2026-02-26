@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Plus, ArrowLeft, Play, Trash2, Eye, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { QuizBuilder } from '@/components/engagement/QuizBuilder';
@@ -19,10 +20,11 @@ import { LiveResults } from '@/components/engagement/LiveResults';
 export default function EngagementPage() {
   const params = useParams();
   const router = useRouter();
-  const { toast, toasts } = useToast();
+  const { toast } = useToast();
   const eventId = params.id as string;
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [polls, setPolls] = useState<Quiz[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
@@ -78,14 +80,17 @@ export default function EngagementPage() {
     }
   };
 
-  const handleDelete = async (quizId: string, type: string) => {
-    if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
+  const handleDelete = (quizId: string, type: string) => {
+    setDeleteConfirm({ id: quizId, type });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
     try {
-      await engagementService.deleteQuiz(eventId, quizId);
+      await engagementService.deleteQuiz(eventId, deleteConfirm.id);
       toast({
         title: 'Success',
-        description: `${type} deleted successfully`,
+        description: `${deleteConfirm.type} deleted successfully`,
       });
       loadEngagement();
     } catch (error: any) {
@@ -141,22 +146,6 @@ export default function EngagementPage() {
           }}
         />
 
-        {/* Toast Notifications */}
-        <div className="fixed bottom-4 right-4 z-50 space-y-2">
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className={`p-4 rounded-lg shadow-lg max-w-sm ${
-                t.variant === 'destructive'
-                  ? 'bg-red-50 text-red-900 border border-red-200'
-                  : 'bg-green-50 text-green-900 border border-green-200'
-              }`}
-            >
-              {t.title && <p className="font-semibold">{t.title}</p>}
-              {t.description && <p className="text-sm">{t.description}</p>}
-            </div>
-          ))}
-        </div>
       </div>
     );
   }
@@ -176,22 +165,6 @@ export default function EngagementPage() {
 
         <LiveResults eventId={eventId} quiz={viewingResults} />
 
-        {/* Toast Notifications */}
-        <div className="fixed bottom-4 right-4 z-50 space-y-2">
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className={`p-4 rounded-lg shadow-lg max-w-sm ${
-                t.variant === 'destructive'
-                  ? 'bg-red-50 text-red-900 border border-red-200'
-                  : 'bg-green-50 text-green-900 border border-green-200'
-              }`}
-            >
-              {t.title && <p className="font-semibold">{t.title}</p>}
-              {t.description && <p className="text-sm">{t.description}</p>}
-            </div>
-          ))}
-        </div>
       </div>
     );
   }
@@ -443,22 +416,14 @@ export default function EngagementPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Toast Notifications */}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`p-4 rounded-lg shadow-lg max-w-sm ${
-              t.variant === 'destructive'
-                ? 'bg-red-50 text-red-900 border border-red-200'
-                : 'bg-green-50 text-green-900 border border-green-200'
-            }`}
-          >
-            {t.title && <p className="font-semibold">{t.title}</p>}
-            {t.description && <p className="text-sm">{t.description}</p>}
-          </div>
-        ))}
-      </div>
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+        title={`Delete ${deleteConfirm?.type || 'item'}`}
+        description={`Are you sure you want to delete this ${deleteConfirm?.type || 'item'}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

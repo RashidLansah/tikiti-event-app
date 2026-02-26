@@ -2,6 +2,7 @@
 
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { NewDashboardLayout } from '@/components/layout/NewDashboardLayout';
+import { ToastProvider } from '@/components/ui/toast-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,9 +49,11 @@ export default function DashboardLayoutWrapper({
   // All dashboard pages require organization
   return (
     <ProtectedRoute requireOrganization={true}>
-      <NewDashboardLayout>
-        {children}
-      </NewDashboardLayout>
+      <ToastProvider>
+        <NewDashboardLayout>
+          {children}
+        </NewDashboardLayout>
+      </ToastProvider>
     </ProtectedRoute>
   );
 }

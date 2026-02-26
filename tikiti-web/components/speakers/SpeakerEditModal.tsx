@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { speakerService } from '@/lib/services/speakerService';
 import { Speaker } from '@/types/speaker';
 import { X, Loader2, Camera, User, Briefcase, Building2, FileText, Linkedin, Twitter, Globe } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface SpeakerEditModalProps {
   speaker: Speaker;
@@ -16,6 +17,7 @@ export default function SpeakerEditModal({
   onClose,
   onSaved,
 }: SpeakerEditModalProps) {
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,12 +38,12 @@ export default function SpeakerEditModal({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      toast({ title: 'Invalid file', description: 'Please select an image file.', variant: 'destructive' });
       return;
     }
 
     if (file.size > 500 * 1024) {
-      alert('Image must be less than 500KB');
+      toast({ title: 'Image too large', description: 'Image must be less than 500KB.', variant: 'destructive' });
       return;
     }
 

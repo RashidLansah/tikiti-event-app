@@ -32,6 +32,7 @@ import {
   Loader2,
   Upload,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Template types
 export type TemplateType = 'professional' | 'modern' | 'minimal' | 'bold';
@@ -127,6 +128,7 @@ export function ReportExporter({
   reportData,
   onClose,
 }: ReportExporterProps) {
+  const { toast } = useToast();
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('professional');
   const [isExporting, setIsExporting] = useState(false);
   const [exportFormat, setExportFormat] = useState<'pdf' | 'docx'>('pdf');
@@ -757,7 +759,7 @@ export function ReportExporter({
       }
     } catch (error) {
       console.error('Export error:', error);
-      alert('Failed to export report. Please try again.');
+      toast({ title: 'Export failed', description: 'Failed to export report. Please try again.', variant: 'destructive' });
     } finally {
       setIsExporting(false);
     }

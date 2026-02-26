@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Trash2, Edit, Save, Play, Eye } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Quiz, QuizQuestion, QuestionType, QuizType, QuizTrigger, TriggerType } from '@/types/engagement';
 import { QuestionEditor } from './QuestionEditor';
 import { TriggerConfig } from './TriggerConfig';
@@ -27,6 +28,7 @@ interface QuizBuilderProps {
 }
 
 export function QuizBuilder({ initialQuiz, eventId, onSave, onCancel }: QuizBuilderProps) {
+  const { toast } = useToast();
   const [quiz, setQuiz] = useState<Quiz>(
     initialQuiz || {
       title: '',
@@ -86,16 +88,16 @@ export function QuizBuilder({ initialQuiz, eventId, onSave, onCancel }: QuizBuil
   const handleSave = () => {
     // Validate
     if (!quiz.title.trim()) {
-      alert('Please enter a title for the quiz/poll.');
+      toast({ title: 'Missing title', description: 'Please enter a title for the quiz/poll.', variant: 'destructive' });
       return;
     }
     if (quiz.questions.length === 0) {
-      alert('Please add at least one question.');
+      toast({ title: 'No questions', description: 'Please add at least one question.', variant: 'destructive' });
       return;
     }
     const invalidQuestions = quiz.questions.filter((q) => !q.question.trim());
     if (invalidQuestions.length > 0) {
-      alert('Please complete all question texts before saving.');
+      toast({ title: 'Incomplete questions', description: 'Please complete all question texts before saving.', variant: 'destructive' });
       return;
     }
     onSave(quiz);

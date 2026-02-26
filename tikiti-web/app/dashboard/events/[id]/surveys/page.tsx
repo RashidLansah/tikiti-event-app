@@ -9,14 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Plus, Play, Trash2, Eye, X, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SurveyBuilder } from '@/components/surveys/SurveyBuilder';
 import { SurveyResults } from '@/components/surveys/SurveyResults';
 
 export default function SurveysPage() {
   const params = useParams();
-  const { toast, toasts } = useToast();
+  const { toast } = useToast();
   const eventId = params.id as string;
   const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingSurvey, setEditingSurvey] = useState<Survey | null>(null);
@@ -70,11 +72,14 @@ export default function SurveysPage() {
     }
   };
 
-  const handleDelete = async (surveyId: string) => {
-    if (!confirm('Are you sure you want to delete this survey?')) return;
+  const handleDelete = (surveyId: string) => {
+    setDeleteConfirmId(surveyId);
+  };
 
+  const confirmDeleteSurvey = async () => {
+    if (!deleteConfirmId) return;
     try {
-      await surveyService.deleteSurvey(eventId, surveyId);
+      await surveyService.deleteSurvey(eventId, deleteConfirmId);
       toast({
         title: 'Success',
         description: 'Survey deleted successfully',
@@ -154,22 +159,6 @@ export default function SurveysPage() {
           }}
         />
 
-        {/* Toast Notifications */}
-        <div className="fixed bottom-4 right-4 z-50 space-y-2">
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className={`p-4 rounded-lg shadow-lg max-w-sm ${
-                t.variant === 'destructive'
-                  ? 'bg-red-50 text-red-900 border border-red-200'
-                  : 'bg-green-50 text-green-900 border border-green-200'
-              }`}
-            >
-              {t.title && <p className="font-semibold">{t.title}</p>}
-              {t.description && <p className="text-sm">{t.description}</p>}
-            </div>
-          ))}
-        </div>
       </div>
     );
   }
@@ -189,22 +178,6 @@ export default function SurveysPage() {
 
         <SurveyResults eventId={eventId} survey={viewingResults} />
 
-        {/* Toast Notifications */}
-        <div className="fixed bottom-4 right-4 z-50 space-y-2">
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className={`p-4 rounded-lg shadow-lg max-w-sm ${
-                t.variant === 'destructive'
-                  ? 'bg-red-50 text-red-900 border border-red-200'
-                  : 'bg-green-50 text-green-900 border border-green-200'
-              }`}
-            >
-              {t.title && <p className="font-semibold">{t.title}</p>}
-              {t.description && <p className="text-sm">{t.description}</p>}
-            </div>
-          ))}
-        </div>
       </div>
     );
   }
@@ -329,22 +302,14 @@ export default function SurveysPage() {
         </div>
       )}
 
-      {/* Toast Notifications */}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`p-4 rounded-lg shadow-lg max-w-sm ${
-              t.variant === 'destructive'
-                ? 'bg-red-50 text-red-900 border border-red-200'
-                : 'bg-green-50 text-green-900 border border-green-200'
-            }`}
-          >
-            {t.title && <p className="font-semibold">{t.title}</p>}
-            {t.description && <p className="text-sm">{t.description}</p>}
-          </div>
-        ))}
-      </div>
+      <ConfirmDialog
+        open={!!deleteConfirmId}
+        onOpenChange={(open) => !open && setDeleteConfirmId(null)}
+        title="Delete Survey"
+        description="Are you sure you want to delete this survey? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteSurvey}
+      />
     </div>
   );
 }

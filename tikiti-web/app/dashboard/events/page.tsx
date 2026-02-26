@@ -35,15 +35,19 @@ import {
 import { eventCategories } from '@/lib/data/categories';
 import { useRouter } from 'next/navigation';
 import { EventsSkeleton } from '@/components/ui/Skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export default function EventsPage() {
   const { currentOrganization, user } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<Event['status'] | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [archiveConfirm, setArchiveConfirm] = useState<string | null>(null);
 
   // Auto-archive past events once on mount
   useEffect(() => {
@@ -91,19 +95,23 @@ export default function EventsPage() {
       router.push(`/dashboard/events/${duplicatedEvent.id}/edit`);
     } catch (error) {
       console.error('Error duplicating event:', error);
-      alert('Failed to duplicate event');
+      toast({ title: 'Error', description: 'Failed to duplicate event', variant: 'destructive' });
     }
   };
 
-  const handleDelete = async (eventId: string) => {
-    if (!confirm('Are you sure you want to archive this event?')) return;
+  const handleDelete = (eventId: string) => {
+    setArchiveConfirm(eventId);
+  };
 
+  const confirmArchive = async () => {
+    if (!archiveConfirm) return;
     try {
-      await eventService.delete(eventId);
+      await eventService.delete(archiveConfirm);
       loadEvents();
+      toast({ title: 'Event archived', variant: 'success' });
     } catch (error) {
-      console.error('Error deleting event:', error);
-      alert('Failed to delete event');
+      console.error('Error archiving event:', error);
+      toast({ title: 'Error', description: 'Failed to archive event', variant: 'destructive' });
     }
   };
 
@@ -113,7 +121,7 @@ export default function EventsPage() {
       loadEvents();
     } catch (error) {
       console.error('Error publishing event:', error);
-      alert('Failed to publish event');
+      toast({ title: 'Error', description: 'Failed to publish event', variant: 'destructive' });
     }
   };
 
@@ -303,6 +311,15 @@ export default function EventsPage() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!archiveConfirm}
+        onOpenChange={(open) => !open && setArchiveConfirm(null)}
+        title="Archive Event"
+        description="Are you sure you want to archive this event? It will be moved to your archived events."
+        confirmLabel="Archive"
+        onConfirm={confirmArchive}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Trash2, Edit, Calendar, Clock, MapPin, Users, QrCode } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { ProgramSession, Program } from '@/types/program';
 import { SessionEditor } from './SessionEditor';
 
@@ -40,6 +41,7 @@ export function ProgramBuilder({
   onSave,
   onCancel,
 }: ProgramBuilderProps) {
+  const { toast } = useToast();
   const [program, setProgram] = useState<Program>(
     initialProgram || { sessions: [] }
   );
@@ -167,7 +169,7 @@ export function ProgramBuilder({
       (s) => !s.title.trim() || !s.startTime || !s.endTime
     );
     if (invalidSessions.length > 0) {
-      alert('Please complete all session details before saving.');
+      toast({ title: 'Incomplete sessions', description: 'Please complete all session details before saving.', variant: 'destructive' });
       return;
     }
 
@@ -177,7 +179,7 @@ export function ProgramBuilder({
         (s) => s.date && s.date < eventDate
       );
       if (invalidDates.length > 0) {
-        alert('Some sessions have dates before the event start date. Please correct them before saving.');
+        toast({ title: 'Invalid dates', description: 'Some sessions have dates before the event start date. Please correct them.', variant: 'destructive' });
         return;
       }
     }

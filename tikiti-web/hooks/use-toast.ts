@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, createContext, useContext } from 'react';
 
 export interface Toast {
   id: string;
@@ -9,7 +9,15 @@ export interface Toast {
   variant?: 'default' | 'destructive' | 'success';
 }
 
-export function useToast() {
+interface ToastContextValue {
+  toast: (props: Omit<Toast, 'id'>) => void;
+  toasts: Toast[];
+  dismiss: (id: string) => void;
+}
+
+export const ToastContext = createContext<ToastContextValue | null>(null);
+
+export function useToastState() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const toast = useCallback(({ title, description, variant = 'default' }: Omit<Toast, 'id'>) => {
@@ -29,4 +37,13 @@ export function useToast() {
   }, []);
 
   return { toast, toasts, dismiss };
+}
+
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) {
+    // Fallback to local state if not wrapped in provider (backwards compatible)
+    return useToastState();
+  }
+  return context;
 }

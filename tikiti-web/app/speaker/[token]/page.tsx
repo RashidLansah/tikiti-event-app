@@ -6,12 +6,15 @@ import { speakerInvitationService } from '@/lib/services/speakerInvitationServic
 import { speakerService } from '@/lib/services/speakerService';
 import { SpeakerInvitation } from '@/types/speakerInvitation';
 import { Camera, User, Briefcase, Building2, FileText, Linkedin, Twitter, Globe, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { ToastProvider } from '@/components/ui/toast-provider';
 
-export default function SpeakerProfilePage() {
+function SpeakerProfilePageContent() {
   const params = useParams();
   const router = useRouter();
   const token = params.token as string;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const [invitation, setInvitation] = useState<SpeakerInvitation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,13 +81,13 @@ export default function SpeakerProfilePage() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      toast({ title: 'Invalid file', description: 'Please select an image file.', variant: 'destructive' });
       return;
     }
 
     // Validate file size (500KB max)
     if (file.size > 500 * 1024) {
-      alert('Image must be less than 500KB. Please choose a smaller image or compress it.');
+      toast({ title: 'Image too large', description: 'Image must be less than 500KB. Please choose a smaller image or compress it.', variant: 'destructive' });
       return;
     }
 
@@ -102,15 +105,15 @@ export default function SpeakerProfilePage() {
 
     // Validate required fields
     if (!formData.name.trim()) {
-      alert('Please enter your full name');
+      toast({ title: 'Required', description: 'Please enter your full name.', variant: 'destructive' });
       return;
     }
     if (!formData.jobTitle.trim()) {
-      alert('Please enter your job title');
+      toast({ title: 'Required', description: 'Please enter your job title.', variant: 'destructive' });
       return;
     }
     if (!formData.bio.trim()) {
-      alert('Please enter a short bio');
+      toast({ title: 'Required', description: 'Please enter a short bio.', variant: 'destructive' });
       return;
     }
 
@@ -159,7 +162,7 @@ export default function SpeakerProfilePage() {
       setSubmitted(true);
     } catch (err) {
       console.error('Error submitting profile:', err);
-      alert('Failed to submit profile. Please try again.');
+      toast({ title: 'Error', description: 'Failed to submit profile. Please try again.', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -384,5 +387,13 @@ export default function SpeakerProfilePage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SpeakerProfilePage() {
+  return (
+    <ToastProvider>
+      <SpeakerProfilePageContent />
+    </ToastProvider>
   );
 }

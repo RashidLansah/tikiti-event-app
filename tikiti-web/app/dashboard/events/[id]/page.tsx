@@ -70,7 +70,7 @@ export default function EventDetailPage() {
       loadEvent();
     } catch (error) {
       console.error('Error publishing event:', error);
-      alert('Failed to publish event');
+      toast({ title: 'Error', description: 'Failed to publish event', variant: 'destructive' });
     }
   };
 

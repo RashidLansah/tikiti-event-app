@@ -11,11 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Users, Download, Mail, Phone, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { ToastContainer } from '@/components/ui/toast';
 
 export default function EventAttendeesPage() {
   const params = useParams();
-  const { toast, toasts, dismiss } = useToast();
+  const { toast } = useToast();
   const eventId = params.id as string;
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [event, setEvent] = useState<any>(null);
@@ -329,8 +328,6 @@ export default function EventAttendeesPage() {
         </CardContent>
       </Card>
 
-      {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} onDismiss={dismiss} position="top-center" />
     </div>
   );
 }

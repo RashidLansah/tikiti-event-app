@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, Trash2, GripVertical, Eye, Save } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { FormField, FieldType, RegistrationForm } from '@/types/form';
 import { FieldEditor } from './FieldEditor';
 import { FormPreview } from './FormPreview';
@@ -25,6 +26,7 @@ interface FormBuilderProps {
 }
 
 export function FormBuilder({ initialForm, onSave, onCancel }: FormBuilderProps) {
+  const { toast } = useToast();
   const [form, setForm] = useState<RegistrationForm>(
     initialForm || {
       fields: [],
@@ -75,7 +77,7 @@ export function FormBuilder({ initialForm, onSave, onCancel }: FormBuilderProps)
     // Validate that all fields have labels
     const invalidFields = form.fields.filter((f) => !f.label.trim());
     if (invalidFields.length > 0) {
-      alert('Please add labels to all fields before saving.');
+      toast({ title: 'Missing labels', description: 'Please add labels to all fields before saving.', variant: 'destructive' });
       return;
     }
     onSave(form);
