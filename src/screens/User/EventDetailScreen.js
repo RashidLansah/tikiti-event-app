@@ -338,8 +338,14 @@ const EventDetailScreen = ({ navigation, route }) => {
     }
 
     // Redirect to web registration form for complete details capture
+    // Pass user identity so the web form links the booking to their app account
     const eventUrl = generateEventShareUrl(event.id, event.name);
-    Linking.openURL(eventUrl);
+    const params = new URLSearchParams();
+    if (user.uid) params.set('uid', user.uid);
+    if (user.displayName) params.set('name', user.displayName);
+    if (user.email) params.set('email', user.email);
+    const separator = eventUrl.includes('?') ? '&' : '?';
+    Linking.openURL(`${eventUrl}${separator}${params.toString()}`);
   };
 
 

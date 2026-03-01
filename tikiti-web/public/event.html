@@ -995,6 +995,32 @@
         let selectedGender = '';
         let selectedCohortId = '';
         let selectedCohortName = '';
+        let appUserId = '';
+
+        // Check for app user identity passed via URL params
+        function detectAppUser() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const uid = urlParams.get('uid');
+            const name = urlParams.get('name');
+            const email = urlParams.get('email');
+
+            if (uid) {
+                appUserId = uid;
+                // Pre-fill form fields
+                if (name) {
+                    const parts = name.split(' ');
+                    const firstNameEl = document.getElementById('firstName');
+                    const lastNameEl = document.getElementById('lastName');
+                    if (firstNameEl) firstNameEl.value = parts[0] || '';
+                    if (lastNameEl) lastNameEl.value = parts.slice(1).join(' ') || '';
+                }
+                if (email) {
+                    const emailEl = document.getElementById('email');
+                    if (emailEl) emailEl.value = email;
+                }
+                console.log('📱 App user detected:', uid);
+            }
+        }
 
         // Get event ID from URL
         function getEventId() {
@@ -1332,7 +1358,7 @@
 
                 const bookingData = {
                     eventId: currentEvent.id,
-                    userId: `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    userId: appUserId || `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     quantity: 1,
                     totalPrice: 0,
                     status: 'confirmed',
@@ -1345,7 +1371,7 @@
                     lastName: lastName,
                     phoneNumber: phoneNumber,
                     gender: selectedGender,
-                    source: 'web',
+                    source: appUserId ? 'app' : 'web',
                     eventName: currentEvent.name,
                     eventDate: currentEvent.date,
                     eventTime: currentEvent.startTime || currentEvent.time,
@@ -1601,8 +1627,11 @@
         // Event listeners
         document.getElementById('rsvpForm').addEventListener('submit', submitRSVP);
 
-        // Load event when page loads
-        window.addEventListener('load', loadEvent);
+        // Load event when page loads, then pre-fill from app user params
+        window.addEventListener('load', () => {
+            loadEvent();
+            detectAppUser();
+        });
     </script>
 </body>
 </html>
