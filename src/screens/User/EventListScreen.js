@@ -284,11 +284,20 @@ const EventListScreen = ({ navigation }) => {
     );
   };
 
-  // Format date for card pill (e.g., "Fri.14 May 2026")
-  const getCardFormattedDate = (dateStr) => {
+  // Format date for card pill (e.g., "Fri.14 May 2026" or "Mar 15 - Mar 17, 2026")
+  const getCardFormattedDate = (dateStr, endDateStr) => {
     if (!dateStr) return '';
     try {
       const eventDate = new Date(dateStr);
+
+      // Multi-day: show date range
+      if (endDateStr && endDateStr !== dateStr) {
+        const endDate = new Date(endDateStr);
+        const startStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return `${startStr} - ${endStr}`;
+      }
+
       const weekday = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
       const day = eventDate.getDate();
       const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
@@ -385,7 +394,7 @@ const EventListScreen = ({ navigation }) => {
           <View style={styles.cardPillsContainer}>
             <View style={styles.cardPillRow}>
               <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
-                <Text style={[styles.cardPillText, { color: colors.text.primary }]}>{getCardFormattedDate(event.date)}</Text>
+                <Text style={[styles.cardPillText, { color: colors.text.primary }]}>{getCardFormattedDate(event.date, event.endDate)}</Text>
               </View>
               {eventTime ? (
                 <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>

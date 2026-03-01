@@ -337,109 +337,9 @@ const EventDetailScreen = ({ navigation, route }) => {
       return;
     }
 
-    // For app users, proceed directly since we already have their details
-    await processBooking();
-  };
-
-  // Form handlers removed - direct RSVP for app users
-
-  const processBooking = async () => {
-    setBooking(true);
-
-    try {
-      console.log('🚀 Starting booking process...');
-      const finalQuantity = event.type === 'free' ? 1 : ticketQuantity;
-      const bookingData = {
-        eventId: event.id,
-        userId: user.uid,
-        quantity: finalQuantity,
-        totalPrice: event.type === 'free' ? 0 : (event.price * finalQuantity),
-        eventName: event.name,
-        eventDate: event.date,
-        eventTime: event.time,
-        eventLocation: event.location,
-        userEmail: user.email,
-        userName: user.displayName || 'Guest',
-        registrationType: event.type === 'free' ? 'rsvp' : 'purchase',
-        // For app users, we use their existing profile information
-        firstName: user.displayName?.split(' ')[0] || '',
-        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-        phoneNumber: user.phoneNumber || '',
-        gender: user.gender || '',
-      };
-
-      console.log('📝 Creating booking with data:', bookingData);
-      const bookingResult = await bookingService.create(bookingData);
-      console.log('✅ Booking created successfully:', bookingResult);
-      
-      // If we get here, the booking was successful - no need to continue if there are errors
-      console.log('🎯 Core booking process completed successfully');
-
-      const successTitle = event.type === 'free' ? 'RSVP Confirmed!' : 'Booking Confirmed!';
-      const successMessage = event.type === 'free' 
-        ? `You have successfully registered for ${event.name}`
-        : `Successfully booked ${finalQuantity} ticket(s) for ${event.name}`;
-      
-      // Send RSVP confirmation notification (non-blocking)
-      if (event.type === 'free') {
-        notificationService.sendRSVPConfirmation(user.uid, event.name, event.id).catch(error => {
-          console.warn('Failed to send RSVP confirmation notification:', error);
-        });
-        // Schedule event reminder notification (non-blocking)
-        notificationService.scheduleEventReminder(user.uid, event.name, event.id, event.date, event.time).catch(error => {
-          console.warn('Failed to schedule event reminder notification:', error);
-        });
-      }
-      
-      // Send new RSVP notification to organizer (non-blocking)
-      if (event.organizerId) {
-        const attendeeName = user?.displayName || user?.email || 'Someone';
-        notificationService.sendNewRSVPNotification(event.organizerId, event.name, attendeeName, event.id).catch(error => {
-          console.warn('Failed to send new RSVP notification to organizer:', error);
-        });
-      }
-      
-      // Refresh user booking status (non-blocking)
-      bookingService.getUserBookingForEvent(user.uid, event.id).then(newBooking => {
-        setUserBooking(newBooking);
-      }).catch(error => {
-        console.warn('Failed to refresh user booking status:', error);
-      });
-      
-      // Update the event state to reflect new booking numbers (non-blocking)
-      if (event?.id) {
-        eventService.getById(event.id).then(updatedEvent => {
-          if (updatedEvent) {
-            setEvent(updatedEvent);
-          }
-        }).catch(error => {
-          console.warn('Failed to refresh event data:', error);
-        });
-      }
-
-      console.log('🎉 Showing success alert:', successTitle, successMessage);
-      
-      // Always show success alert - the booking was successful
-      Alert.alert(
-        successTitle,
-        successMessage,
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-
-    } catch (error) {
-      console.error('❌ Booking error:', error);
-      
-      // Handle specific error messages
-      if (error.message.includes('spots remaining') || error.message.includes('spots available')) {
-        Alert.alert('Event Full', error.message);
-      } else if (error.message.includes('no longer accepting')) {
-        Alert.alert('Event Not Available', error.message);
-      } else {
-        Alert.alert('Booking Failed', error.message || 'Please try again later');
-      }
-    } finally {
-      setBooking(false);
-    }
+    // Redirect to web registration form for complete details capture
+    const eventUrl = generateEventShareUrl(event.id, event.name);
+    Linking.openURL(eventUrl);
   };
 
 
@@ -487,6 +387,16 @@ const EventDetailScreen = ({ navigation, route }) => {
       const now = new Date();
       const isToday = eventDate.toDateString() === now.toDateString();
       const time = event.startTime || event.time || '';
+
+      // Multi-day: show date range
+      if (event.endDate && event.endDate !== event.date) {
+        const endDate = new Date(event.endDate);
+        const startStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (time) return `${time} · ${startStr} - ${endStr}`;
+        return `${startStr} - ${endStr}`;
+      }
+
       if (isToday && time) return `${time} Today`;
       if (time) return `${time} · ${eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
       return eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -500,6 +410,15 @@ const EventDetailScreen = ({ navigation, route }) => {
     if (!event.date) return '';
     try {
       const eventDate = new Date(event.date);
+
+      // Multi-day: show date range
+      if (event.endDate && event.endDate !== event.date) {
+        const endDate = new Date(event.endDate);
+        const startStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return `${startStr} - ${endStr}`;
+      }
+
       const weekday = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
       const day = eventDate.getDate();
       const month = eventDate.toLocaleDateString('en-US', { month: 'short' });

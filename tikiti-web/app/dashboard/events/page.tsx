@@ -400,7 +400,11 @@ function EventCard({ event, statusStyle, formatDate, handleDuplicate, handleDele
           </div>
           <div className="flex items-center gap-2 text-sm text-[#333]">
             <Calendar className="w-4 h-4" />
-            <span>{formatDate(event.date)}</span>
+            <span>
+              {event.endDate && event.endDate !== event.date
+                ? `${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                : formatDate(event.date)}
+            </span>
           </div>
           <div className="flex items-center gap-2 text-sm text-[#333]">
             <Clock className="w-4 h-4" />

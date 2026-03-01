@@ -260,6 +260,74 @@
             margin: 2rem 0;
         }
 
+        .cohort-selector {
+            margin-bottom: 1.5rem;
+        }
+
+        .cohort-selector .form-label {
+            margin-bottom: 0.75rem;
+        }
+
+        .cohort-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .cohort-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            border: 2px solid rgba(0,0,0,0.08);
+            border-radius: 12px;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cohort-option:hover {
+            border-color: rgba(0,0,0,0.15);
+        }
+
+        .cohort-option.selected {
+            border-color: #333;
+            background: #fafafa;
+        }
+
+        .cohort-option input[type="radio"] {
+            accent-color: #333;
+            width: 16px;
+            height: 16px;
+        }
+
+        .cohort-option-info {
+            flex: 1;
+        }
+
+        .cohort-option-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #141414;
+        }
+
+        .cohort-option-dates {
+            font-size: 0.8rem;
+            color: #7a7a7a;
+            margin-top: 2px;
+        }
+
+        .cohort-option-spots {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .cohort-option-spots.full {
+            color: #d32f2f;
+        }
+
         .section-title {
             font-size: 1.25rem;
             font-weight: 700;
@@ -779,6 +847,12 @@
                 <h3 class="section-title">Register for this Event</h3>
                 <p class="section-subtitle">Fill in your details to complete registration</p>
 
+                <!-- Cohort Selector (shown only for events with cohorts) -->
+                <div class="cohort-selector hidden" id="cohortSelector">
+                    <label class="form-label">Select a Session *</label>
+                    <div class="cohort-options" id="cohortOptions"></div>
+                </div>
+
                 <form id="rsvpForm">
                     <div class="form-row">
                         <div class="form-group">
@@ -919,6 +993,8 @@
         let currentEvent = null;
         let userBooking = null;
         let selectedGender = '';
+        let selectedCohortId = '';
+        let selectedCohortName = '';
 
         // Get event ID from URL
         function getEventId() {
@@ -1030,7 +1106,15 @@
         function displayEvent(event) {
             document.getElementById('eventTitle').textContent = event.name || 'Untitled Event';
             document.getElementById('eventCategory').textContent = event.category || 'Event';
-            document.getElementById('eventDate').textContent = event.date || 'Date TBA';
+            if (event.endDate && event.endDate !== event.date) {
+                const start = new Date(event.date);
+                const end = new Date(event.endDate);
+                const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                document.getElementById('eventDate').textContent = startStr + ' - ' + endStr;
+            } else {
+                document.getElementById('eventDate').textContent = event.date || 'Date TBA';
+            }
             document.getElementById('eventTime').textContent = event.time || event.startTime || 'Time TBA';
 
             let locationText = 'Location TBA';
@@ -1066,6 +1150,51 @@
                 document.getElementById('rsvpSection').classList.add('hidden');
             } else {
                 document.getElementById('rsvpSection').classList.remove('hidden');
+            }
+
+            // Render cohort selector if event has cohorts
+            const cohortSelector = document.getElementById('cohortSelector');
+            const cohortOptionsEl = document.getElementById('cohortOptions');
+            if (event.hasCohorts && event.cohorts && Object.keys(event.cohorts).length > 0) {
+                cohortOptionsEl.innerHTML = '';
+                const sortedCohorts = Object.entries(event.cohorts).sort((a, b) => (a[1].startDate || '').localeCompare(b[1].startDate || ''));
+                sortedCohorts.forEach(([id, cohort]) => {
+                    const available = cohort.availableTickets;
+                    const isCohortFull = typeof available === 'number' && available <= 0;
+                    const startDate = cohort.startDate ? new Date(cohort.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                    const endDate = cohort.endDate ? new Date(cohort.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                    const dateStr = endDate && cohort.endDate !== cohort.startDate ? startDate + ' - ' + endDate : startDate;
+                    const timeStr = cohort.time ? ' at ' + cohort.time : '';
+
+                    const div = document.createElement('div');
+                    div.className = 'cohort-option' + (isCohortFull ? ' disabled' : '');
+                    div.style.opacity = isCohortFull ? '0.5' : '1';
+                    div.innerHTML = `
+                        <input type="radio" name="cohort" value="${id}" ${isCohortFull ? 'disabled' : ''}>
+                        <div class="cohort-option-info">
+                            <div class="cohort-option-name">${cohort.name || 'Session'}</div>
+                            <div class="cohort-option-dates">${dateStr}${timeStr}</div>
+                        </div>
+                        <div class="cohort-option-spots ${isCohortFull ? 'full' : ''}">
+                            ${isCohortFull ? 'Full' : (typeof available === 'number' ? available + ' spots left' : 'Open')}
+                        </div>
+                    `;
+                    if (!isCohortFull) {
+                        div.addEventListener('click', function() {
+                            document.querySelectorAll('.cohort-option').forEach(el => el.classList.remove('selected'));
+                            div.classList.add('selected');
+                            div.querySelector('input[type="radio"]').checked = true;
+                            selectedCohortId = id;
+                            selectedCohortName = cohort.name || '';
+                        });
+                    }
+                    cohortOptionsEl.appendChild(div);
+                });
+                cohortSelector.classList.remove('hidden');
+            } else {
+                cohortSelector.classList.add('hidden');
+                selectedCohortId = '';
+                selectedCohortName = '';
             }
 
             document.title = `${event.name || 'Event'} - Tikiti`;
@@ -1116,8 +1245,15 @@
         function resetForm() {
             document.getElementById('rsvpForm').reset();
             selectedGender = '';
+            selectedCohortId = '';
+            selectedCohortName = '';
             document.querySelectorAll('.gender-option').forEach(option => {
                 option.classList.remove('selected');
+            });
+            document.querySelectorAll('.cohort-option').forEach(option => {
+                option.classList.remove('selected');
+                const radio = option.querySelector('input[type="radio"]');
+                if (radio) radio.checked = false;
             });
         }
 
@@ -1127,10 +1263,19 @@
 
             const eventStatus = currentEvent?.status || 'active';
             const isActive = (eventStatus === 'published' || eventStatus === 'active') && currentEvent?.isActive !== false;
-            const isFull = typeof currentEvent?.availableTickets === 'number' ? currentEvent.availableTickets <= 0 : false;
+            let isFull = typeof currentEvent?.availableTickets === 'number' ? currentEvent.availableTickets <= 0 : false;
 
             if (!isActive) { showModal('Registration Closed', 'This event is no longer accepting registrations.', 'error'); return; }
             if (isFull) { showModal('Fully Booked', 'This event is fully booked.', 'error'); return; }
+
+            // Check cohort-specific capacity
+            if (selectedCohortId && currentEvent?.cohorts?.[selectedCohortId]) {
+                const cohort = currentEvent.cohorts[selectedCohortId];
+                if (typeof cohort.availableTickets === 'number' && cohort.availableTickets <= 0) {
+                    showModal('Session Full', `The "${cohort.name}" session is fully booked. Please select another session.`, 'warning');
+                    return;
+                }
+            }
 
             const firstName = document.getElementById('firstName').value.trim();
             const lastName = document.getElementById('lastName').value.trim();
@@ -1139,6 +1284,13 @@
 
             if (!firstName || !lastName || !email || !phoneNumber || !selectedGender) {
                 showModal('Missing Fields', 'Please fill in all required fields.', 'warning');
+                return;
+            }
+
+            // Validate cohort selection if event has cohorts
+            const hasCohorts = currentEvent?.hasCohorts && currentEvent?.cohorts && Object.keys(currentEvent.cohorts).length > 0;
+            if (hasCohorts && !selectedCohortId) {
+                showModal('Select a Session', 'Please select a session/cohort before registering.', 'warning');
                 return;
             }
 
@@ -1197,7 +1349,8 @@
                     eventName: currentEvent.name,
                     eventDate: currentEvent.date,
                     eventTime: currentEvent.startTime || currentEvent.time,
-                    eventLocation: currentEvent.location || currentEvent.address
+                    eventLocation: currentEvent.location || currentEvent.address,
+                    ...(selectedCohortId ? { cohortId: selectedCohortId, cohortName: selectedCohortName } : {})
                 };
 
                 const bookingResult = await db.collection('bookings').add(bookingData);
@@ -1209,12 +1362,17 @@
                     bookingReference: bookingReference
                 };
 
-                // Atomically update ticket counts on the event
+                // Atomically update ticket counts on the event (and cohort if applicable)
                 try {
-                    await db.collection('events').doc(currentEvent.id).update({
+                    const ticketUpdate = {
                         soldTickets: firebase.firestore.FieldValue.increment(1),
                         availableTickets: firebase.firestore.FieldValue.increment(-1),
-                    });
+                    };
+                    if (selectedCohortId) {
+                        ticketUpdate[`cohorts.${selectedCohortId}.soldTickets`] = firebase.firestore.FieldValue.increment(1);
+                        ticketUpdate[`cohorts.${selectedCohortId}.availableTickets`] = firebase.firestore.FieldValue.increment(-1);
+                    }
+                    await db.collection('events').doc(currentEvent.id).update(ticketUpdate);
                 } catch (ticketErr) {
                     console.error('Error updating ticket counts:', ticketErr);
                 }
@@ -1256,6 +1414,29 @@
                         statusMessageEl.textContent = 'This event is fully booked.';
                         statusMessageEl.classList.add('full');
                         statusMessageEl.classList.remove('hidden');
+                    }
+                }
+
+                // Update cohort availability locally
+                if (selectedCohortId && currentEvent.cohorts && currentEvent.cohorts[selectedCohortId]) {
+                    const cohort = currentEvent.cohorts[selectedCohortId];
+                    if (typeof cohort.availableTickets === 'number') {
+                        cohort.availableTickets = Math.max(cohort.availableTickets - 1, 0);
+                        cohort.soldTickets = (cohort.soldTickets || 0) + 1;
+                        // Update the UI for this cohort option
+                        const cohortRadio = document.querySelector(`input[name="cohort"][value="${selectedCohortId}"]`);
+                        if (cohortRadio) {
+                            const optionDiv = cohortRadio.closest('.cohort-option');
+                            const spotsEl = optionDiv.querySelector('.cohort-option-spots');
+                            if (cohort.availableTickets <= 0) {
+                                spotsEl.textContent = 'Full';
+                                spotsEl.classList.add('full');
+                                optionDiv.style.opacity = '0.5';
+                                cohortRadio.disabled = true;
+                            } else {
+                                spotsEl.textContent = cohort.availableTickets + ' spots left';
+                            }
+                        }
                     }
                 }
 

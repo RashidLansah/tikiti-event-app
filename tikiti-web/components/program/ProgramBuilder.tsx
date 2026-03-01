@@ -23,6 +23,7 @@ interface ProgramBuilderProps {
   eventId?: string;
   eventName?: string;
   eventDate?: string;
+  eventEndDate?: string;
   organizationId?: string;
   organizationName?: string;
   userId?: string;
@@ -30,11 +31,24 @@ interface ProgramBuilderProps {
   onCancel?: () => void;
 }
 
+// Helper to generate all dates between start and end (inclusive)
+function getDateRange(start: string, end: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(start);
+  const endDate = new Date(end);
+  while (current <= endDate) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+}
+
 export function ProgramBuilder({
   initialProgram,
   eventId,
   eventName,
   eventDate,
+  eventEndDate,
   organizationId,
   organizationName,
   userId,
@@ -46,14 +60,18 @@ export function ProgramBuilder({
     initialProgram || { sessions: [] }
   );
   const [editingSession, setEditingSession] = useState<ProgramSession | null>(null);
+  const isMultiDay = Boolean(eventEndDate && eventDate && eventEndDate !== eventDate);
+  const eventDays = isMultiDay ? getDateRange(eventDate!, eventEndDate!) : [];
+  const [selectedDay, setSelectedDay] = useState<string>(eventDate || '');
 
   const addSession = () => {
+    const sessionDate = isMultiDay ? selectedDay : (eventDate || undefined);
     const newSession: ProgramSession = {
       id: `session-${Date.now()}`,
       title: '',
       startTime: '09:00',
       endTime: '10:00',
-      date: eventDate || undefined, // Use eventDate as default, but allow undefined for single-day events
+      date: sessionDate,
       type: 'session',
     };
     setProgram({
@@ -197,8 +215,13 @@ export function ProgramBuilder({
     return a.startTime.localeCompare(b.startTime);
   });
 
+  // Filter by selected day for multi-day events
+  const filteredSessions = isMultiDay && selectedDay
+    ? sortedSessions.filter((s) => (s.date || eventDate) === selectedDay)
+    : sortedSessions;
+
   // Group sessions by date if multi-day
-  const groupedSessions = sortedSessions.reduce((acc, session) => {
+  const groupedSessions = filteredSessions.reduce((acc, session) => {
     const date = session.date || eventDate || 'default';
     if (!acc[date]) {
       acc[date] = [];
@@ -226,6 +249,35 @@ export function ProgramBuilder({
           <Button onClick={handleSave}>Save Program</Button>
         </div>
       </div>
+
+      {/* Day tabs for multi-day events */}
+      {isMultiDay && eventDays.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {eventDays.map((day, idx) => (
+            <button
+              key={day}
+              onClick={() => setSelectedDay(day)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                selectedDay === day
+                  ? 'bg-[#333] text-white'
+                  : 'bg-[#f0f0f0] text-[#333] hover:bg-[#e0e0e0]'
+              }`}
+            >
+              Day {idx + 1} — {new Date(day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </button>
+          ))}
+          <button
+            onClick={() => setSelectedDay('')}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              selectedDay === ''
+                ? 'bg-[#333] text-white'
+                : 'bg-[#f0f0f0] text-[#333] hover:bg-[#e0e0e0]'
+            }`}
+          >
+            All Days
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Sessions List */}
@@ -357,6 +409,7 @@ export function ProgramBuilder({
               eventId={eventId}
               eventName={eventName}
               eventDate={eventDate}
+              eventEndDate={eventEndDate}
               organizationId={organizationId}
               organizationName={organizationName}
               userId={userId}

@@ -120,11 +120,20 @@ const MyTicketsScreen = ({ navigation }) => {
     }
   }, [activeFilter]);
 
-  // Format date for card pill (e.g., "Fri.14 May 2026")
-  const getCardFormattedDate = (dateStr) => {
+  // Format date for card pill (e.g., "Fri.14 May 2026" or "Mar 15 - Mar 17, 2026")
+  const getCardFormattedDate = (dateStr, endDateStr) => {
     if (!dateStr) return '';
     try {
       const eventDate = new Date(dateStr);
+
+      // Multi-day: show date range
+      if (endDateStr && endDateStr !== dateStr) {
+        const endDate = new Date(endDateStr);
+        const startStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return `${startStr} - ${endStr}`;
+      }
+
       const weekday = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
       const day = eventDate.getDate();
       const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
@@ -265,7 +274,7 @@ const MyTicketsScreen = ({ navigation }) => {
             <View style={styles.cardPillRow}>
               <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
                 <Text style={[styles.cardPillText, { color: colors.text.primary }]}>
-                  {getCardFormattedDate(booking.eventDate)}
+                  {getCardFormattedDate(booking.eventDate, event.endDate)}
                 </Text>
               </View>
               {eventTime ? (
@@ -287,6 +296,13 @@ const MyTicketsScreen = ({ navigation }) => {
                   </Text>
                 </View>
               )}
+              {booking.cohortName ? (
+                <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
+                  <Text style={[styles.cardPillText, { color: colors.text.primary }]}>
+                    {booking.cohortName}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </View>
         </TouchableOpacity>

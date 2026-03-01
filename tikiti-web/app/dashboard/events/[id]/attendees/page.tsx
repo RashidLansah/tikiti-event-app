@@ -8,9 +8,10 @@ import { eventService } from '@/lib/services/eventService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Users, Download, Mail, Phone, Send, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Users, Download, Mail, Phone, Send, Loader2, CheckCircle2, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { AddAttendeeModal } from '@/components/modals/AddAttendeeModal';
 
 export default function EventAttendeesPage() {
   const params = useParams();
@@ -21,6 +22,8 @@ export default function EventAttendeesPage() {
   const [loading, setLoading] = useState(true);
   const [sendingTicket, setSendingTicket] = useState<string | null>(null);
   const [sentTickets, setSentTickets] = useState<Set<string>>(new Set());
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [cohortFilter, setCohortFilter] = useState<string>('all');
 
   useEffect(() => {
     loadData();
@@ -85,6 +88,11 @@ export default function EventAttendeesPage() {
   };
 
   const confirmedCount = attendees.filter((a) => a.status === 'confirmed').length;
+  const hasCohorts = event?.hasCohorts || (event?.cohorts && Object.keys(event.cohorts).length > 0);
+  const cohortOptions = hasCohorts && event?.cohorts
+    ? Object.entries(event.cohorts as Record<string, any>).map(([id, c]) => ({ id, name: c.name }))
+    : [];
+  const filteredAttendees = cohortFilter === 'all' ? attendees : attendees.filter((a) => a.cohortId === cohortFilter);
 
   const sendTicketEmail = async (attendee: Attendee) => {
     if (!event) return;
@@ -166,10 +174,16 @@ export default function EventAttendeesPage() {
             </p>
           </div>
         </div>
-        <Button onClick={exportAttendees} variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowAddModal(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add Attendee
+          </Button>
+          <Button onClick={exportAttendees} variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -207,12 +221,41 @@ export default function EventAttendeesPage() {
         </Card>
       </div>
 
+      {/* Cohort Filter */}
+      {hasCohorts && cohortOptions.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-gray-600">Filter by cohort:</span>
+          <button
+            onClick={() => setCohortFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              cohortFilter === 'all' ? 'bg-[#333] text-white' : 'bg-[#f0f0f0] text-[#333] hover:bg-[#e0e0e0]'
+            }`}
+          >
+            All ({attendees.length})
+          </button>
+          {cohortOptions.map((c) => {
+            const count = attendees.filter((a) => a.cohortId === c.id).length;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setCohortFilter(c.id)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  cohortFilter === c.id ? 'bg-[#333] text-white' : 'bg-[#f0f0f0] text-[#333] hover:bg-[#e0e0e0]'
+                }`}
+              >
+                {c.name} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Attendees List */}
       <Card>
         <CardHeader>
           <CardTitle>Attendees List</CardTitle>
           <CardDescription>
-            {attendees.length} {attendees.length === 1 ? 'attendee' : 'attendees'} registered
+            {filteredAttendees.length} {filteredAttendees.length === 1 ? 'attendee' : 'attendees'} {cohortFilter !== 'all' ? 'in this cohort' : 'registered'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -233,7 +276,7 @@ export default function EventAttendeesPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {attendees.map((attendee) => (
+              {filteredAttendees.map((attendee) => (
                 <div
                   key={attendee.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
@@ -243,12 +286,17 @@ export default function EventAttendeesPage() {
                       {(attendee.userName || attendee.firstName || attendee.userEmail || 'A')[0].toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-medium">
-                        {attendee.userName ||
-                          `${attendee.firstName || ''} ${attendee.lastName || ''}`.trim() ||
-                          attendee.userEmail ||
-                          'Unknown'}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">
+                          {attendee.userName ||
+                            `${attendee.firstName || ''} ${attendee.lastName || ''}`.trim() ||
+                            attendee.userEmail ||
+                            'Unknown'}
+                        </p>
+                        {attendee.cohortName && (
+                          <Badge variant="outline" className="text-xs">{attendee.cohortName}</Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-4 mt-1">
                         <div className="flex items-center gap-1 text-sm text-gray-500">
                           <Mail className="h-3 w-3" />
@@ -328,6 +376,14 @@ export default function EventAttendeesPage() {
         </CardContent>
       </Card>
 
+      <AddAttendeeModal
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        eventId={eventId}
+        eventName={event?.name || 'Event'}
+        onSuccess={loadData}
+        cohorts={hasCohorts ? event?.cohorts : undefined}
+      />
     </div>
   );
 }

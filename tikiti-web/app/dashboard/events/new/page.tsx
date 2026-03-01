@@ -101,6 +101,8 @@ export default function CreateEventPage() {
     description: '',
     date: '',
     time: '',
+    startDate: '',
+    endDate: '',
     venueType: 'in_person',
     location: '',
     address: '',
@@ -114,6 +116,11 @@ export default function CreateEventPage() {
     isActive: true,
     imageBase64: undefined,
   });
+  const [isMultiDay, setIsMultiDay] = useState(false);
+  const [hasCohorts, setHasCohorts] = useState(false);
+  const [cohortEntries, setCohortEntries] = useState<Array<{ name: string; startDate: string; endDate: string; capacity: number }>>([
+    { name: '', startDate: '', endDate: '', capacity: 50 },
+  ]);
 
   // Auto-focus input on step change
   useEffect(() => {
@@ -176,6 +183,9 @@ export default function CreateEventPage() {
       case 'image':
         return true; // Optional
       case 'datetime':
+        if (isMultiDay) {
+          return Boolean(formData.startDate && formData.endDate && formData.time && formData.endDate >= formData.startDate);
+        }
         return Boolean(formData.date && formData.time);
       case 'venueType':
         return Boolean(formData.venueType);
@@ -232,6 +242,30 @@ export default function CreateEventPage() {
         status: 'draft',
         isActive: true,
       };
+
+      // Add cohorts if enabled
+      if (hasCohorts && cohortEntries.length > 0) {
+        const cohortsMap: Record<string, any> = {};
+        cohortEntries.forEach((entry) => {
+          if (entry.name.trim() && entry.startDate) {
+            const id = `cohort-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+            cohortsMap[id] = {
+              id,
+              name: entry.name.trim(),
+              startDate: entry.startDate,
+              endDate: entry.endDate || '',
+              capacity: entry.capacity || 50,
+              soldTickets: 0,
+              availableTickets: entry.capacity || 50,
+              status: 'active',
+            };
+          }
+        });
+        if (Object.keys(cohortsMap).length > 0) {
+          eventData.cohorts = cohortsMap;
+          eventData.hasCohorts = true;
+        }
+      }
 
       const newEvent = await eventService.create(eventData, user.uid, currentOrganization.id);
       router.push(`/dashboard/events/${newEvent.id}`);
@@ -353,21 +387,76 @@ export default function CreateEventPage() {
       case 'datetime':
         return (
           <div className="space-y-8 max-w-md">
-            <div className="space-y-3">
-              <label className="text-lg font-medium text-[#333]">Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#86868b]" />
-                <Input
-                  type="date"
-                  value={formData.date || ''}
-                  onChange={(e) => updateFormData('date', e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="pl-12 h-14 text-lg rounded-2xl border-[#333]/10 bg-[#f0f0f0]"
-                />
+            {/* Multi-day toggle */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                onClick={() => {
+                  const newMultiDay = !isMultiDay;
+                  setIsMultiDay(newMultiDay);
+                  if (!newMultiDay) {
+                    updateFormData('startDate', '');
+                    updateFormData('endDate', '');
+                  } else {
+                    updateFormData('startDate', formData.date || '');
+                  }
+                }}
+                className={`relative w-11 h-6 rounded-full transition-colors ${isMultiDay ? 'bg-[#333]' : 'bg-[#d1d1d6]'}`}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${isMultiDay ? 'translate-x-5' : ''}`} />
               </div>
-            </div>
+              <span className="text-base font-medium text-[#333]">Multi-day event</span>
+            </label>
+
+            {isMultiDay ? (
+              <>
+                <div className="space-y-3">
+                  <label className="text-lg font-medium text-[#333]">Start Date</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#86868b]" />
+                    <Input
+                      type="date"
+                      value={formData.startDate || ''}
+                      onChange={(e) => {
+                        updateFormData('startDate', e.target.value);
+                        updateFormData('date', e.target.value);
+                      }}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="pl-12 h-14 text-lg rounded-2xl border-[#333]/10 bg-[#f0f0f0]"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <label className="text-lg font-medium text-[#333]">End Date</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#86868b]" />
+                    <Input
+                      type="date"
+                      value={formData.endDate || ''}
+                      onChange={(e) => updateFormData('endDate', e.target.value)}
+                      min={formData.startDate || new Date().toISOString().split('T')[0]}
+                      className="pl-12 h-14 text-lg rounded-2xl border-[#333]/10 bg-[#f0f0f0]"
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <label className="text-lg font-medium text-[#333]">Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#86868b]" />
+                  <Input
+                    type="date"
+                    value={formData.date || ''}
+                    onChange={(e) => updateFormData('date', e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="pl-12 h-14 text-lg rounded-2xl border-[#333]/10 bg-[#f0f0f0]"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
-              <label className="text-lg font-medium text-[#333]">Time</label>
+              <label className="text-lg font-medium text-[#333]">{isMultiDay ? 'Start Time' : 'Time'}</label>
               <div className="relative">
                 <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#86868b]" />
                 <Input
@@ -584,16 +673,11 @@ export default function CreateEventPage() {
                   <span className="text-lg font-medium">Free</span>
                 </motion.button>
                 <motion.button
-                  onClick={() => updateFormData('type', 'paid')}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`flex-1 p-6 rounded-2xl text-center transition-all ${
-                    formData.type === 'paid'
-                      ? 'bg-[#333] text-white ring-2 ring-[#333] ring-offset-2'
-                      : 'bg-[#f0f0f0] text-[#333] hover:bg-[#e8e8e8]'
-                  }`}
+                  disabled
+                  className="flex-1 p-6 rounded-2xl text-center bg-[#f0f0f0] text-[#bbb] cursor-not-allowed opacity-60"
                 >
                   <span className="text-lg font-medium">Paid</span>
+                  <span className="block text-xs mt-1">Coming soon</span>
                 </motion.button>
               </div>
             </div>
@@ -616,17 +700,125 @@ export default function CreateEventPage() {
               </div>
             )}
 
-            <div className="space-y-3">
-              <label className="text-lg font-medium text-[#333]">Total tickets available</label>
-              <Input
-                type="number"
-                value={formData.totalTickets || ''}
-                onChange={(e) => updateFormData('totalTickets', parseInt(e.target.value) || 0)}
-                placeholder="100"
-                min="1"
-                className="h-14 text-lg rounded-2xl border-[#333]/10 bg-[#f0f0f0]"
-              />
-            </div>
+            {!hasCohorts && (
+              <div className="space-y-3">
+                <label className="text-lg font-medium text-[#333]">Total tickets available</label>
+                <Input
+                  type="number"
+                  value={formData.totalTickets || ''}
+                  onChange={(e) => updateFormData('totalTickets', parseInt(e.target.value) || 0)}
+                  placeholder="100"
+                  min="1"
+                  className="h-14 text-lg rounded-2xl border-[#333]/10 bg-[#f0f0f0]"
+                />
+              </div>
+            )}
+
+            {/* Cohorts toggle */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                onClick={() => {
+                  setHasCohorts(!hasCohorts);
+                  if (!hasCohorts) {
+                    // Sum cohort capacities into totalTickets
+                    const totalCap = cohortEntries.reduce((sum, c) => sum + (c.capacity || 0), 0);
+                    if (totalCap > 0) updateFormData('totalTickets', totalCap);
+                  }
+                }}
+                className={`relative w-11 h-6 rounded-full transition-colors ${hasCohorts ? 'bg-[#333]' : 'bg-[#d1d1d6]'}`}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${hasCohorts ? 'translate-x-5' : ''}`} />
+              </div>
+              <span className="text-base font-medium text-[#333]">Multiple cohorts</span>
+            </label>
+            {hasCohorts && (
+              <p className="text-sm text-[#86868b] -mt-4">Run this event multiple times on different dates</p>
+            )}
+
+            {hasCohorts && (
+              <div className="space-y-4">
+                {cohortEntries.map((entry, idx) => (
+                  <div key={idx} className="bg-[#f0f0f0] rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-[#333]">Cohort {idx + 1}</span>
+                      {cohortEntries.length > 1 && (
+                        <button
+                          onClick={() => {
+                            const updated = cohortEntries.filter((_, i) => i !== idx);
+                            setCohortEntries(updated);
+                            updateFormData('totalTickets', updated.reduce((sum, c) => sum + (c.capacity || 0), 0));
+                          }}
+                          className="text-red-500 text-sm"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <Input
+                      value={entry.name}
+                      onChange={(e) => {
+                        const updated = [...cohortEntries];
+                        updated[idx] = { ...updated[idx], name: e.target.value };
+                        setCohortEntries(updated);
+                      }}
+                      placeholder="Cohort name (e.g. January Batch)"
+                      className="h-12 rounded-xl border-[#333]/10 bg-white"
+                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        type="date"
+                        value={entry.startDate}
+                        onChange={(e) => {
+                          const updated = [...cohortEntries];
+                          updated[idx] = { ...updated[idx], startDate: e.target.value };
+                          setCohortEntries(updated);
+                        }}
+                        className="h-10 text-sm rounded-xl border-[#333]/10 bg-white"
+                      />
+                      <Input
+                        type="date"
+                        value={entry.endDate}
+                        min={entry.startDate}
+                        onChange={(e) => {
+                          const updated = [...cohortEntries];
+                          updated[idx] = { ...updated[idx], endDate: e.target.value };
+                          setCohortEntries(updated);
+                        }}
+                        placeholder="End date"
+                        className="h-10 text-sm rounded-xl border-[#333]/10 bg-white"
+                      />
+                      <Input
+                        type="number"
+                        value={entry.capacity || ''}
+                        min={1}
+                        onChange={(e) => {
+                          const updated = [...cohortEntries];
+                          updated[idx] = { ...updated[idx], capacity: parseInt(e.target.value) || 0 };
+                          setCohortEntries(updated);
+                          updateFormData('totalTickets', updated.reduce((sum, c) => sum + (c.capacity || 0), 0));
+                        }}
+                        placeholder="Capacity"
+                        className="h-10 text-sm rounded-xl border-[#333]/10 bg-white"
+                      />
+                    </div>
+                    <div className="flex gap-2 text-xs text-[#86868b]">
+                      <span>Start date</span>
+                      <span>End date (optional)</span>
+                      <span>Capacity</span>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={() => setCohortEntries([...cohortEntries, { name: '', startDate: '', endDate: '', capacity: 50 }])}
+                  className="text-sm font-medium text-[#333] hover:underline"
+                >
+                  + Add another cohort
+                </button>
+                <div className="text-sm text-[#86868b]">
+                  Total capacity: {cohortEntries.reduce((sum, c) => sum + (c.capacity || 0), 0)} tickets
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -670,12 +862,20 @@ export default function CreateEventPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center gap-2 text-[#333]">
                   <Calendar className="h-4 w-4 text-[#86868b]" />
-                  {formData.date && new Date(formData.date).toLocaleDateString('en-GB', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {isMultiDay && formData.startDate && formData.endDate ? (
+                    <>
+                      {new Date(formData.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      {' - '}
+                      {new Date(formData.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </>
+                  ) : (
+                    formData.date && new Date(formData.date).toLocaleDateString('en-GB', {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-[#333]">
                   <Clock className="h-4 w-4 text-[#86868b]" />

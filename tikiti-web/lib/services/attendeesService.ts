@@ -4,7 +4,9 @@ import {
   doc,
   getDoc,
   getDocs,
+  addDoc,
   updateDoc,
+  increment,
   query,
   where,
   orderBy,
@@ -40,6 +42,9 @@ export interface Attendee {
   status: 'confirmed' | 'cancelled' | 'waitlisted';
   createdAt?: any;
   updatedAt?: any;
+  // Cohort
+  cohortId?: string;
+  cohortName?: string;
   // Custom form data
   customData?: Record<string, any>;
   // Check-in fields
@@ -264,6 +269,8 @@ export const attendeesService = {
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
           customData: data.customData,
+          cohortId: data.cohortId,
+          cohortName: data.cohortName,
           checkedIn: data.checkedIn || false,
           checkedInAt: data.checkedInAt,
           checkedInBy: data.checkedInBy,
@@ -429,6 +436,80 @@ export const attendeesService = {
       });
     } catch (error) {
       console.error('Error searching attendees:', error);
+      throw error;
+    }
+  },
+
+  // Manually add an attendee from the dashboard
+  addManually: async (
+    eventId: string,
+    eventName: string,
+    attendeeData: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone?: string;
+      gender?: string;
+      cohortId?: string;
+      cohortName?: string;
+    }
+  ): Promise<string> => {
+    try {
+      // Check for duplicate (same email + event + confirmed)
+      const bookingsRef = collection(db, COLLECTIONS.BOOKINGS);
+      const dupQuery = query(
+        bookingsRef,
+        where('eventId', '==', eventId),
+        where('userEmail', '==', attendeeData.email),
+        where('status', '==', 'confirmed')
+      );
+      const dupSnapshot = await getDocs(dupQuery);
+      if (!dupSnapshot.empty) {
+        throw new Error('This email is already registered for this event');
+      }
+
+      // Create booking document
+      const bookingData: Record<string, any> = {
+        eventId,
+        eventName,
+        userId: `manual_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        userEmail: attendeeData.email,
+        userName: `${attendeeData.firstName} ${attendeeData.lastName}`.trim(),
+        firstName: attendeeData.firstName,
+        lastName: attendeeData.lastName,
+        phoneNumber: attendeeData.phone || '',
+        gender: attendeeData.gender || '',
+        registrationType: 'rsvp',
+        quantity: 1,
+        totalPrice: 0,
+        status: 'confirmed',
+        source: 'manual',
+        bookingReference: `TKT-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      };
+      if (attendeeData.cohortId) {
+        bookingData.cohortId = attendeeData.cohortId;
+        bookingData.cohortName = attendeeData.cohortName || '';
+      }
+      const bookingRef = await addDoc(bookingsRef, bookingData);
+
+      // Update event ticket counts
+      const eventRef = doc(db, COLLECTIONS.EVENTS, eventId);
+      const updateData: Record<string, any> = {
+        soldTickets: increment(1),
+        availableTickets: increment(-1),
+      };
+      // Also update cohort-specific ticket counts
+      if (attendeeData.cohortId) {
+        updateData[`cohorts.${attendeeData.cohortId}.soldTickets`] = increment(1);
+        updateData[`cohorts.${attendeeData.cohortId}.availableTickets`] = increment(-1);
+      }
+      await updateDoc(eventRef, updateData);
+
+      return bookingRef.id;
+    } catch (error) {
+      console.error('Error manually adding attendee:', error);
       throw error;
     }
   },

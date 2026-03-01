@@ -13,6 +13,7 @@ import { Calendar, MapPin, Users, DollarSign, Tag, Edit, ArrowLeft, ExternalLink
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import EventCancellationModal from '@/components/modals/EventCancellationModal';
+import { CohortManager } from '@/components/cohorts/CohortManager';
 
 export default function EventDetailPage() {
   const params = useParams();
@@ -321,12 +322,20 @@ export default function EventDetailPage() {
                 <div>
                   <p className="font-medium">Date & Time</p>
                   <p className="text-sm text-gray-600">
-                    {event.date && new Date(event.date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {event.endDate && event.endDate !== event.date ? (
+                      <>
+                        {event.date && new Date(event.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                        {' - '}
+                        {new Date(event.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </>
+                    ) : (
+                      event.date && new Date(event.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })
+                    )}
                     {event.time && ` at ${event.time}`}
                   </p>
                 </div>
@@ -622,6 +631,31 @@ export default function EventDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Cohorts Section */}
+      {event && (event.hasCohorts || (event.cohorts && Object.keys(event.cohorts).length > 0)) && (
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <CohortManager
+              cohorts={event.cohorts || {}}
+              eventId={eventId}
+              onSave={async (cohorts) => {
+                const totalCapacity = Object.values(cohorts).reduce((sum, c) => sum + c.capacity, 0);
+                const totalSold = Object.values(cohorts).reduce((sum, c) => sum + c.soldTickets, 0);
+                await eventService.update(eventId, {
+                  cohorts,
+                  hasCohorts: Object.keys(cohorts).length > 0,
+                  totalTickets: totalCapacity,
+                  soldTickets: totalSold,
+                  availableTickets: totalCapacity - totalSold,
+                });
+                const refreshed = await eventService.getById(eventId);
+                if (refreshed) setEvent(refreshed);
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Cancel Event Modal */}
       {showCancelModal && event && (

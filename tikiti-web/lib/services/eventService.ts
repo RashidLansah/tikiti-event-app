@@ -17,6 +17,7 @@ import {
 import { db } from '../firebase/config';
 import { RegistrationForm, FormField } from '@/types/form';
 import { Program } from '@/types/program';
+import { Cohort } from '@/types/cohort';
 import { eventUpdateService } from './eventUpdateService';
 
 const COLLECTIONS = {
@@ -36,9 +37,11 @@ export interface Event {
   };
   meetingLink?: string; // For virtual/hybrid events
   meetingPlatform?: string; // e.g., 'zoom', 'google_meet', 'teams', 'other'
-  date: string; // YYYY-MM-DD
+  date: string; // YYYY-MM-DD (also serves as start date for multi-day events)
   time: string; // HH:mm
   startTime?: string;
+  startDate?: string; // YYYY-MM-DD (for multi-day events)
+  endDate?: string; // YYYY-MM-DD (for multi-day events)
   category: string;
   type: 'free' | 'paid';
   price?: number;
@@ -56,6 +59,8 @@ export interface Event {
   isActive: boolean;
   registrationForm?: RegistrationForm;
   program?: Program;
+  cohorts?: Record<string, Cohort>; // Map keyed by cohort ID for atomic Firestore updates
+  hasCohorts?: boolean;
   createdAt?: any;
   updatedAt?: any;
   publishedAt?: any;
@@ -159,6 +164,12 @@ export const eventService = {
       }
       if (eventData.imageBase64) {
         eventWithDefaults.imageBase64 = eventData.imageBase64;
+      }
+      if (eventData.startDate) {
+        eventWithDefaults.startDate = eventData.startDate;
+      }
+      if (eventData.endDate) {
+        eventWithDefaults.endDate = eventData.endDate;
       }
       if (eventData.registrationForm) {
         eventWithDefaults.registrationForm = eventData.registrationForm;
@@ -523,6 +534,12 @@ export const eventService = {
       if (originalEvent.program) {
         duplicatedEvent.program = originalEvent.program;
       }
+      if (originalEvent.startDate) {
+        duplicatedEvent.startDate = originalEvent.startDate;
+      }
+      if (originalEvent.endDate) {
+        duplicatedEvent.endDate = originalEvent.endDate;
+      }
 
       return await eventService.create(duplicatedEvent, organizerId, organizationId);
     } catch (error) {
@@ -547,7 +564,8 @@ export const eventService = {
 
       for (const docSnap of snapshot.docs) {
         const data = docSnap.data();
-        const eventEndTime = new Date(`${data.date} ${data.endTime || '23:59'}`);
+        const eventEndDate = data.endDate || data.date;
+        const eventEndTime = new Date(`${eventEndDate} ${data.endTime || '23:59'}`);
         const archiveTime = new Date(eventEndTime.getTime() + bufferHours * 60 * 60 * 1000);
 
         if (now >= archiveTime && data.status !== 'archived') {

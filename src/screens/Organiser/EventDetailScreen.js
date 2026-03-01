@@ -301,7 +301,11 @@ const EventDetailScreen = ({ navigation, route }) => {
           <View style={styles.eventDetails}>
             <View style={styles.detailRow}>
               <Feather name="calendar" size={20} color={Colors.primary[500]} />
-              <Text style={styles.detailText}>{eventData.date}</Text>
+              <Text style={styles.detailText}>
+                {eventData.endDate && eventData.endDate !== eventData.date
+                  ? `${eventData.date} to ${eventData.endDate}`
+                  : eventData.date}
+              </Text>
             </View>
             
             <View style={styles.detailRow}>

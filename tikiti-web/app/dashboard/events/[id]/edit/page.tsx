@@ -51,6 +51,8 @@ export default function EditEventPage() {
     description: '',
     date: '',
     time: '',
+    startDate: '',
+    endDate: '',
     venueType: 'in_person' as 'in_person' | 'virtual' | 'hybrid',
     location: '',
     address: '',
@@ -61,6 +63,7 @@ export default function EditEventPage() {
     price: 0,
     totalTickets: 100,
   });
+  const [isMultiDay, setIsMultiDay] = useState(false);
 
   useEffect(() => {
     loadEvent();
@@ -77,6 +80,8 @@ export default function EditEventPage() {
           description: event.description || '',
           date: event.date || '',
           time: event.time || '',
+          startDate: event.startDate || '',
+          endDate: event.endDate || '',
           venueType: event.venueType || 'in_person',
           location: event.location || '',
           address: event.address || '',
@@ -88,6 +93,9 @@ export default function EditEventPage() {
           totalTickets: event.totalTickets || 100,
         };
         setFormData(data as any);
+        if (event.endDate) {
+          setIsMultiDay(true);
+        }
         // Store original values for important fields
         originalDataRef.current = {
           date: data.date,
@@ -216,6 +224,8 @@ export default function EditEventPage() {
         description: formData.description,
         date: formData.date,
         time: formData.time,
+        startDate: isMultiDay ? formData.startDate : undefined,
+        endDate: isMultiDay ? formData.endDate : undefined,
         venueType: formData.venueType,
         location: formData.location,
         address: formData.address || undefined,
@@ -382,28 +392,81 @@ export default function EditEventPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Date *</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      required
-                    />
+                <label className="flex items-center gap-3 cursor-pointer mb-2">
+                  <div
+                    onClick={() => {
+                      const newMultiDay = !isMultiDay;
+                      setIsMultiDay(newMultiDay);
+                      if (!newMultiDay) {
+                        setFormData({ ...formData, startDate: '', endDate: '' });
+                      } else {
+                        setFormData({ ...formData, startDate: formData.date });
+                      }
+                    }}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${isMultiDay ? 'bg-[#333]' : 'bg-[#d1d1d6]'}`}
+                  >
+                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${isMultiDay ? 'translate-x-5' : ''}`} />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="time">Time *</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={formData.time}
-                      onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                      required
-                    />
+                  <span className="text-sm font-medium">Multi-day event</span>
+                </label>
+                {isMultiDay ? (
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">Start Date *</Label>
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value, date: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate">End Date *</Label>
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                        min={formData.startDate}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="time">Start Time *</Label>
+                      <Input
+                        id="time"
+                        type="time"
+                        value={formData.time}
+                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="date">Date *</Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="time">Time *</Label>
+                      <Input
+                        id="time"
+                        type="time"
+                        value={formData.time}
+                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

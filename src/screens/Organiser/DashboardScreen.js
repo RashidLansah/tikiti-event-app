@@ -41,7 +41,8 @@ const DashboardScreen = ({ navigation }) => {
     const past = [];
 
     events.forEach((event) => {
-      const eventEndTime = new Date(`${event.date} ${event.endTime || '23:59'}`);
+      const endDateStr = event.endDate || event.date;
+      const eventEndTime = new Date(`${endDateStr} ${event.endTime || '23:59'}`);
       if (now <= eventEndTime) {
         upcoming.push(event);
       } else {
@@ -160,11 +161,11 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.eventHeader}>
           <Text style={[styles.eventName, { color: colors.text.primary }]}>{event.name}</Text>
           <Text style={[styles.eventDate, { color: colors.text.secondary }]}>
-           {event.date ? new Date(event.date).toLocaleDateString('en-US', {
-             month: 'short',
-             day: 'numeric',
-             year: 'numeric'
-           }) : 'Date TBD'}
+           {event.date ? (
+             event.endDate && event.endDate !== event.date
+               ? `${new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(event.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+               : new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+           ) : 'Date TBD'}
          </Text>
         </View>
         <Text style={[styles.eventLocation, { color: colors.text.secondary }]}>

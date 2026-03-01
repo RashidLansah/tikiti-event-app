@@ -24,6 +24,7 @@ interface SessionEditorProps {
   eventId?: string;
   eventName?: string;
   eventDate?: string;
+  eventEndDate?: string;
   organizationId?: string;
   organizationName?: string;
   userId?: string;
@@ -43,6 +44,7 @@ export function SessionEditor({
   eventId,
   eventName,
   eventDate,
+  eventEndDate,
   organizationId,
   organizationName,
   userId,
@@ -375,6 +377,7 @@ export function SessionEditor({
                 setDate(selectedDate);
               }}
               min={eventDate || undefined}
+              max={eventEndDate || undefined}
               placeholder={eventDate || 'Select date'}
             />
             {eventDate && (

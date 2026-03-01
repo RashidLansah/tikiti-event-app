@@ -114,6 +114,7 @@ export default function EventProgramPage() {
         eventId={eventId}
         eventName={event.name}
         eventDate={event.date}
+        eventEndDate={event.endDate}
         organizationId={currentOrganization?.id}
         organizationName={currentOrganization?.name}
         userId={user?.uid}
