@@ -16,7 +16,10 @@ interface EventRedirectProps {
 export default function EventRedirect({ eventId }: EventRedirectProps) {
   useEffect(() => {
     if (eventId) {
-      window.location.href = `/event.html?eventId=${eventId}`;
+      // Preserve any extra URL params (uid, name, email from app redirect)
+      const currentParams = new URLSearchParams(window.location.search);
+      currentParams.set('eventId', eventId);
+      window.location.href = `/event.html?${currentParams.toString()}`;
     }
   }, [eventId]);
 
