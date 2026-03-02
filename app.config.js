@@ -34,7 +34,7 @@ export default {
         backgroundColor: "#FFFFFF"
       },
       package: "com.tikiti.eventapp",
-      versionCode: 15,
+      versionCode: 16,
       permissions: [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
