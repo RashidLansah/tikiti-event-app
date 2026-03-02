@@ -14,6 +14,9 @@ import {
   Linking,
   Platform,
   Modal,
+  TextInput,
+  Switch,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -50,6 +53,10 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [loadingUpdates, setLoadingUpdates] = useState(false);
   const [loadingSurveys, setLoadingSurveys] = useState(false);
   const [selectedSpeaker, setSelectedSpeaker] = useState(null);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [formValues, setFormValues] = useState({});
+  const [selectedCohort, setSelectedCohort] = useState(null);
+  const [submittingRegistration, setSubmittingRegistration] = useState(false);
 
   // Tabs for the registered/post-RSVP view
   const eventTabs = [
@@ -337,15 +344,10 @@ const EventDetailScreen = ({ navigation, route }) => {
       return;
     }
 
-    // Redirect to web registration form for complete details capture
-    // Pass user identity so the web form links the booking to their app account
-    const eventUrl = generateEventShareUrl(event.id, event.name);
-    const params = new URLSearchParams();
-    if (user.uid) params.set('uid', user.uid);
-    if (user.displayName) params.set('name', user.displayName);
-    if (user.email) params.set('email', user.email);
-    const separator = eventUrl.includes('?') ? '&' : '?';
-    Linking.openURL(`${eventUrl}${separator}${params.toString()}`);
+    // Open in-app registration bottom sheet
+    setFormValues(initializeFormValues());
+    setSelectedCohort(null);
+    setShowRegistrationModal(true);
   };
 
 
@@ -447,6 +449,197 @@ const EventDetailScreen = ({ navigation, route }) => {
       return event.location.name || event.location.address || 'Location TBA';
     }
     return event.location;
+  };
+
+  // ──── Registration Form Helpers ─────────────────────────
+  const getFormFields = () => {
+    // If organizer customized the form, use their fields
+    if (event.registrationForm?.fields?.length > 0) {
+      return event.registrationForm.fields.map(field => {
+        // Determine if this field can be pre-filled from user profile
+        const preFillMap = {
+          'firstName': user?.displayName?.split(' ')[0] || '',
+          'first_name': user?.displayName?.split(' ')[0] || '',
+          'lastName': user?.displayName?.split(' ').slice(1).join(' ') || '',
+          'last_name': user?.displayName?.split(' ').slice(1).join(' ') || '',
+          'email': user?.email || '',
+          'name': user?.displayName || '',
+          'fullName': user?.displayName || '',
+          'full_name': user?.displayName || '',
+        };
+        const fieldId = field.id?.toLowerCase() || '';
+        const fieldLabel = field.label?.toLowerCase() || '';
+        const isPreFilled = preFillMap[field.id] !== undefined ||
+          fieldLabel.includes('first name') || fieldLabel.includes('last name') ||
+          fieldLabel.includes('email') || fieldLabel.includes('full name');
+
+        let defaultValue = preFillMap[field.id] || '';
+        if (!defaultValue && fieldLabel.includes('first name')) defaultValue = user?.displayName?.split(' ')[0] || '';
+        if (!defaultValue && fieldLabel.includes('last name')) defaultValue = user?.displayName?.split(' ').slice(1).join(' ') || '';
+        if (!defaultValue && (fieldLabel.includes('email'))) defaultValue = user?.email || '';
+        if (!defaultValue && (fieldLabel.includes('full name') || fieldLabel.includes('name'))) defaultValue = user?.displayName || '';
+
+        return {
+          ...field,
+          readOnly: isPreFilled && !!defaultValue,
+          defaultValue,
+        };
+      });
+    }
+
+    // Default fields: firstName, lastName, email (pre-filled), phone, gender
+    const nameParts = (user?.displayName || '').split(' ');
+    return [
+      { id: 'firstName', label: 'First Name', type: 'text', required: true, readOnly: true, defaultValue: nameParts[0] || '' },
+      { id: 'lastName', label: 'Last Name', type: 'text', required: true, readOnly: true, defaultValue: nameParts.slice(1).join(' ') || '' },
+      { id: 'email', label: 'Email', type: 'email', required: true, readOnly: true, defaultValue: user?.email || '' },
+      { id: 'phone', label: 'Phone Number', type: 'phone', required: true, readOnly: false, defaultValue: '' },
+      { id: 'gender', label: 'Gender', type: 'radio', required: false, readOnly: false, defaultValue: '', options: ['Male', 'Female', 'Other'] },
+    ];
+  };
+
+  const initializeFormValues = () => {
+    const fields = getFormFields();
+    const values = {};
+    fields.forEach(field => {
+      values[field.id] = field.defaultValue || '';
+    });
+    return values;
+  };
+
+  const submitRegistration = async () => {
+    const fields = getFormFields();
+
+    // Validate required fields
+    for (const field of fields) {
+      if (field.required && !formValues[field.id]?.toString().trim()) {
+        Alert.alert('Required Field', `Please fill in ${field.label}`);
+        return;
+      }
+    }
+
+    // Validate cohort selection if event has cohorts
+    if (event.hasCohorts && event.cohorts && Object.keys(event.cohorts).length > 0) {
+      if (!selectedCohort) {
+        Alert.alert('Select a Session', 'Please select a session/cohort to register for.');
+        return;
+      }
+      // Check if selected cohort is full
+      const cohort = event.cohorts[selectedCohort];
+      if (cohort && cohort.maxAttendees && (cohort.soldTickets || 0) >= cohort.maxAttendees) {
+        Alert.alert('Session Full', 'The selected session is fully booked. Please choose another one.');
+        return;
+      }
+    }
+
+    // Validate consent if required
+    if (event.registrationForm?.consentRequired && !formValues._consent) {
+      Alert.alert('Consent Required', 'Please accept the terms to continue.');
+      return;
+    }
+
+    setSubmittingRegistration(true);
+
+    try {
+      const nameParts = (user?.displayName || '').split(' ');
+      const firstName = formValues.firstName || formValues.first_name || nameParts[0] || '';
+      const lastName = formValues.lastName || formValues.last_name || nameParts.slice(1).join(' ') || '';
+
+      const bookingData = {
+        eventId: event.id,
+        userId: user.uid,
+        quantity: 1,
+        totalPrice: 0,
+        registrationType: 'rsvp',
+        userEmail: formValues.email || user?.email || '',
+        userName: `${firstName} ${lastName}`.trim(),
+        firstName,
+        lastName,
+        phoneNumber: formValues.phone || formValues.phoneNumber || '',
+        gender: formValues.gender || '',
+        source: 'app',
+        eventName: event.name,
+        eventDate: event.date,
+        eventTime: event.startTime || event.time,
+        eventLocation: typeof event.location === 'object'
+          ? (event.location.name || event.location.address || '')
+          : (event.location || ''),
+      };
+
+      // Include cohort data if selected
+      if (selectedCohort && event.cohorts?.[selectedCohort]) {
+        bookingData.cohortId = selectedCohort;
+        bookingData.cohortName = event.cohorts[selectedCohort].name;
+      }
+
+      // Include any extra custom fields
+      fields.forEach(field => {
+        if (!bookingData[field.id] && formValues[field.id]) {
+          bookingData[field.id] = formValues[field.id];
+        }
+      });
+
+      const docRef = await bookingService.create(bookingData);
+
+      // Send RSVP confirmation notification
+      try {
+        await notificationService.sendRSVPConfirmation(
+          user.uid,
+          event.name,
+          event.date,
+          event.startTime || event.time
+        );
+      } catch (notifError) {
+        console.log('Notification error (non-critical):', notifError);
+      }
+
+      // Send organizer notification
+      try {
+        if (event.organizerId) {
+          await notificationService.sendOrganizerNotification(
+            event.organizerId,
+            `${bookingData.userName} just registered for ${event.name}`,
+            'New Registration'
+          );
+        }
+      } catch (notifError) {
+        console.log('Organizer notification error (non-critical):', notifError);
+      }
+
+      // Schedule event reminder
+      try {
+        await notificationService.scheduleEventReminder(
+          event.id,
+          event.name,
+          event.date,
+          event.startTime || event.time
+        );
+      } catch (notifError) {
+        console.log('Reminder scheduling error (non-critical):', notifError);
+      }
+
+      // Update local state
+      setUserBooking({
+        id: docRef.id,
+        ...bookingData,
+        status: 'confirmed',
+      });
+
+      setShowRegistrationModal(false);
+      Alert.alert('🎉 Registration Confirmed!', `You're registered for ${event.name}. Your ticket is ready!`);
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      let errorMsg = 'Failed to complete registration. Please try again.';
+      if (error.message?.includes('no longer accepting')) {
+        errorMsg = 'This event is no longer accepting registrations.';
+      } else if (error.message?.includes('spots remaining')) {
+        errorMsg = error.message;
+      }
+      Alert.alert('Registration Failed', errorMsg);
+    } finally {
+      setSubmittingRegistration(false);
+    }
   };
 
   // Generate QR code data for the ticket tab
@@ -1259,6 +1452,250 @@ const EventDetailScreen = ({ navigation, route }) => {
           <View style={{ height: 60 }} />
         </View>
       </ScrollView>
+
+      {/* ──── Registration Bottom Sheet Modal ──────────────── */}
+      <Modal
+        visible={showRegistrationModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowRegistrationModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <View style={registeredStyles.regModalOverlay}>
+            <TouchableOpacity
+              style={registeredStyles.regModalBackdrop}
+              activeOpacity={1}
+              onPress={() => !submittingRegistration && setShowRegistrationModal(false)}
+            />
+            <View style={[registeredStyles.regModalContainer, { backgroundColor: colors.background.primary }]}>
+              {/* Handle bar */}
+              <View style={[registeredStyles.regModalHandle, { backgroundColor: colors.border.medium }]} />
+
+              {/* Title */}
+              <Text style={[registeredStyles.regModalTitle, { color: colors.text.primary }]}>Register for Event</Text>
+              <Text style={[registeredStyles.regModalSubtitle, { color: colors.text.secondary }]}>
+                {event.name}
+              </Text>
+
+              <ScrollView
+                style={registeredStyles.regModalScroll}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {/* Cohort Selector */}
+                {event.hasCohorts && event.cohorts && Object.keys(event.cohorts).length > 0 && (
+                  <View style={registeredStyles.regSectionContainer}>
+                    <Text style={[registeredStyles.regSectionLabel, { color: colors.text.primary }]}>Select Session</Text>
+                    {Object.entries(event.cohorts)
+                      .sort(([, a], [, b]) => (a.startDate || '').localeCompare(b.startDate || ''))
+                      .map(([cohortId, cohort]) => {
+                        const isFull = cohort.maxAttendees && (cohort.soldTickets || 0) >= cohort.maxAttendees;
+                        const isSelected = selectedCohort === cohortId;
+                        const spotsLeft = cohort.maxAttendees ? cohort.maxAttendees - (cohort.soldTickets || 0) : null;
+                        return (
+                          <TouchableOpacity
+                            key={cohortId}
+                            style={[
+                              registeredStyles.cohortCard,
+                              { borderColor: isSelected ? colors.primary[500] : colors.border.light },
+                              isSelected && { backgroundColor: colors.primary[50] || '#f0f7ff' },
+                              isFull && registeredStyles.cohortCardFull,
+                            ]}
+                            onPress={() => !isFull && setSelectedCohort(cohortId)}
+                            disabled={isFull}
+                            activeOpacity={0.7}
+                          >
+                            <View style={registeredStyles.cohortCardContent}>
+                              <Text style={[
+                                registeredStyles.cohortCardName,
+                                { color: isFull ? colors.text.tertiary : colors.text.primary }
+                              ]}>
+                                {cohort.name}
+                              </Text>
+                              {(cohort.startDate || cohort.endDate) && (
+                                <Text style={[registeredStyles.cohortCardDates, { color: colors.text.secondary }]}>
+                                  {cohort.startDate}{cohort.endDate ? ` - ${cohort.endDate}` : ''}
+                                </Text>
+                              )}
+                              {spotsLeft !== null && (
+                                <Text style={[
+                                  registeredStyles.cohortCardSpots,
+                                  { color: isFull ? colors.error[500] : spotsLeft <= 5 ? colors.warning[500] : colors.text.tertiary }
+                                ]}>
+                                  {isFull ? 'Full' : `${spotsLeft} spots left`}
+                                </Text>
+                              )}
+                            </View>
+                            <View style={[
+                              registeredStyles.cohortRadio,
+                              { borderColor: isSelected ? colors.primary[500] : colors.border.medium },
+                              isSelected && { backgroundColor: colors.primary[500] },
+                            ]}>
+                              {isSelected && <Feather name="check" size={12} color="#fff" />}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                  </View>
+                )}
+
+                {/* Dynamic Form Fields */}
+                {getFormFields().map((field) => {
+                  if (field.type === 'radio' && field.options) {
+                    return (
+                      <View key={field.id} style={registeredStyles.regFieldContainer}>
+                        <Text style={[registeredStyles.regFieldLabel, { color: colors.text.primary }]}>
+                          {field.label}{field.required ? ' *' : ''}
+                        </Text>
+                        <View style={registeredStyles.regRadioGroup}>
+                          {field.options.map((option) => (
+                            <TouchableOpacity
+                              key={option}
+                              style={[
+                                registeredStyles.regRadioButton,
+                                { borderColor: formValues[field.id] === option ? colors.primary[500] : colors.border.light },
+                                formValues[field.id] === option && { backgroundColor: colors.primary[50] || '#f0f7ff' },
+                              ]}
+                              onPress={() => !field.readOnly && setFormValues(prev => ({ ...prev, [field.id]: option }))}
+                              disabled={field.readOnly}
+                            >
+                              <Text style={[
+                                registeredStyles.regRadioText,
+                                { color: formValues[field.id] === option ? colors.primary[500] : colors.text.primary },
+                              ]}>
+                                {option}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  if (field.type === 'dropdown' && field.options) {
+                    return (
+                      <View key={field.id} style={registeredStyles.regFieldContainer}>
+                        <Text style={[registeredStyles.regFieldLabel, { color: colors.text.primary }]}>
+                          {field.label}{field.required ? ' *' : ''}
+                        </Text>
+                        <View style={registeredStyles.regRadioGroup}>
+                          {field.options.map((option) => (
+                            <TouchableOpacity
+                              key={option}
+                              style={[
+                                registeredStyles.regRadioButton,
+                                { borderColor: formValues[field.id] === option ? colors.primary[500] : colors.border.light },
+                                formValues[field.id] === option && { backgroundColor: colors.primary[50] || '#f0f7ff' },
+                              ]}
+                              onPress={() => !field.readOnly && setFormValues(prev => ({ ...prev, [field.id]: option }))}
+                              disabled={field.readOnly}
+                            >
+                              <Text style={[
+                                registeredStyles.regRadioText,
+                                { color: formValues[field.id] === option ? colors.primary[500] : colors.text.primary },
+                              ]}>
+                                {option}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  if (field.type === 'checkbox') {
+                    return (
+                      <View key={field.id} style={registeredStyles.regCheckboxRow}>
+                        <Switch
+                          value={!!formValues[field.id]}
+                          onValueChange={(val) => !field.readOnly && setFormValues(prev => ({ ...prev, [field.id]: val }))}
+                          trackColor={{ false: colors.border.medium, true: colors.primary[500] }}
+                          thumbColor="#fff"
+                          disabled={field.readOnly}
+                        />
+                        <Text style={[registeredStyles.regCheckboxLabel, { color: colors.text.primary }]}>
+                          {field.label}{field.required ? ' *' : ''}
+                        </Text>
+                      </View>
+                    );
+                  }
+
+                  // Default: text/email/phone/number input
+                  return (
+                    <View key={field.id} style={registeredStyles.regFieldContainer}>
+                      <Text style={[registeredStyles.regFieldLabel, { color: colors.text.primary }]}>
+                        {field.label}{field.required ? ' *' : ''}
+                      </Text>
+                      <TextInput
+                        style={[
+                          registeredStyles.regFieldInput,
+                          {
+                            backgroundColor: field.readOnly ? (colors.background.tertiary || '#f5f5f5') : colors.background.secondary,
+                            color: field.readOnly ? colors.text.tertiary : colors.text.primary,
+                            borderColor: colors.border.light,
+                          },
+                        ]}
+                        value={formValues[field.id]?.toString() || ''}
+                        onChangeText={(text) => setFormValues(prev => ({ ...prev, [field.id]: text }))}
+                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                        placeholderTextColor={colors.text.tertiary}
+                        editable={!field.readOnly}
+                        keyboardType={
+                          field.type === 'email' ? 'email-address' :
+                          field.type === 'phone' ? 'phone-pad' :
+                          field.type === 'number' ? 'numeric' :
+                          'default'
+                        }
+                        autoCapitalize={field.type === 'email' ? 'none' : 'words'}
+                      />
+                      {field.readOnly && (
+                        <Text style={[registeredStyles.regFieldHint, { color: colors.text.tertiary }]}>
+                          From your profile
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+
+                {/* Consent checkbox */}
+                {event.registrationForm?.consentRequired && (
+                  <View style={registeredStyles.regCheckboxRow}>
+                    <Switch
+                      value={!!formValues._consent}
+                      onValueChange={(val) => setFormValues(prev => ({ ...prev, _consent: val }))}
+                      trackColor={{ false: colors.border.medium, true: colors.primary[500] }}
+                      thumbColor="#fff"
+                    />
+                    <Text style={[registeredStyles.regCheckboxLabel, { color: colors.text.secondary, flex: 1 }]}>
+                      {event.registrationForm.consentText || 'I agree to the terms and conditions'}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={{ height: 20 }} />
+              </ScrollView>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[registeredStyles.regSubmitButton, { backgroundColor: colors.primary[500] }, submittingRegistration && { opacity: 0.6 }]}
+                onPress={submitRegistration}
+                disabled={submittingRegistration}
+              >
+                {submittingRegistration ? (
+                  <ActivityIndicator color={isDarkMode ? Colors.black : Colors.white} size="small" />
+                ) : (
+                  <Text style={[registeredStyles.regSubmitButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>
+                    Confirm Registration
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 };
@@ -2077,6 +2514,175 @@ const registeredStyles = StyleSheet.create({
   cancelRegistrationText: {
     fontFamily: Typography.fontFamily.semibold,
     fontSize: 14,
+  },
+
+  // ─── Registration Modal ─────────────────────────────────
+  regModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  regModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  regModalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 44 : 32,
+    maxHeight: '90%',
+  },
+  regModalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ddd',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  regModalTitle: {
+    fontFamily: Typography.fontFamily.bold,
+    fontSize: 22,
+    color: Colors.text.primary,
+    marginBottom: 4,
+  },
+  regModalSubtitle: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginBottom: 20,
+  },
+  regModalScroll: {
+    maxHeight: SCREEN_HEIGHT * 0.55,
+  },
+  regSectionContainer: {
+    marginBottom: 20,
+  },
+  regSectionLabel: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 16,
+    color: Colors.text.primary,
+    marginBottom: 12,
+  },
+
+  // ─── Cohort cards ─────────────────────────────────────
+  cohortCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e0e0e0',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+  },
+  cohortCardFull: {
+    opacity: 0.5,
+  },
+  cohortCardContent: {
+    flex: 1,
+    gap: 2,
+  },
+  cohortCardName: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 15,
+    color: Colors.text.primary,
+  },
+  cohortCardDates: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 13,
+    color: Colors.text.secondary,
+    marginTop: 2,
+  },
+  cohortCardSpots: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 12,
+    color: Colors.text.tertiary,
+    marginTop: 2,
+  },
+  cohortRadio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+
+  // ─── Form fields ──────────────────────────────────────
+  regFieldContainer: {
+    marginBottom: 16,
+  },
+  regFieldLabel: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 14,
+    color: Colors.text.primary,
+    marginBottom: 6,
+  },
+  regFieldInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontFamily: Typography.fontFamily.regular,
+  },
+  regFieldHint: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 11,
+    color: Colors.text.tertiary,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+
+  // ─── Radio / dropdown buttons ─────────────────────────
+  regRadioGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  regRadioButton: {
+    borderWidth: 1.5,
+    borderColor: '#e0e0e0',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  regRadioText: {
+    fontFamily: Typography.fontFamily.medium,
+    fontSize: 14,
+  },
+
+  // ─── Checkbox / switch ────────────────────────────────
+  regCheckboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  regCheckboxLabel: {
+    fontFamily: Typography.fontFamily.regular,
+    fontSize: 14,
+    color: Colors.text.primary,
+    flex: 1,
+  },
+
+  // ─── Submit button ────────────────────────────────────
+  regSubmitButton: {
+    backgroundColor: '#060606',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  regSubmitButtonText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 16,
+    color: Colors.white,
   },
 });
 
