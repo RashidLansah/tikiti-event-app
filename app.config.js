@@ -19,7 +19,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.tikiti.eventapp",
-      buildNumber: "14",
+      buildNumber: "15",
       infoPlist: {
         NSCameraUsageDescription: "Tikiti needs camera access to scan QR codes for event tickets and to upload event photos.",
         NSPhotoLibraryUsageDescription: "Tikiti needs photo library access to select and upload event images.",
@@ -34,7 +34,7 @@ export default {
         backgroundColor: "#FFFFFF"
       },
       package: "com.tikiti.eventapp",
-      versionCode: 14,
+      versionCode: 15,
       permissions: [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
