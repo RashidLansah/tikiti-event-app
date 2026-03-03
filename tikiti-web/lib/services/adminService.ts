@@ -273,8 +273,38 @@ export const adminService = {
     await deleteDoc(eventRef);
   },
 
-  // Delete an organization
+  // Delete an organization and all related data (members, user profiles, events, bookings)
   async deleteOrganization(orgId: string): Promise<void> {
+    // 1. Get all members of this org
+    const membersRef = collection(db, 'organizations', orgId, 'members');
+    const membersSnapshot = await getDocs(membersRef);
+    const memberUserIds = membersSnapshot.docs.map(d => d.id);
+
+    // 2. Delete member documents
+    for (const memberDoc of membersSnapshot.docs) {
+      await deleteDoc(memberDoc.ref);
+    }
+
+    // 3. Delete user profiles for each member
+    for (const userId of memberUserIds) {
+      const userRef = doc(db, 'users', userId);
+      await deleteDoc(userRef);
+    }
+
+    // 4. Delete all events belonging to this org
+    const eventsQuery = query(collection(db, 'events'), where('organizationId', '==', orgId));
+    const eventsSnapshot = await getDocs(eventsQuery);
+    for (const eventDoc of eventsSnapshot.docs) {
+      // Also delete bookings for this event
+      const bookingsQuery = query(collection(db, 'bookings'), where('eventId', '==', eventDoc.id));
+      const bookingsSnapshot = await getDocs(bookingsQuery);
+      for (const bookingDoc of bookingsSnapshot.docs) {
+        await deleteDoc(bookingDoc.ref);
+      }
+      await deleteDoc(eventDoc.ref);
+    }
+
+    // 5. Delete the organization document itself
     const orgRef = doc(db, 'organizations', orgId);
     await deleteDoc(orgRef);
   }
