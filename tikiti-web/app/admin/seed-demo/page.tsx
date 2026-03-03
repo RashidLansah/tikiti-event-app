@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { eventService, Event } from '@/lib/services/eventService';
 import { speakerService } from '@/lib/services/speakerService';
 import { surveyService } from '@/lib/services/surveyService';
+import { adminService, PlatformOrganization } from '@/lib/services/adminService';
 import { Speaker } from '@/types/speaker';
 import { ProgramSession } from '@/types/program';
 import { Cohort } from '@/types/cohort';
@@ -15,6 +16,7 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
+  Building2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,12 +35,29 @@ export default function SeedDemoPage() {
   const [eventId, setEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // For admin accounts without an org — let them pick one
+  const [allOrgs, setAllOrgs] = useState<PlatformOrganization[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+
+  useEffect(() => {
+    if (!currentOrganization && user) {
+      setLoadingOrgs(true);
+      adminService.getAllOrganizations(50).then(orgs => {
+        setAllOrgs(orgs);
+        if (orgs.length > 0) setSelectedOrgId(orgs[0].id);
+      }).catch(() => {}).finally(() => setLoadingOrgs(false));
+    }
+  }, [currentOrganization, user]);
+
+  const activeOrgId = currentOrganization?.id || selectedOrgId;
+
   const updateStep = (index: number, update: Partial<StepStatus>) => {
     setSteps(prev => prev.map((s, i) => (i === index ? { ...s, ...update } : s)));
   };
 
   const handleSeed = async () => {
-    if (!user || !currentOrganization) return;
+    if (!user || !activeOrgId) return;
 
     setRunning(true);
     setError(null);
@@ -52,7 +71,7 @@ export default function SeedDemoPage() {
     ];
     setSteps(initialSteps);
 
-    const orgId = currentOrganization.id!;
+    const orgId = activeOrgId!;
     const userId = user.uid;
 
     try {
@@ -441,31 +460,72 @@ export default function SeedDemoPage() {
         </p>
       </div>
 
-      {!currentOrganization && (
+      {/* Org picker for admin accounts without an org */}
+      {!currentOrganization && !loadingOrgs && allOrgs.length === 0 && (
         <Card className="border-yellow-200 bg-yellow-50">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-yellow-600" />
               <p className="text-sm text-yellow-800">
-                No organization found. Please log in to the{' '}
+                No organizations found. Create an organization from the{' '}
                 <Link href="/dashboard" className="underline font-medium">
                   organizer dashboard
                 </Link>{' '}
-                first to create or join an organization, then come back here.
+                first, then come back here.
               </p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {currentOrganization && (
+      {!currentOrganization && allOrgs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Select Organization
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-3">
+              Choose which organization to create the demo event under:
+            </p>
+            <div className="space-y-2">
+              {allOrgs.map(org => (
+                <label
+                  key={org.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedOrgId === org.id ? 'border-primary bg-primary/5' : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="org"
+                    checked={selectedOrgId === org.id}
+                    onChange={() => setSelectedOrgId(org.id)}
+                    className="accent-primary"
+                  />
+                  <div>
+                    <p className="font-medium text-sm">{org.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {org.ownerEmail} &middot; {org.eventsCount} events &middot; {org.membersCount} members
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeOrgId && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">What will be created</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p>
-              <strong>Organization:</strong> {currentOrganization.name}
+              <strong>Organization:</strong> {currentOrganization?.name || allOrgs.find(o => o.id === selectedOrgId)?.name}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="bg-gray-50 rounded-lg p-3">
@@ -579,7 +639,7 @@ export default function SeedDemoPage() {
       {/* Action */}
       <Button
         onClick={handleSeed}
-        disabled={running || !currentOrganization}
+        disabled={running || !activeOrgId}
         size="lg"
         className="gap-2"
       >
