@@ -17,8 +17,9 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, Video, Building2, Globe, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Save, Video, Building2, Globe, Link as LinkIcon, ImagePlus, X as XIcon } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { AIDescriptionHelper } from '@/components/AIDescriptionHelper';
 import EventUpdateConfirmationModal from '@/components/modals/EventUpdateConfirmationModal';
@@ -64,6 +65,10 @@ export default function EditEventPage() {
     totalTickets: 100,
   });
   const [isMultiDay, setIsMultiDay] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadEvent();
@@ -95,6 +100,18 @@ export default function EditEventPage() {
         setFormData(data as any);
         if (event.endDate) {
           setIsMultiDay(true);
+        }
+        // Load existing image
+        if (event.imageUrl) {
+          setImageUrl(event.imageUrl);
+          setImagePreview(event.imageUrl);
+        } else if (event.imageBase64) {
+          setImageBase64(event.imageBase64);
+          setImagePreview(
+            event.imageBase64.startsWith('data:')
+              ? event.imageBase64
+              : `data:image/jpeg;base64,${event.imageBase64}`
+          );
         }
         // Store original values for important fields
         originalDataRef.current = {
@@ -144,6 +161,37 @@ export default function EditEventPage() {
     } catch {
       return timeStr;
     }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 1MB)
+    if (file.size > 1024 * 1024) {
+      toast({
+        title: 'Image too large',
+        description: 'Please choose an image under 1MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setImageBase64(base64);
+      setImagePreview(base64);
+      setImageUrl(null); // Clear URL since we're using base64 now
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setImageBase64(null);
+    setImageUrl(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const detectImportantChanges = (): Change[] => {
@@ -219,7 +267,7 @@ export default function EditEventPage() {
 
     try {
       const availableTickets = formData.totalTickets - soldTickets;
-      await eventService.update(eventId, {
+      const updateData: any = {
         name: formData.name,
         description: formData.description,
         date: formData.date,
@@ -236,7 +284,21 @@ export default function EditEventPage() {
         price: formData.type === 'paid' ? formData.price : undefined,
         totalTickets: formData.totalTickets,
         availableTickets,
-      });
+      };
+
+      // Handle image update
+      if (imageBase64) {
+        updateData.imageBase64 = imageBase64;
+        updateData.imageUrl = imageBase64; // Use base64 as URL too for web display
+      } else if (imageUrl) {
+        updateData.imageUrl = imageUrl;
+      } else {
+        // Image was removed
+        updateData.imageBase64 = '';
+        updateData.imageUrl = '';
+      }
+
+      await eventService.update(eventId, updateData);
 
       // Send notifications if requested
       let notificationMessage = '';
@@ -473,6 +535,67 @@ export default function EditEventPage() {
 
           {/* Right Column */}
           <div className="space-y-6">
+            {/* Event Image */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Event Image</CardTitle>
+                <CardDescription>
+                  Upload a cover image for your event (max 1MB)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {imagePreview ? (
+                  <div className="relative">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gray-100">
+                      <img
+                        src={imagePreview}
+                        alt="Event cover"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <ImagePlus className="w-4 h-4 mr-2" />
+                        Change Image
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRemoveImage}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <XIcon className="w-4 h-4 mr-2" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-gray-400 transition-colors"
+                  >
+                    <ImagePlus className="w-8 h-8 text-gray-400" />
+                    <span className="text-sm text-gray-500">Click to upload event image</span>
+                    <span className="text-xs text-gray-400">JPG, PNG — max 1MB</span>
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Venue Type</CardTitle>

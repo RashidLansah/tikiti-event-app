@@ -72,7 +72,9 @@ export default function SeedDemoPage() {
     setSteps(initialSteps);
 
     const orgId = activeOrgId!;
-    const userId = user.uid;
+    // Use the org owner's UID so the event shows up in their organiser dashboard
+    const selectedOrg = allOrgs.find(o => o.id === orgId);
+    const userId = selectedOrg?.ownerId || user.uid;
 
     try {
       // ── Step 1: Create Speakers ────────────────────────────
@@ -361,6 +363,7 @@ export default function SeedDemoPage() {
         organizationId: orgId,
         organizerName: user.displayName || 'Tikiti Admin',
         organizerEmail: user.email || '',
+        imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=600&fit=crop&q=80',
       };
 
       const createdEvent = await eventService.create(eventData, userId, orgId);
