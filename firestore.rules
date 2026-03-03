@@ -47,8 +47,9 @@ service cloud.firestore {
       // Anyone can read events (for public event listing)
       allow read: if true;
 
-      // Admins can delete any event
+      // Admins can manage any event
       allow delete: if isAdmin();
+      allow create, update: if isAdmin();
 
       // Only organizers can create events
       allow create: if isOrganizer() &&
@@ -66,16 +67,18 @@ service cloud.firestore {
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
         .hasOnly(['soldTickets', 'availableTickets']);
 
-      // Event updates subcollection — anyone can read, organizer can write
+      // Event updates subcollection — anyone can read, organizer or admin can write
       match /updates/{updateId} {
         allow read: if true;
+        allow write: if isAdmin();
         allow write: if isOrganizer() &&
           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.organizerId;
       }
 
-      // Event surveys subcollection — anyone can read, organizer can write
+      // Event surveys subcollection — anyone can read, organizer or admin can write
       match /surveys/{surveyId} {
         allow read: if true;
+        allow write: if isAdmin();
         allow write: if isOrganizer() &&
           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.organizerId;
 
