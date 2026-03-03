@@ -335,9 +335,9 @@ export default function SeedDemoPage() {
 
       // Event data
       const eventData: Partial<Event> = {
-        name: 'Tikiti Demo Day: Explore All Features',
+        name: '[DEMO] Tikiti Demo Day — Explore All Features',
         description:
-          'Welcome to the Tikiti Demo Event! This is a practice event designed to help you explore all the features of the Tikiti app.\n\nTry registering for a cohort, checking in with QR codes, viewing the agenda, exploring speaker profiles, and more. Feel free to experiment — this is your sandbox!\n\nThis 2-day hybrid event showcases:\n• Multi-day scheduling with different sessions each day\n• Cohort selection (Morning, Afternoon, or Day 2)\n• Full speaker profiles with bios and LinkedIn links\n• Custom registration form with various field types\n• QR code check-in system\n• Post-event feedback survey\n• Virtual attendance via Google Meet',
+          'THIS IS NOT A REAL EVENT — it is a guided demo to help you learn how to use the Tikiti app.\n\nWelcome to the Tikiti Demo Event! Explore all the features of Tikiti by interacting with this sample event. Try registering for a cohort, checking in with QR codes, viewing the agenda, exploring speaker profiles, and more.\n\nFeel free to experiment — this is your sandbox! Nothing here is real, so go ahead and click around.\n\nThis 2-day hybrid event showcases:\n• Multi-day scheduling with different sessions each day\n• Cohort selection (Morning, Afternoon, or Day 2)\n• Full speaker profiles with bios and LinkedIn links\n• Custom registration form with various field types\n• QR code check-in system\n• Post-event feedback survey\n• Virtual attendance via Google Meet',
         category: 'Conference',
         venueType: 'hybrid',
         location: 'Tikiti HQ, 14 Kanda Highway, Accra',
