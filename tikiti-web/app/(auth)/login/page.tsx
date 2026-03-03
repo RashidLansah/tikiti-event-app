@@ -52,6 +52,11 @@ function LoginForm() {
       // Show loading screen after successful login
       setShowLoadingScreen(true);
     } catch (err: any) {
+      if (err.code === 'auth/email-not-verified') {
+        // Redirect to verify-email page
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
       setError(err.message || 'Failed to login. Please check your credentials.');
       setLoading(false);
     }

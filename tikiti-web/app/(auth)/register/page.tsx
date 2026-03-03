@@ -70,7 +70,7 @@ export default function RegisterPage() {
   };
 
   const handleLoadingComplete = () => {
-    router.push('/dashboard');
+    router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
   };
 
   if (showLoadingScreen) {

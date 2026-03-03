@@ -1,13 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { 
-  onAuthStateChanged, 
+import {
+  onAuthStateChanged,
   signOut as firebaseSignOut,
   User as FirebaseUser,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile as firebaseUpdateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -176,6 +177,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Check if email is verified
+      if (!userCredential.user.emailVerified) {
+        // Sign out the unverified user so they can't access dashboard
+        await firebaseSignOut(auth);
+        const error = new Error('EMAIL_NOT_VERIFIED') as any;
+        error.code = 'auth/email-not-verified';
+        error.email = email;
+        throw error;
+      }
+
       return userCredential;
     } catch (error) {
       console.error('Login error:', error);
@@ -212,6 +224,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updatedAt: serverTimestamp()
       };
       await setDoc(userRef, newUserProfile);
+
+      // Send email verification
+      try {
+        await sendEmailVerification(userCredential.user);
+      } catch (verifyError) {
+        console.log('Email verification send error (non-critical):', verifyError);
+      }
 
       // Immediately set the user state so createOrganization can use it
       // (onAuthStateChanged will also fire, but this ensures immediate availability)
