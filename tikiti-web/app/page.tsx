@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Calendar, Users, BarChart3, QrCode, Bell, MessageSquare,
   ArrowRight, Check, Smartphone, Monitor, Globe, Zap,
@@ -541,6 +542,18 @@ export default function LandingPage() {
             ))}
           </div>
 
+          {/* Dashboard Screenshot */}
+          <div className="mt-14 rounded-[20px] overflow-hidden border border-white/10 shadow-2xl">
+            <Image
+              src="/images/dashboard.png"
+              alt="Tikiti organizer dashboard showing event management, analytics, and attendee tracking"
+              width={1280}
+              height={720}
+              className="w-full h-auto"
+              unoptimized
+            />
+          </div>
+
           {/* Dashboard CTA */}
           <div className="text-center mt-12">
             <Link
@@ -645,6 +658,40 @@ export default function LandingPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Mobile App Screenshots */}
+          <div className="mt-14 flex flex-col sm:flex-row items-center justify-center gap-4 lg:gap-6">
+            <div className="rounded-[32px] overflow-hidden shadow-2xl border border-[#e0e0e0] w-[240px] sm:w-[200px] lg:w-[260px] shrink-0">
+              <Image
+                src="/images/mobile-home.png"
+                alt="Tikiti mobile app home screen showing event discovery"
+                width={260}
+                height={560}
+                className="w-full h-auto"
+                unoptimized
+              />
+            </div>
+            <div className="rounded-[32px] overflow-hidden shadow-2xl border border-[#e0e0e0] w-[240px] sm:w-[200px] lg:w-[260px] shrink-0">
+              <Image
+                src="/images/mobile-event.png"
+                alt="Tikiti mobile app event detail with description and image"
+                width={260}
+                height={560}
+                className="w-full h-auto"
+                unoptimized
+              />
+            </div>
+            <div className="rounded-[32px] overflow-hidden shadow-2xl border border-[#e0e0e0] w-[240px] sm:w-[200px] lg:w-[260px] shrink-0 hidden sm:block">
+              <Image
+                src="/images/mobile-ticket.png"
+                alt="Tikiti mobile app QR ticket screen"
+                width={260}
+                height={560}
+                className="w-full h-auto"
+                unoptimized
+              />
             </div>
           </div>
 
