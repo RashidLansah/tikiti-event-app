@@ -31,7 +31,14 @@ import {
   Loader2,
   AlertCircle,
   Sparkles,
+  UserCircle,
 } from 'lucide-react';
+import {
+  userProfileService,
+  INTEREST_TAGS,
+  INDUSTRY_OPTIONS,
+  AudienceProfile,
+} from '@/lib/services/userProfileService';
 import { useToast } from '@/hooks/use-toast';
 import InviteMemberModal from '@/components/InviteMemberModal';
 
@@ -46,6 +53,13 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
   const [showInviteModal, setShowInviteModal] = useState(false);
 
+  // Audience profile state
+  const [profileInterests, setProfileInterests] = useState<string[]>([]);
+  const [profileProfession, setProfileProfession] = useState('');
+  const [profileIndustry, setProfileIndustry] = useState('');
+  const [allowOrganizerContact, setAllowOrganizerContact] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+
   // Billing state
   const [billingLoading, setBillingLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -53,6 +67,35 @@ export default function SettingsPage() {
 
   const isOwnerOrAdmin = currentOrgRole === 'owner' || currentOrgRole === 'admin';
   const isOwner = currentOrgRole === 'owner';
+
+  // Load audience profile data from userProfile (supplied by AuthContext)
+  useEffect(() => {
+    if (userProfile) {
+      const p = userProfile as AudienceProfile & Record<string, any>;
+      setProfileInterests(p.interests || []);
+      setProfileProfession(p.profession || '');
+      setProfileIndustry(p.industry || '');
+      setAllowOrganizerContact(p.allowOrganizerContact ?? false);
+    }
+  }, [userProfile]);
+
+  const handleSaveAudienceProfile = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    try {
+      await userProfileService.updateInterests(user.uid, {
+        interests: profileInterests,
+        profession: profileProfession,
+        industry: profileIndustry,
+      });
+      await userProfileService.updateConsent(user.uid, allowOrganizerContact);
+      toast({ title: 'Profile saved', description: 'Your audience profile has been updated.' });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to save profile.', variant: 'destructive' });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   useEffect(() => {
     if (currentOrganization) {
@@ -496,6 +539,7 @@ export default function SettingsPage() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'team', label: 'Team', icon: Users },
     { id: 'subscription', label: 'Subscription', icon: CreditCard },
+    { id: 'audience-profile', label: 'My Profile', icon: UserCircle },
   ];
 
   const getRoleStyles = (role: string) => {
@@ -1249,6 +1293,120 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Audience Profile Tab ────────────────────────────────────────── */}
+      {activeTab === 'audience-profile' && (
+        <div className="space-y-5">
+          <div className="bg-white border border-black/10 rounded-[24px] p-8">
+            <h2 className="text-lg font-bold text-[#333] mb-1">Audience Profile</h2>
+            <p className="text-sm text-[#86868b] mb-6">
+              Help us personalise your experience and match you with relevant events.
+              This data is never sold — it&apos;s used only to connect you with events you&apos;ll care about.
+            </p>
+
+            {/* Profession */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-[#333] mb-2">Profession</label>
+              <input
+                type="text"
+                placeholder="e.g. Product Designer, Software Engineer, Founder"
+                value={profileProfession}
+                onChange={(e) => setProfileProfession(e.target.value)}
+                className="w-full h-11 px-4 bg-[#f0f0f0] border-0 rounded-[16px] text-[#333] placeholder:text-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#333]/20"
+              />
+            </div>
+
+            {/* Industry */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-[#333] mb-2">Industry</label>
+              <select
+                value={profileIndustry}
+                onChange={(e) => setProfileIndustry(e.target.value)}
+                className="w-full h-11 px-4 bg-[#f0f0f0] border-0 rounded-[16px] text-[#333] focus:outline-none focus:ring-2 focus:ring-[#333]/20"
+              >
+                <option value="">Select your industry</option>
+                {INDUSTRY_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Interests */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-[#333] mb-2">
+                Event Interests
+                <span className="ml-2 text-xs text-[#86868b] font-normal">Select all that apply</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {INTEREST_TAGS.map((tag) => {
+                  const selected = profileInterests.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() =>
+                        setProfileInterests((prev) =>
+                          selected ? prev.filter((t) => t !== tag) : [...prev, tag]
+                        )
+                      }
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        selected
+                          ? 'bg-[#333] text-white'
+                          : 'bg-[#f0f0f0] text-[#333] hover:bg-[#e5e5e5]'
+                      }`}
+                    >
+                      {selected && <Check className="inline w-3 h-3 mr-1 -mt-0.5" />}
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Consent */}
+            <div className="border-t border-black/5 pt-6 mb-6">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <div className="relative mt-0.5">
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={allowOrganizerContact}
+                    onChange={(e) => setAllowOrganizerContact(e.target.checked)}
+                  />
+                  <div
+                    onClick={() => setAllowOrganizerContact((v) => !v)}
+                    className={`w-5 h-5 rounded flex items-center justify-center transition-colors cursor-pointer ${
+                      allowOrganizerContact ? 'bg-[#333]' : 'bg-[#f0f0f0] border border-[#ccc]'
+                    }`}
+                  >
+                    {allowOrganizerContact && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#333]">Allow organisers to reach me</p>
+                  <p className="text-xs text-[#86868b] mt-0.5">
+                    Organisers can send you personalised event invitations based on your interests.
+                    You can turn this off at any time.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <button
+              onClick={handleSaveAudienceProfile}
+              disabled={savingProfile}
+              className="flex items-center gap-2 bg-[#333] text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-[#1a1a1a] transition-colors disabled:opacity-50"
+            >
+              {savingProfile ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {savingProfile ? 'Saving...' : 'Save Profile'}
+            </button>
+          </div>
         </div>
       )}
 

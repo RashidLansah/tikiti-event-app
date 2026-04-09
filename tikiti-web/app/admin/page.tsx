@@ -18,9 +18,15 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { adminService, PlatformStats } from '@/lib/services/adminService';
+import { userProfileService } from '@/lib/services/userProfileService';
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [audienceStats, setAudienceStats] = useState<{
+    totalWithConsent: number;
+    totalWithInterests: number;
+    topCategories: Array<{ category: string; count: number }>;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,8 +38,12 @@ export default function AdminDashboardPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await adminService.getPlatformStats();
+      const [data, audience] = await Promise.all([
+        adminService.getPlatformStats(),
+        userProfileService.getAudienceStats(),
+      ]);
       setStats(data);
+      setAudienceStats(audience);
     } catch (err) {
       console.error('Error loading stats:', err);
       setError('Failed to load platform statistics');
@@ -274,6 +284,56 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Audience Intelligence */}
+      <Card className="border-black/10">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-purple-600" />
+            Audience Intelligence
+          </CardTitle>
+          <p className="text-sm text-[#86868b]">
+            Profile data collected from attendees — powers future organizer targeting tools.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="bg-purple-50 rounded-xl p-4">
+              <p className="text-2xl font-bold text-purple-700">{audienceStats?.totalWithConsent ?? '—'}</p>
+              <p className="text-xs text-[#86868b] mt-1">Users opted in to organizer outreach</p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-4">
+              <p className="text-2xl font-bold text-blue-700">{audienceStats?.totalWithInterests ?? '—'}</p>
+              <p className="text-xs text-[#86868b] mt-1">Profiles with interest tags</p>
+            </div>
+            <div className="bg-green-50 rounded-xl p-4">
+              <p className="text-2xl font-bold text-green-700">{audienceStats?.topCategories.length ?? '—'}</p>
+              <p className="text-xs text-[#86868b] mt-1">Event categories tracked</p>
+            </div>
+          </div>
+          {audienceStats && audienceStats.topCategories.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-[#86868b] uppercase tracking-wide mb-3">Top Event Categories</p>
+              <div className="flex flex-wrap gap-2">
+                {audienceStats.topCategories.map(({ category, count }) => (
+                  <span
+                    key={category}
+                    className="inline-flex items-center gap-1.5 bg-[#f0f0f0] text-[#333] text-xs font-medium px-3 py-1.5 rounded-full"
+                  >
+                    {category}
+                    <span className="bg-[#333] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{count}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {(!audienceStats || audienceStats.topCategories.length === 0) && (
+            <p className="text-sm text-[#86868b] italic">
+              No audience data yet. Data will appear here as attendees register for events.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card className="border-black/10">

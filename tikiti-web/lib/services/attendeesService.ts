@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { eventService } from './eventService';
+import { userProfileService } from './userProfileService';
 
 const COLLECTIONS = {
   BOOKINGS: 'bookings',
@@ -327,6 +328,12 @@ export const attendeesService = {
         checkInMethod,
         updatedAt: Timestamp.now(),
       });
+      // Silently update the user's event history with check-in status
+      const bookingSnap = await getDoc(bookingRef);
+      const booking = bookingSnap.data();
+      if (booking?.userId && booking?.eventId) {
+        userProfileService.markCheckedIn(booking.userId, booking.eventId);
+      }
     } catch (error) {
       console.error('Error checking in attendee:', error);
       throw error;
@@ -493,6 +500,24 @@ export const attendeesService = {
         bookingData.cohortName = attendeeData.cohortName || '';
       }
       const bookingRef = await addDoc(bookingsRef, bookingData);
+
+      // Silently record this booking in the user's event history for audience profiling.
+      // We fetch the event to get category, venueType, date, and type.
+      eventService.getById(eventId).then((event) => {
+        if (event) {
+          userProfileService.recordEventAttendance(bookingData.userId, {
+            bookingId: bookingRef.id,
+            eventId,
+            eventName,
+            category: event.category || 'Other',
+            venueType: event.venueType || 'in_person',
+            eventType: event.type || 'free',
+            date: event.date,
+            location: event.location,
+            organizationId: event.organizationId,
+          });
+        }
+      }).catch(() => {}); // non-critical
 
       // Update event ticket counts
       const eventRef = doc(db, COLLECTIONS.EVENTS, eventId);
