@@ -101,6 +101,7 @@ export default function LandingPage() {
             <div className="hidden md:flex items-center gap-8">
               <a href="#events" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Events</a>
               <a href="#features" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Features</a>
+              <a href="#pricing" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Pricing</a>
               <a href="#dashboard" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Dashboard</a>
               <a href="#mobile" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Mobile App</a>
             </div>
@@ -136,6 +137,7 @@ export default function LandingPage() {
           <div className="md:hidden bg-[#fefff7] border-t border-black/5 px-6 py-6 space-y-4">
             <a href="#events" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Events</a>
             <a href="#features" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Features</a>
+            <a href="#pricing" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
             <a href="#dashboard" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Dashboard</a>
             <a href="#mobile" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Mobile App</a>
             <div className="pt-4 flex flex-col gap-3">
@@ -159,7 +161,7 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-[#f0f0f0] rounded-full px-4 py-2 mb-8">
             <Zap size={14} className="text-[#333]" />
-            <span className="text-[13px] font-semibold text-[#333]">Free to start</span>
+            <span className="text-[13px] font-semibold text-[#333]">Currently free</span>
           </div>
 
           {/* Headline */}
@@ -170,7 +172,7 @@ export default function LandingPage() {
 
           {/* Subheadline */}
           <p className="text-[18px] md:text-[20px] text-[#86868b] max-w-[640px] mx-auto mb-10 leading-relaxed">
-            Everything you need to plan, promote, and manage your event — from speaker coordination to check-in day. Free to start.
+            Everything you need to plan, promote, and manage your event — from speaker coordination to check-in day. Completely free.
           </p>
 
           {/* CTA Buttons */}
@@ -825,6 +827,25 @@ export default function LandingPage() {
 
 
       {/* ════════════════════════════════════════════════════
+          PRICING
+      ════════════════════════════════════════════════════ */}
+      <section id="pricing" className="py-24 px-6 lg:px-12">
+        <div className="max-w-[640px] mx-auto">
+          <h2 className="text-[32px] md:text-[40px] font-extrabold text-[#333] mb-6">Pricing</h2>
+          <div className="bg-[#f0f0f0] rounded-[24px] p-8 md:p-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-[10px] h-[10px] rounded-full bg-[#4ade80]" />
+              <span className="text-[15px] font-semibold text-[#333]">Tikiti is currently free</span>
+            </div>
+            <p className="text-[16px] text-[#555] leading-relaxed">
+              In the future, we may introduce paid features or plans. If we do, we&apos;ll clearly describe the terms and pricing before you&apos;re charged.
+            </p>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ════════════════════════════════════════════════════
           FINAL CTA
       ════════════════════════════════════════════════════ */}
       <section className="py-24 px-6 lg:px-12">
@@ -833,7 +854,7 @@ export default function LandingPage() {
             Ready to create your<br />next event?
           </h2>
           <p className="text-[18px] text-[#86868b] max-w-[540px] mx-auto mb-10">
-            Join organizers who use Tikiti to plan, promote, and run professional events. All features included — free to start.
+            Join organizers who use Tikiti to plan, promote, and run professional events. All features included — completely free.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
