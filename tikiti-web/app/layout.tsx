@@ -12,17 +12,69 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Tikiti — Event Management Platform",
-  description: "Create events, manage attendees, scan tickets, and track analytics. The modern event platform for organizers and attendees.",
-  keywords: ["events", "ticketing", "event management", "QR tickets", "Tikiti"],
+  title: "Tikiti — Free Event Management Platform",
+  description: "Tikiti is a free event management platform. Create events, manage attendees, send QR tickets, track check-ins, and view analytics. 100% free for event organizers.",
+  keywords: [
+    "free event management platform",
+    "event management software",
+    "event organizer tool",
+    "event ticketing platform",
+    "free event ticketing",
+    "QR code tickets",
+    "event check-in app",
+    "event registration",
+    "event analytics",
+    "manage event attendees",
+    "event dashboard",
+    "create events online",
+    "event management app",
+    "free event platform",
+    "event organizer software",
+    "attendee management",
+    "event messaging",
+    "digital event tickets",
+    "event management tool free",
+    "Tikiti",
+  ],
   icons: {
     icon: '/favicon.png',
     apple: '/favicon.png',
   },
+  metadataBase: new URL('https://gettikiti.com'),
   openGraph: {
-    title: "Tikiti — Event Management Platform",
-    description: "Create events people remember.",
+    title: "Tikiti — Free Event Management Platform",
+    description: "Create events, manage attendees, send QR tickets, and track analytics — completely free. Tikiti is the modern event platform built for organizers.",
     type: "website",
+    url: "https://gettikiti.com",
+    siteName: "Tikiti",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Tikiti — Free Event Management Platform",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tikiti — Free Event Management Platform",
+    description: "Create events, manage attendees, send QR tickets, and track analytics — completely free.",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: "https://gettikiti.com",
   },
 };
 

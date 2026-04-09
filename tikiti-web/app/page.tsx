@@ -101,7 +101,6 @@ export default function LandingPage() {
             <div className="hidden md:flex items-center gap-8">
               <a href="#events" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Events</a>
               <a href="#features" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Features</a>
-              <a href="#pricing" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Pricing</a>
               <a href="#dashboard" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Dashboard</a>
               <a href="#mobile" className="text-[15px] font-medium text-[#86868b] hover:text-[#333] transition-colors">Mobile App</a>
             </div>
@@ -137,7 +136,6 @@ export default function LandingPage() {
           <div className="md:hidden bg-[#fefff7] border-t border-black/5 px-6 py-6 space-y-4">
             <a href="#events" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Events</a>
             <a href="#features" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Features</a>
-            <a href="#pricing" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
             <a href="#dashboard" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Dashboard</a>
             <a href="#mobile" className="block text-[15px] font-medium text-[#333]" onClick={() => setMobileMenuOpen(false)}>Mobile App</a>
             <div className="pt-4 flex flex-col gap-3">
@@ -347,131 +345,6 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-
-      {/* ════════════════════════════════════════════════════
-          PRICING SECTION
-      ════════════════════════════════════════════════════ */}
-      <section id="pricing" className="py-24 px-6 lg:px-12 bg-[#f0f0f0]">
-        <div className="max-w-[1280px] mx-auto">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-2 mb-6">
-              <Zap size={14} className="text-[#333]" />
-              <span className="text-[13px] font-semibold text-[#333]">Simple Pricing</span>
-            </div>
-            <h2 className="text-[36px] md:text-[48px] font-extrabold text-[#333] leading-tight mb-4">
-              All features free.<br />
-              <span className="text-[#a3a3a3]">Upgrade when you grow.</span>
-            </h2>
-            <p className="text-[16px] text-[#86868b] max-w-[520px] mx-auto">
-              No feature walls. Every tool is available on the free plan.
-              Only upgrade when you need more than one active event.
-            </p>
-          </div>
-
-          {/* Pricing Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[800px] mx-auto">
-            {/* Free Plan */}
-            <div className="bg-white rounded-[24px] p-8 relative">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-[48px] h-[48px] bg-[#f0f0f0] rounded-[16px] flex items-center justify-center">
-                  <Zap size={22} className="text-[#333]" />
-                </div>
-                <div>
-                  <h3 className="text-[20px] font-bold text-[#333]">Free</h3>
-                  <p className="text-[13px] text-[#86868b]">Everything you need to get started</p>
-                </div>
-              </div>
-              <div className="mb-6">
-                <span className="text-[48px] font-extrabold text-[#333]">Free</span>
-                <span className="text-[16px] text-[#86868b] font-medium">/forever</span>
-              </div>
-              <div className="space-y-3 mb-8">
-                {[
-                  '1 active event',
-                  'Unlimited attendees',
-                  'Unlimited team members',
-                  'QR ticketing & check-in',
-                  'Attendee messaging',
-                  'AI event descriptions',
-                  'Analytics & reports',
-                  'Bulk email',
-                  'Custom branding',
-                ].map((feature) => (
-                  <div key={feature} className="flex items-center gap-3">
-                    <div className="w-[20px] h-[20px] bg-[#f0f0f0] rounded-full flex items-center justify-center shrink-0">
-                      <Check size={12} className="text-[#333]" />
-                    </div>
-                    <span className="text-[14px] text-[#555]">{feature}</span>
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/register"
-                className="block w-full text-center bg-[#f0f0f0] text-[#333] text-[15px] font-semibold py-3.5 rounded-full hover:bg-[#e5e5e5] transition-colors"
-              >
-                Get started free
-              </Link>
-            </div>
-
-            {/* Pro Plan */}
-            <div className="bg-[#333] rounded-[24px] p-8 relative text-white">
-              {/* Recommended Badge */}
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="bg-[#333] text-white text-[12px] font-bold uppercase tracking-wider px-4 py-1.5 rounded-full border-2 border-[#f0f0f0]">
-                  Most Popular
-                </span>
-              </div>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-[48px] h-[48px] bg-white/10 rounded-[16px] flex items-center justify-center">
-                  <Star size={22} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="text-[20px] font-bold">Pro</h3>
-                  <p className="text-[13px] text-white/50">For growing organisations</p>
-                </div>
-              </div>
-              <div className="mb-6">
-                <span className="text-[48px] font-extrabold">$1.99</span>
-                <span className="text-[16px] text-white/50 font-medium">/month</span>
-              </div>
-              <div className="space-y-3 mb-8">
-                {[
-                  'Unlimited active events',
-                  'Unlimited attendees',
-                  'Unlimited team members',
-                  'QR ticketing & check-in',
-                  'Attendee messaging',
-                  'AI event descriptions',
-                  'Analytics & reports',
-                  'Bulk email',
-                  'Custom branding',
-                  'Priority support',
-                ].map((feature) => (
-                  <div key={feature} className="flex items-center gap-3">
-                    <div className="w-[20px] h-[20px] bg-white/10 rounded-full flex items-center justify-center shrink-0">
-                      <Check size={12} className="text-white" />
-                    </div>
-                    <span className="text-[14px] text-white/70">{feature}</span>
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="/register"
-                className="block w-full text-center bg-white text-[#333] text-[15px] font-semibold py-3.5 rounded-full hover:bg-white/90 transition-colors"
-              >
-                Start with Pro
-              </Link>
-            </div>
-          </div>
-
-          {/* Bottom note */}
-          <p className="text-center text-[13px] text-[#86868b] mt-8 max-w-[400px] mx-auto">
-            No credit card required for the free plan. Upgrade or downgrade anytime.
-          </p>
         </div>
       </section>
 
