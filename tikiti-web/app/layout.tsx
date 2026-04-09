@@ -76,6 +76,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://gettikiti.com",
   },
+  verification: {
+    google: "Ly9qFOGJxolptq-AphQM1wua8CkpWqnE1rViNCzXLyA",
+  },
 };
 
 export default function RootLayout({
