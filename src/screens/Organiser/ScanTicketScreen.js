@@ -14,6 +14,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather } from '@expo/vector-icons';
 import { bookingService } from '../../services/firestoreService';
 import notificationService from '../../services/notificationService';
+import { userProfileService } from '../../services/userProfileService';
 import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import logger from '../../utils/logger';
@@ -211,6 +212,11 @@ const ScanTicketScreen = ({ navigation }) => {
       // If valid, mark ticket as used and notify attendee
       if (isValid) {
         await markTicketAsUsed(ticketData.purchaseId);
+
+        // Silently record check-in in the attendee's event history
+        if (ticketData.userId && ticketData.eventId) {
+          userProfileService.markCheckedIn(ticketData.userId, ticketData.eventId);
+        }
 
         // Send check-in confirmation push notification to attendee
         if (ticketData.userId) {

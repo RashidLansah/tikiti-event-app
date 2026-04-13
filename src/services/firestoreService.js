@@ -19,6 +19,7 @@ import {
 import { db, auth } from '../config/firebase';
 import { emailService } from '../config/emailService';
 import logger from '../utils/logger';
+import { userProfileService } from './userProfileService';
 
 // Firestore error mapper — returns user-friendly messages
 export const getFirestoreErrorMessage = (error) => {
@@ -611,6 +612,22 @@ export const bookingService = {
           soldTickets: increment(bookingData.quantity),
           availableTickets: increment(-bookingData.quantity),
         });
+      }
+
+      // Silently record this booking in the user's event history for audience profiling.
+      // eventData is already in scope from the availability check above.
+      if (bookingData.userId && bookingData.eventId) {
+        userProfileService.recordEventAttendance(bookingData.userId, {
+          bookingId: docRef.id,
+          eventId: bookingData.eventId,
+          eventName: bookingData.eventName || (typeof eventData !== 'undefined' ? eventData.name : ''),
+          category: typeof eventData !== 'undefined' ? (eventData.category || 'Other') : 'Other',
+          venueType: typeof eventData !== 'undefined' ? (eventData.venueType || 'in_person') : 'in_person',
+          eventType: typeof eventData !== 'undefined' ? (eventData.type || 'free') : 'free',
+          date: typeof eventData !== 'undefined' ? (eventData.date || '') : '',
+          location: typeof eventData !== 'undefined' ? (eventData.location || '') : '',
+          organizationId: typeof eventData !== 'undefined' ? (eventData.organizationId || '') : '',
+        }); // fire-and-forget — no await, no catch needed here
       }
 
       // Send email confirmation

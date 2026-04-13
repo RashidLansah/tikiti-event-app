@@ -40,6 +40,7 @@ import EditSocialLinksScreen from '../screens/User/EditSocialLinksScreen';
 import NetworkScreen from '../screens/User/NetworkScreen';
 import ScanConnectionScreen from '../screens/User/ScanConnectionScreen';
 import ConnectionDetailScreen from '../screens/User/ConnectionDetailScreen';
+import AudienceProfileScreen from '../screens/User/AudienceProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -111,7 +112,7 @@ const NetworkStack = () => (
   </Stack.Navigator>
 );
 
-// Stack navigator for Profile (social card + edit links)
+// Stack navigator for Profile (social card + edit links + audience profile)
 const ProfileStack = () => (
   <Stack.Navigator
     screenOptions={{
@@ -121,6 +122,7 @@ const ProfileStack = () => (
     <Stack.Screen name="ProfileMain" component={ProfileScreen} />
     <Stack.Screen name="SocialCard" component={SocialCardScreen} />
     <Stack.Screen name="EditSocialLinks" component={EditSocialLinksScreen} />
+    <Stack.Screen name="AudienceProfile" component={AudienceProfileScreen} />
   </Stack.Navigator>
 );
 

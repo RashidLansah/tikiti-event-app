@@ -403,7 +403,21 @@ Thank you!`;
             />
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
+            style={[styles.menuItem, { borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }]}
+            onPress={() => navigation.navigate('AudienceProfile')}
+          >
+            <View style={styles.menuIcon}>
+              <Feather name="sliders" size={20} color={getSubtleIconColor(colors.primary[500])} />
+            </View>
+            <View style={styles.menuContent}>
+              <Text style={[styles.menuTitle, { color: colors.text.primary }]}>Event Preferences</Text>
+              <Text style={[styles.menuSubtitle, { color: colors.text.secondary }]}>Interests, industry and event alerts</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={getSubtleIconColor(colors.text.tertiary)} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.menuItem, { borderBottomColor: 'transparent' }]}
             onPress={handleResetPassword}
           >
