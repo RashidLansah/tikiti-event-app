@@ -28,6 +28,9 @@ import {
 } from 'lucide-react';
 import { AIDescriptionHelper } from '@/components/AIDescriptionHelper';
 import { motion, AnimatePresence } from 'framer-motion';
+import { eventMediaService } from '@/lib/services/eventMediaService';
+import { storage } from '@/lib/firebase/config';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const STEPS = [
   {
@@ -47,6 +50,12 @@ const STEPS = [
     title: 'Add a cover image',
     subtitle: 'A great image helps your event stand out',
     icon: ImageIcon,
+  },
+  {
+    id: 'promoVideo',
+    title: 'Add a promo video',
+    subtitle: 'Show people what to expect — optional but powerful',
+    icon: Video,
   },
   {
     id: 'datetime',
@@ -118,6 +127,10 @@ export default function CreateEventPage() {
   });
   const [isMultiDay, setIsMultiDay] = useState(false);
   const [hasCohorts, setHasCohorts] = useState(false);
+  const [promoVideoFile, setPromoVideoFile] = useState<File | null>(null);
+  const [promoVideoPreview, setPromoVideoPreview] = useState<string | null>(null);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [cohortEntries, setCohortEntries] = useState<Array<{ name: string; startDate: string; endDate: string; capacity: number }>>([
     { name: '', startDate: '', endDate: '', capacity: 50 },
   ]);
@@ -152,6 +165,22 @@ export default function CreateEventPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handlePromoVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      setError('Please select a video file (MP4, MOV, etc.)');
+      return;
+    }
+    if (file.size > 200 * 1024 * 1024) {
+      setError('Video must be under 200MB');
+      return;
+    }
+    setPromoVideoFile(file);
+    setPromoVideoPreview(URL.createObjectURL(file));
+    setError('');
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -181,6 +210,8 @@ export default function CreateEventPage() {
       case 'description':
         return (formData.description?.length || 0) > 10;
       case 'image':
+        return true; // Optional
+      case 'promoVideo':
         return true; // Optional
       case 'datetime':
         if (isMultiDay) {
@@ -268,6 +299,37 @@ export default function CreateEventPage() {
       }
 
       const newEvent = await eventService.create(eventData, user.uid, currentOrganization.id);
+
+      // If organizer selected a promo video, upload it now and create an eventMedia doc
+      if (promoVideoFile && newEvent.id) {
+        setUploadingVideo(true);
+        try {
+          await eventMediaService.uploadVideo(
+            promoVideoFile,
+            {
+              eventId: newEvent.id,
+              userId: user.uid,
+              type: 'organizer_promo',
+              eventPhase: 'pre',
+              verificationLevel: 'organizer',
+              caption: '',
+              eventName: formData.name || '',
+              eventDate: formData.date || formData.startDate || '',
+              eventCategory: formData.category || '',
+              eventCity: formData.location || '',
+              organizerId: user.uid,
+              organizationId: currentOrganization.id,
+            },
+            (pct) => setVideoUploadProgress(pct)
+          );
+        } catch (videoErr) {
+          console.warn('Promo video upload failed (event was created):', videoErr);
+          // Don't block navigation — event was created successfully
+        } finally {
+          setUploadingVideo(false);
+        }
+      }
+
       router.push(`/dashboard/events/${newEvent.id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to create event');
@@ -371,6 +433,55 @@ export default function CreateEventPage() {
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </label>
+            )}
+            <button
+              onClick={handleNext}
+              className="text-sm text-[#86868b] hover:text-[#333] transition-colors"
+            >
+              Skip for now →
+            </button>
+          </div>
+        );
+
+      case 'promoVideo':
+        return (
+          <div className="space-y-6">
+            {promoVideoPreview ? (
+              <div className="relative group">
+                <video
+                  src={promoVideoPreview}
+                  controls
+                  className="w-full max-w-2xl rounded-3xl bg-black"
+                  style={{ maxHeight: 360 }}
+                />
+                <button
+                  onClick={() => { setPromoVideoFile(null); setPromoVideoPreview(null); }}
+                  className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <p className="mt-3 text-sm text-[#86868b]">
+                  This video will be uploaded when you create the event.
+                </p>
+              </div>
+            ) : (
+              <label className="block w-full max-w-2xl cursor-pointer">
+                <div className="border-2 border-dashed border-[#333]/20 rounded-3xl p-16 text-center hover:border-[#333]/40 transition-colors">
+                  <Video className="h-16 w-16 text-[#333]/30 mx-auto mb-6" />
+                  <p className="text-xl font-medium text-[#333]/70 mb-2">
+                    Drop a video here or click to upload
+                  </p>
+                  <p className="text-sm text-[#86868b]">
+                    MP4 or MOV recommended • Max 200MB
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handlePromoVideoSelect}
                   className="hidden"
                 />
               </label>
@@ -1044,9 +1155,9 @@ export default function CreateEventPage() {
         ) : (
           <motion.button
             onClick={handleSubmit}
-            disabled={loading}
-            whileHover={!loading ? { scale: 1.02 } : {}}
-            whileTap={!loading ? { scale: 0.98 } : {}}
+            disabled={loading || uploadingVideo}
+            whileHover={!(loading || uploadingVideo) ? { scale: 1.02 } : {}}
+            whileTap={!(loading || uploadingVideo) ? { scale: 0.98 } : {}}
             className="flex items-center gap-3 px-10 py-4 rounded-full font-semibold text-lg bg-[#333] text-white hover:bg-[#444] transition-all disabled:opacity-50 shadow-lg shadow-[#333]/25"
           >
             {loading ? (
@@ -1057,6 +1168,15 @@ export default function CreateEventPage() {
                   className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                 />
                 Creating...
+              </>
+            ) : uploadingVideo ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                />
+                Uploading video {videoUploadProgress}%
               </>
             ) : (
               <>

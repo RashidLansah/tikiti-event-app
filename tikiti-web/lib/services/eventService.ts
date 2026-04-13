@@ -55,6 +55,7 @@ export interface Event {
   organizerPhone?: string;
   imageUrl?: string;
   imageBase64?: string;
+  promoVideoUrl?: string; // Firebase Storage download URL for organizer promo video
   status: 'draft' | 'published' | 'archived' | 'cancelled';
   isActive: boolean;
   registrationForm?: RegistrationForm;
