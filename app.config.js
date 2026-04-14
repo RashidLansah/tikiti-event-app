@@ -23,6 +23,7 @@ export default {
       infoPlist: {
         NSCameraUsageDescription: "Tikiti needs camera access to scan QR codes for event tickets and to upload event photos.",
         NSPhotoLibraryUsageDescription: "Tikiti needs photo library access to select and upload event images.",
+        NSPhotoLibraryAddUsageDescription: "Tikiti needs permission to save event photos to your photo library.",
       },
       config: {
         usesNonExemptEncryption: false
@@ -39,6 +40,7 @@ export default {
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "SCHEDULE_EXACT_ALARM"
@@ -52,6 +54,7 @@ export default {
     plugins: [
       "expo-camera",
       "expo-image-picker",
+      "expo-media-library",
       "expo-font",
       [
         "expo-notifications",

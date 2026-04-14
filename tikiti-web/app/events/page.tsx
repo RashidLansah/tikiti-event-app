@@ -93,7 +93,6 @@ export default function EventsPage() {
         const eventsRef = collection(db, 'events');
         const q = query(
           eventsRef,
-          where('status', '==', 'published'),
           where('date', '>=', today),
           orderBy('date', 'asc')
         );
@@ -147,6 +146,7 @@ export default function EventsPage() {
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2 text-[#86868b] hover:text-[#333] transition-colors">
                 <ArrowLeft size={20} />
+                <span className="text-[14px] font-medium hidden sm:inline">Back to Home</span>
               </Link>
               <Link href="/" className="text-[28px] font-extrabold text-[#333] tracking-tight">
                 Tikiti
@@ -174,7 +174,7 @@ export default function EventsPage() {
       <section className="pt-[120px] pb-8 px-6 lg:px-12">
         <div className="max-w-[1280px] mx-auto">
           <h1 className="text-[36px] md:text-[56px] font-extrabold text-[#333] leading-tight mb-3">
-            All Events
+            Discover Events
           </h1>
           <p className="text-[16px] md:text-[18px] text-[#86868b] mb-8 max-w-[500px]">
             Browse upcoming events and register directly. No app needed.

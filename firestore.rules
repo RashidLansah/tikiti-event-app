@@ -313,10 +313,10 @@ service cloud.firestore {
         request.resource.data.eventId == resource.data.eventId &&
         request.resource.data.userId == resource.data.userId;
 
-      // Any authenticated user can increment views and likes (fire-and-forget)
+      // Any authenticated user can increment views, likes, and downloads (fire-and-forget)
       allow update: if isAuthenticated() &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['views', 'likes', 'updatedAt']);
+          .hasOnly(['views', 'likes', 'downloads', 'updatedAt']);
 
       // Any authenticated user can report (increment reportCount, set reported flag)
       allow update: if isAuthenticated() &&

@@ -43,6 +43,8 @@ import ConnectionDetailScreen from '../screens/User/ConnectionDetailScreen';
 import AudienceProfileScreen from '../screens/User/AudienceProfileScreen';
 import PostEventVideoScreen from '../screens/User/PostEventVideoScreen';
 import VideoFeedScreen from '../screens/User/VideoFeedScreen';
+import PhotoGalleryScreen from '../screens/User/PhotoGalleryScreen';
+import EventVideoFeedScreen from '../screens/User/EventVideoFeedScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -107,6 +109,23 @@ const MyTicketsStack = () => (
   >
     <Stack.Screen name="MyTicketsList" component={MyTicketsScreen} />
     <Stack.Screen name="Ticket" component={TicketScreen} />
+  </Stack.Navigator>
+);
+
+// Stack navigator for Feed (main feed + photo gallery + event video feed)
+const FeedStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="FeedMain" component={VideoFeedScreen} />
+    <Stack.Screen
+      name="PhotoGallery"
+      component={PhotoGalleryScreen}
+      options={{ presentation: 'modal' }}
+    />
+    <Stack.Screen
+      name="EventVideoFeed"
+      component={EventVideoFeedScreen}
+      options={{ presentation: 'modal' }}
+    />
   </Stack.Navigator>
 );
 
@@ -190,7 +209,7 @@ const UserTabNavigator = () => {
       />
       <Tab.Screen
         name="Feed"
-        component={VideoFeedScreen}
+        component={FeedStack}
         options={{
           tabBarLabel: 'Feed',
         }}

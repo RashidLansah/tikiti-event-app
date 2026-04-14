@@ -63,10 +63,9 @@ export default function LandingPage() {
         const eventsRef = collection(db, 'events');
         const q = query(
           eventsRef,
-          where('status', '==', 'published'),
           where('date', '>=', today),
           orderBy('date', 'asc'),
-          limit(6)
+          limit(3)
         );
         const snapshot = await getDocs(q);
         const events: FeaturedEvent[] = snapshot.docs.map(doc => ({
@@ -161,18 +160,18 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-[#f0f0f0] rounded-full px-4 py-2 mb-8">
             <Zap size={14} className="text-[#333]" />
-            <span className="text-[13px] font-semibold text-[#333]">Currently free</span>
+            <span className="text-[13px] font-semibold text-[#333]">Free for organizers to get started</span>
           </div>
 
           {/* Headline */}
           <h1 className="text-[48px] md:text-[72px] lg:text-[88px] font-extrabold text-[#333] leading-[0.95] tracking-tight mb-6">
-            Run professional events<br />
-            <span className="text-[#a3a3a3]">without the chaos.</span>
+            The event platform<br />
+            <span className="text-[#a3a3a3]">built for Africa.</span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-[18px] md:text-[20px] text-[#86868b] max-w-[640px] mx-auto mb-10 leading-relaxed">
-            Everything you need to plan, promote, and manage your event — from speaker coordination to check-in day. Completely free.
+            Create events, sell tickets, scan QR codes at the gate, and let attendees share real photos and videos — all in one place.
           </p>
 
           {/* CTA Buttons */}
@@ -183,23 +182,23 @@ export default function LandingPage() {
             >
               Start for free <ArrowRight size={18} />
             </Link>
-            <a
-              href="#dashboard"
+            <Link
+              href="/events"
               className="flex items-center gap-2 bg-[#f0f0f0] text-[#333] text-[16px] font-semibold px-8 py-4 rounded-full hover:bg-[#e5e5e5] transition-colors"
             >
-              See the dashboard
-            </a>
+              Browse events
+            </Link>
           </div>
 
-          {/* Stats */}
-          <div className="flex flex-wrap items-center justify-center gap-12 mt-16">
+          {/* Social proof points */}
+          <div className="flex flex-wrap items-center justify-center gap-8 mt-16">
             {[
-              { value: '10K+', label: 'Events created' },
-              { value: '500K+', label: 'Tickets issued' },
-              { value: '99.9%', label: 'Uptime' },
+              { value: 'QR Check-In', label: 'Scan at the gate' },
+              { value: 'Verified Content', label: 'Only real ticket holders post' },
+              { value: 'Photo Downloads', label: 'Save memories to your phone' },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="text-[36px] md:text-[48px] font-extrabold text-[#333]">{stat.value}</div>
+                <div className="text-[22px] md:text-[26px] font-extrabold text-[#333]">{stat.value}</div>
                 <div className="text-[14px] font-medium text-[#86868b]">{stat.label}</div>
               </div>
             ))}
@@ -214,49 +213,49 @@ export default function LandingPage() {
       <section className="py-20 px-6 lg:px-12">
         <div className="max-w-[1280px] mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Plan it */}
+            {/* Organise it */}
             <div className="bg-[#333] rounded-[32px] p-10 text-white relative overflow-hidden">
               <div className="relative z-10">
                 <div className="w-[56px] h-[56px] bg-white/10 rounded-[18px] flex items-center justify-center mb-6">
                   <Calendar size={24} className="text-white" />
                 </div>
                 <h3 className="text-[28px] md:text-[32px] font-extrabold leading-tight mb-3">
-                  Plan it
+                  Organise it
                 </h3>
                 <p className="text-[15px] text-white/50 leading-relaxed">
-                  Program builder, speaker invitations, team collaboration. Set up every detail before doors open.
+                  Full dashboard, speaker management, audience builder, email campaigns, and promo video — everything before doors open.
                 </p>
               </div>
               <div className="absolute -bottom-16 -right-16 w-[160px] h-[160px] bg-white/5 rounded-full" />
             </div>
 
-            {/* Fill it */}
+            {/* Sell it */}
             <div className="bg-[#f0f0f0] rounded-[32px] p-10 relative overflow-hidden">
               <div className="relative z-10">
                 <div className="w-[56px] h-[56px] bg-white rounded-[18px] flex items-center justify-center mb-6">
                   <Ticket size={24} className="text-[#333]" />
                 </div>
                 <h3 className="text-[28px] md:text-[32px] font-extrabold text-[#333] leading-tight mb-3">
-                  Fill it
+                  Sell it
                 </h3>
                 <p className="text-[15px] text-[#86868b] leading-relaxed">
-                  Beautiful event pages, QR tickets, email confirmations. Make it easy for people to show up.
+                  Paid tickets or free RSVP. QR codes generated instantly. Attendees buy, show up, and scan in — no friction.
                 </p>
               </div>
               <div className="absolute -bottom-16 -right-16 w-[160px] h-[160px] bg-black/5 rounded-full" />
             </div>
 
-            {/* Run it */}
+            {/* Relive it */}
             <div className="bg-[#333] rounded-[32px] p-10 text-white relative overflow-hidden">
               <div className="relative z-10">
                 <div className="w-[56px] h-[56px] bg-white/10 rounded-[18px] flex items-center justify-center mb-6">
                   <BarChart3 size={24} className="text-white" />
                 </div>
                 <h3 className="text-[28px] md:text-[32px] font-extrabold leading-tight mb-3">
-                  Run it
+                  Relive it
                 </h3>
                 <p className="text-[15px] text-white/50 leading-relaxed">
-                  QR check-in, live attendee tracking, real-time analytics. Stay in control on the big day.
+                  Verified attendees post photos and videos. Real-time analytics. Everyone downloads memories straight to their camera roll.
                 </p>
               </div>
               <div className="absolute -bottom-16 -right-16 w-[160px] h-[160px] bg-white/5 rounded-full" />
@@ -278,11 +277,11 @@ export default function LandingPage() {
               <span className="text-[13px] font-semibold text-[#333]">Features</span>
             </div>
             <h2 className="text-[36px] md:text-[48px] font-extrabold text-[#333] leading-tight mb-4">
-              Everything you need,<br />
-              <span className="text-[#a3a3a3]">nothing you don&apos;t.</span>
+              Everything your event needs,<br />
+              <span className="text-[#a3a3a3]">on one platform.</span>
             </h2>
             <p className="text-[16px] text-[#86868b] max-w-[520px] mx-auto">
-              From event creation to post-event analytics — every feature is included on the free plan. No paywalls, no surprises.
+              From event creation to post-event media — every feature is built in. No scattered WhatsApp groups, no missing tools.
             </p>
           </div>
 
@@ -291,48 +290,48 @@ export default function LandingPage() {
             {[
               {
                 icon: <Calendar size={22} />,
-                title: 'Event Creation',
-                description: 'Create free, paid, or hybrid events with rich details, images, and custom categories.',
+                title: 'Event Creation & Dashboard',
+                description: 'Create and manage events with a full organizer dashboard — details, images, pricing, speakers, and a promo video all in one place.',
               },
               {
                 icon: <QrCode size={22} />,
-                title: 'QR Ticketing',
-                description: 'Auto-generated QR tickets for every registration. Scan at entry for seamless check-in.',
+                title: 'QR Code Check-In',
+                description: 'Every ticket comes with a QR code. Gate staff scan on mobile to check in attendees instantly — no paper, no lists.',
               },
               {
                 icon: <Users size={22} />,
-                title: 'Attendee Management',
-                description: 'Track RSVPs, view attendee lists, export data, and manage capacity in real-time.',
+                title: 'Audience Builder',
+                description: 'Filter attendees by category or interests, then send targeted email campaigns directly from the dashboard.',
               },
               {
                 icon: <BarChart3 size={22} />,
-                title: 'Analytics & Reports',
-                description: 'Revenue tracking, attendance rates, check-in stats, and exportable PDF/DOCX reports.',
+                title: 'Real-Time Analytics',
+                description: 'Track ticket sales, check-in rates, and revenue as they happen. Export reports after the event.',
               },
               {
                 icon: <MessageSquare size={22} />,
-                title: 'Event Messaging',
-                description: 'Send updates, reminders, and announcements to all attendees from the dashboard.',
-              },
-              {
-                icon: <Bell size={22} />,
-                title: 'Push Notifications',
-                description: 'Real-time alerts for new RSVPs, event updates, and important reminders on mobile.',
-              },
-              {
-                icon: <Globe size={22} />,
-                title: 'Hybrid Events',
-                description: 'Support for in-person, virtual, and hybrid events with Google Meet, Zoom, and Teams links.',
+                title: 'Event Updates & Notifications',
+                description: 'Push event updates directly to attendees on mobile. Keep everyone informed — no group chats needed.',
               },
               {
                 icon: <Shield size={22} />,
-                title: 'Role-Based Access',
-                description: 'Separate views for organizers, attendees, and gate staff with appropriate permissions.',
+                title: 'Verified Attendee Content',
+                description: 'Only real ticket holders can post photos and videos from your event — keeping the media feed authentic and trustworthy.',
+              },
+              {
+                icon: <Heart size={22} />,
+                title: 'Event Media Feed',
+                description: 'Attendees see a live feed of verified content from the event — photos and videos from people who were actually there.',
               },
               {
                 icon: <Smartphone size={22} />,
-                title: 'Cross-Platform Sync',
-                description: 'Events created on the web dashboard appear instantly on the mobile app. Always in sync.',
+                title: 'Photo Downloads',
+                description: 'Attendees can download event photos directly to their camera roll. Save memories without hunting through WhatsApp threads.',
+              },
+              {
+                icon: <Globe size={22} />,
+                title: 'Discover & Attend',
+                description: 'Attendees browse events, buy tickets or RSVP free, get their QR code, and network with other attendees — all in the app.',
               },
             ].map((feature) => (
               <div
@@ -362,11 +361,11 @@ export default function LandingPage() {
               <span className="text-[13px] font-semibold text-white">Web Dashboard</span>
             </div>
             <h2 className="text-[36px] md:text-[48px] font-extrabold text-white leading-tight mb-4">
-              Your command center<br />
-              <span className="text-white/40">for every event.</span>
+              Your organizer dashboard,<br />
+              <span className="text-white/40">built for Africa.</span>
             </h2>
             <p className="text-[16px] text-white/50 max-w-[500px] mx-auto">
-              A powerful organizer dashboard built for speed. Manage everything from one place.
+              Manage every event from one place — from creation to check-in day to post-event analytics.
             </p>
           </div>
 
@@ -375,23 +374,23 @@ export default function LandingPage() {
             {[
               {
                 icon: <TrendingUp size={20} />,
-                title: 'Live Dashboard',
-                description: 'Real-time overview of all your events, revenue, and attendee metrics at a glance.',
+                title: 'Real-Time Analytics',
+                description: 'Live overview of ticket sales, revenue, check-in counts, and attendee metrics across all your events.',
               },
               {
                 icon: <Calendar size={20} />,
                 title: 'Event Builder',
-                description: 'Step-by-step event creation with image uploads, venue types, pricing, and scheduling.',
+                description: 'Step-by-step creation with images, venue types, pricing, speakers, promo video, and scheduling.',
               },
               {
                 icon: <UserCheck size={20} />,
-                title: 'Check-In System',
-                description: 'Built-in QR scanner for gate staff. Track check-ins live with real-time counts.',
+                title: 'QR Check-In Scanner',
+                description: 'Gate staff scan QR tickets on mobile. Track check-ins live and see real-time attendance counts.',
               },
               {
                 icon: <Send size={20} />,
-                title: 'Broadcast Messages',
-                description: 'Send targeted messages and updates to all attendees with one click.',
+                title: 'Audience Builder & Campaigns',
+                description: 'Filter attendees by category or interests, then send targeted email campaigns directly from the dashboard.',
               },
               {
                 icon: <FileText size={20} />,
@@ -400,8 +399,8 @@ export default function LandingPage() {
               },
               {
                 icon: <Settings size={20} />,
-                title: 'Organization Settings',
-                description: 'Customize your brand colors, logo, organization details, and team access.',
+                title: 'Speaker & Team Management',
+                description: 'Invite speakers, manage event staff roles, and keep your whole team on the same page.',
               },
             ].map((item) => (
               <div
@@ -453,11 +452,11 @@ export default function LandingPage() {
               <span className="text-[13px] font-semibold text-[#333]">Mobile App</span>
             </div>
             <h2 className="text-[36px] md:text-[48px] font-extrabold text-[#333] leading-tight mb-4">
-              Events in your pocket.<br />
-              <span className="text-[#a3a3a3]">Always with you.</span>
+              More than a ticket app.<br />
+              <span className="text-[#a3a3a3]">It&apos;s your event hub.</span>
             </h2>
             <p className="text-[16px] text-[#86868b] max-w-[500px] mx-auto">
-              Built with React Native for iOS and Android. Everything stays perfectly in sync with the web dashboard.
+              Browse events, buy tickets, scan in at the gate, post from the event, and download memories — all in one app.
             </p>
           </div>
 
@@ -469,22 +468,22 @@ export default function LandingPage() {
                 {
                   icon: <Calendar size={20} />,
                   title: 'Discover Events',
-                  description: 'Browse events near you with smart time-based filters — live, today, this week, this month.',
+                  description: 'Browse upcoming events in Ghana and across West Africa. Filter by date — today, this week, this month.',
                 },
                 {
                   icon: <Ticket size={20} />,
-                  title: 'Instant Registration',
-                  description: 'RSVP to free events or buy paid tickets in seconds. Your QR code is generated immediately.',
+                  title: 'Buy Tickets & Free RSVP',
+                  description: 'Pay for tickets or RSVP free in seconds. Your QR code ticket is generated immediately after registration.',
                 },
                 {
                   icon: <QrCode size={20} />,
-                  title: 'QR Code Tickets',
-                  description: 'Your ticket lives in the app. Show the QR code at the door — no paper tickets needed.',
+                  title: 'QR Ticket at the Gate',
+                  description: 'Your ticket lives in the app. Show your QR code at the door — organizers scan and you&apos;re in.',
                 },
                 {
                   icon: <Heart size={20} />,
-                  title: 'My Registered Events',
-                  description: 'Track all your upcoming events with days-left countdowns and quick access to event details.',
+                  title: 'My Events',
+                  description: 'All your registered events in one place, with countdown timers and quick access to your tickets.',
                 },
               ].map((item) => (
                 <div key={item.title} className="bg-[#f0f0f0] rounded-[24px] p-6 flex gap-5">
@@ -503,24 +502,24 @@ export default function LandingPage() {
             <div className="space-y-5">
               {[
                 {
-                  icon: <Bell size={20} />,
-                  title: 'Real-Time Notifications',
-                  description: 'Get notified about event updates, new messages, and reminders so you never miss anything.',
-                },
-                {
                   icon: <MessageSquare size={20} />,
-                  title: 'Event Updates & Messages',
-                  description: 'Read organizer updates, event program changes, and messages — all within the event detail view.',
-                },
-                {
-                  icon: <Globe size={20} />,
-                  title: 'Join Virtual Events',
-                  description: 'Hybrid and virtual events show meeting links right in the app. One tap to join Google Meet, Zoom, or Teams.',
+                  title: 'Post Photos & Videos',
+                  description: 'Share moments from the event in real time. Only verified ticket holders can post — so the feed is always authentic.',
                 },
                 {
                   icon: <Share2 size={20} />,
-                  title: 'Share & Invite',
-                  description: 'Share events and tickets with friends. Spread the word and fill every seat.',
+                  title: 'Event Media Feed',
+                  description: 'See photos and videos from events you attended, posted by other real attendees. Relive the best moments.',
+                },
+                {
+                  icon: <Smartphone size={20} />,
+                  title: 'Download to Camera Roll',
+                  description: 'Save event photos directly to your phone. No more asking around for pictures in WhatsApp groups.',
+                },
+                {
+                  icon: <Bell size={20} />,
+                  title: 'Updates & Notifications',
+                  description: 'Get notified about event changes, organizer messages, and reminders so you never miss a thing.',
                 },
               ].map((item) => (
                 <div key={item.title} className="bg-[#f0f0f0] rounded-[24px] p-6 flex gap-5">
@@ -602,7 +601,7 @@ export default function LandingPage() {
               How it works
             </h2>
             <p className="text-[16px] text-[#86868b] max-w-[500px] mx-auto">
-              Three steps to your next successful event.
+              From setup to the after-party — Tikiti has you covered.
             </p>
           </div>
 
@@ -611,19 +610,19 @@ export default function LandingPage() {
               {
                 step: '01',
                 title: 'Create your event',
-                description: 'Sign up as an organizer. Use the web dashboard to create your event with all the details — date, venue, pricing, images, and more.',
+                description: 'Sign up free as an organizer. Use the web dashboard to set up your event — date, venue, pricing, speakers, promo video, and more.',
                 icon: <Calendar size={24} />,
               },
               {
                 step: '02',
-                title: 'Attendees register',
-                description: 'Attendees discover your event on the mobile app. They register with one tap and instantly receive their QR code ticket.',
+                title: 'Attendees discover & register',
+                description: 'Attendees find your event on the Tikiti app. They buy a ticket or RSVP free and instantly get their QR code. No friction.',
                 icon: <Users size={24} />,
               },
               {
                 step: '03',
-                title: 'Manage & grow',
-                description: 'Track attendance, scan tickets at the door, send updates, view analytics, and use insights to make your next event even better.',
+                title: 'Run it & relive it',
+                description: 'Scan QR codes at the gate, send live updates, track analytics — then let attendees post photos and relive the memories.',
                 icon: <TrendingUp size={24} />,
               },
             ].map((item) => (
@@ -655,21 +654,20 @@ export default function LandingPage() {
                 <span className="text-[13px] font-semibold text-white">Always in sync</span>
               </div>
               <h2 className="text-[32px] md:text-[44px] font-extrabold leading-tight mb-5">
-                Dashboard and app,<br />
-                perfectly aligned.
+                No scattered groups.<br />
+                Everything in one place.
               </h2>
               <p className="text-[16px] text-white/50 mb-8 leading-relaxed">
-                When an organizer creates an event on the web, attendees see it instantly on the mobile app.
-                When someone registers on the app, the dashboard updates in real-time.
-                Check-in data, messages, and analytics flow seamlessly between both platforms.
+                Stop sending event updates over WhatsApp and hunting for photos in group chats.
+                Tikiti keeps everything — tickets, updates, media, and attendee connections — in a single platform built for events.
               </p>
               <div className="space-y-4">
                 {[
                   'Events created on web appear on mobile instantly',
-                  'QR codes generated on mobile scan on the web dashboard',
-                  'Attendee registrations sync in real-time',
-                  'Messages from dashboard delivered as push notifications',
-                  'Analytics reflect both web and mobile activity',
+                  'QR codes generated instantly, scanned seamlessly at the gate',
+                  'Only real ticket holders can post to the event feed',
+                  'Organizer updates pushed as notifications — no group chats needed',
+                  'Attendees download photos to camera roll with one tap',
                 ].map((point) => (
                   <div key={point} className="flex items-center gap-3">
                     <div className="w-[24px] h-[24px] bg-white/10 rounded-full flex items-center justify-center shrink-0">
@@ -812,16 +810,14 @@ export default function LandingPage() {
           )}
 
           {/* View All CTA (below grid) */}
-          {featuredEvents.length > 0 && (
-            <div className="text-center mt-10">
-              <Link
-                href="/events"
-                className="inline-flex items-center gap-2 bg-[#f0f0f0] text-[#333] text-[15px] font-semibold px-8 py-4 rounded-full hover:bg-[#e5e5e5] transition-colors"
-              >
-                Browse all events <ArrowRight size={16} />
-              </Link>
-            </div>
-          )}
+          <div className="text-center mt-10">
+            <Link
+              href="/events"
+              className="inline-flex items-center gap-2 bg-[#333] text-white text-[15px] font-semibold px-8 py-4 rounded-full hover:bg-[#1a1a1a] transition-colors"
+            >
+              View All Events <ArrowRight size={16} />
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -851,10 +847,10 @@ export default function LandingPage() {
       <section className="py-24 px-6 lg:px-12">
         <div className="max-w-[1280px] mx-auto text-center">
           <h2 className="text-[36px] md:text-[56px] font-extrabold text-[#333] leading-tight mb-6">
-            Ready to create your<br />next event?
+            Ready to run your<br />next event?
           </h2>
           <p className="text-[18px] text-[#86868b] max-w-[540px] mx-auto mb-10">
-            Join organizers who use Tikiti to plan, promote, and run professional events. All features included — completely free.
+            Join organizers across Ghana and West Africa who use Tikiti to plan, sell tickets, and build real communities around their events. Free to get started.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -884,7 +880,7 @@ export default function LandingPage() {
             <div className="md:col-span-1">
               <div className="text-[28px] font-extrabold text-white mb-3">Tikiti</div>
               <p className="text-[14px] text-white/40 leading-relaxed">
-                The modern event platform for organizers and attendees.
+                The event platform built for Africa.
               </p>
             </div>
 

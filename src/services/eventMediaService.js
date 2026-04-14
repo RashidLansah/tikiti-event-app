@@ -122,6 +122,7 @@ const eventMediaService = {
 
       views: 0,
       likes: 0,
+      downloads: 0,
       rankScore,
       reported: false,
       hidden: false,
@@ -206,6 +207,18 @@ const eventMediaService = {
     try {
       await updateDoc(doc(db, COLLECTION, mediaId), {
         views: increment(1),
+        updatedAt: Timestamp.now(),
+      });
+    } catch { /* silent */ }
+  },
+
+  /**
+   * Increment download count.
+   */
+  recordDownload: async (mediaId) => {
+    try {
+      await updateDoc(doc(db, COLLECTION, mediaId), {
+        downloads: increment(1),
         updatedAt: Timestamp.now(),
       });
     } catch { /* silent */ }
