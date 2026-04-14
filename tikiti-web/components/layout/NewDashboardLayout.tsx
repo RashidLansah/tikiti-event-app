@@ -15,6 +15,7 @@ import {
   MessageSquare,
   FileText,
   Building2,
+  Target,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -28,6 +29,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Events', href: '/dashboard/events', icon: Calendar },
   { name: 'Attendees', href: '/dashboard/attendees', icon: Users },
+  { name: 'Audience', href: '/dashboard/audience', icon: Target },
   { name: 'Messages', href: '/dashboard/messaging', icon: MessageSquare },
   { name: 'Reports', href: '/dashboard/reports', icon: FileText },
 ];

@@ -6,7 +6,8 @@ import { eventService } from '@/lib/services/eventService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, MapPin, Clock, Users, DollarSign, Tag, Share2, ExternalLink } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, DollarSign, Tag, Share2, ExternalLink, Video, Play } from 'lucide-react';
+import { eventMediaService, EventMedia } from '@/lib/services/eventMediaService';
 import Image from 'next/image';
 import Link from 'next/link';
 import { eventCategories } from '@/lib/data/categories';
@@ -18,9 +19,16 @@ export default function EventPreviewPage() {
   const { toast } = useToast();
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [attendeePosts, setAttendeePosts] = useState<EventMedia[]>([]);
 
   useEffect(() => {
     loadEvent();
+  }, [eventId]);
+
+  useEffect(() => {
+    if (eventId) {
+      eventMediaService.getAttendeePosts(eventId, 8).then(setAttendeePosts).catch(() => {});
+    }
   }, [eventId]);
 
   const loadEvent = async () => {
@@ -114,8 +122,24 @@ export default function EventPreviewPage() {
 
       {/* Event Content */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Event Image */}
-        {event.imageUrl && (
+        {/* Promo Video Hero */}
+        {event.promoVideoUrl ? (
+          <div className="mb-6 rounded-xl overflow-hidden shadow-lg bg-black relative">
+            <video
+              src={event.promoVideoUrl}
+              controls
+              className="w-full max-h-[480px] object-contain"
+              poster={event.imageUrl || undefined}
+              preload="metadata"
+            />
+            <div className="absolute top-3 left-3">
+              <span className="flex items-center gap-1.5 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm">
+                <Video className="h-3 w-3" />
+                Promo Video
+              </span>
+            </div>
+          </div>
+        ) : event.imageUrl ? (
           <div className="mb-6 rounded-lg overflow-hidden shadow-lg">
             <img
               src={event.imageUrl}
@@ -123,7 +147,7 @@ export default function EventPreviewPage() {
               className="w-full h-96 object-cover"
             />
           </div>
-        )}
+        ) : null}
 
         {/* Event Header */}
         <div className="mb-6">
@@ -308,6 +332,60 @@ export default function EventPreviewPage() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Attendee Posts Strip */}
+        {attendeePosts.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-1">From attendees</h2>
+            <p className="text-gray-500 text-sm mb-4">
+              {attendeePosts.length} video{attendeePosts.length !== 1 ? 's' : ''} from people who were there
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {attendeePosts.map((post) => (
+                <div
+                  key={post.id}
+                  className="relative aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 group cursor-pointer"
+                >
+                  <video
+                    src={post.videoUrl}
+                    className="w-full h-full object-cover"
+                    preload="none"
+                    muted
+                    loop
+                    onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play()}
+                    onMouseLeave={(e) => {
+                      const v = e.currentTarget as HTMLVideoElement;
+                      v.pause();
+                      v.currentTime = 0;
+                    }}
+                  />
+                  {/* Play icon on idle */}
+                  <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity pointer-events-none">
+                    <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                      <Play className="h-4 w-4 text-white fill-white ml-0.5" />
+                    </div>
+                  </div>
+                  {/* Verification badge */}
+                  <div className="absolute top-2 left-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      post.verificationLevel === 'checked_in'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-black/50 text-gray-200'
+                    }`}>
+                      {post.verificationLevel === 'checked_in' ? 'Attended' : 'Ticket holder'}
+                    </span>
+                  </div>
+                  {/* Caption overlay */}
+                  {post.caption && (
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                      <p className="text-white text-xs line-clamp-2">{post.caption}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* CTA Button */}

@@ -19,9 +19,18 @@ service firebase.storage {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // eventMedia videos — attendee and organizer video uploads
+    // Path: eventMedia/{eventId}/{userId}/{fileName}
+    match /eventMedia/{eventId}/{userId}/{fileName} {
+      // Anyone can read/stream event videos (public feed)
+      allow read: if true;
+      // Only the uploading user can write their own videos
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Default rule - deny all other access
     match /{allPaths=**} {
       allow read, write: if false;
     }
   }
-} 
+}

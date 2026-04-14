@@ -292,6 +292,66 @@ service cloud.firestore {
       allow delete: if isAuthenticated();
     }
 
+    // eventMedia collection — video discovery layer
+    match /eventMedia/{mediaId} {
+      // Anyone can read non-hidden media (public feed)
+      allow read: if resource.data.hidden == false;
+
+      // Admins can read everything
+      allow read: if isAdmin();
+
+      // Authenticated users can create their own posts
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId &&
+        request.resource.data.hidden == false &&
+        request.resource.data.reported == false;
+
+      // Document owner can update their own post (edit caption, etc.)
+      allow update: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId &&
+        // Cannot change core identity fields after creation
+        request.resource.data.eventId == resource.data.eventId &&
+        request.resource.data.userId == resource.data.userId;
+
+      // Any authenticated user can increment views and likes (fire-and-forget)
+      allow update: if isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['views', 'likes', 'updatedAt']);
+
+      // Any authenticated user can report (increment reportCount, set reported flag)
+      allow update: if isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['reportCount', 'reported', 'updatedAt']);
+
+      // Admins can hide/unhide/delete
+      allow update, delete: if isAdmin();
+
+      // Organizer can hide posts on their own event
+      allow update: if isOrganizer() &&
+        exists(/databases/$(database)/documents/events/$(resource.data.eventId)) &&
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['hidden', 'updatedAt']);
+    }
+
+    // userEventHistory — audience intelligence data
+    match /userEventHistory/{userId} {
+      // Users can read their own history document
+      allow read: if isOwner(userId);
+
+      // Admins can read all history
+      allow read: if isAdmin();
+
+      // Events subcollection
+      match /events/{eventId} {
+        // Users can read and write their own event history
+        allow read, write: if isOwner(userId);
+
+        // Admins can read all
+        allow read: if isAdmin();
+      }
+    }
+
     // Default rule - deny all other access
     match /{document=**} {
       allow read, write: if false;

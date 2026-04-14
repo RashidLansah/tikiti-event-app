@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { eventService, Event } from '@/lib/services/eventService';
 import { attendeesService } from '@/lib/services/attendeesService';
+import { eventMediaService, EventMedia } from '@/lib/services/eventMediaService';
 import { eventCategories } from '@/lib/data/categories';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ export default function EventDetailPage() {
   const [linkCopied, setLinkCopied] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [attendeePosts, setAttendeePosts] = useState<EventMedia[]>([]);
   const [checkInStats, setCheckInStats] = useState({
     total: 0,
     checkedIn: 0,
@@ -40,6 +42,7 @@ export default function EventDetailPage() {
   useEffect(() => {
     if (eventId) {
       loadCheckInStats();
+      eventMediaService.getAttendeePosts(eventId, 6).then(setAttendeePosts).catch(() => {});
     }
   }, [eventId]);
 
@@ -307,6 +310,84 @@ export default function EventDetailPage() {
                   alt={event.name}
                   className="w-full h-64 object-cover rounded-lg"
                 />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Videos */}
+          {(event.promoVideoUrl || attendeePosts.length > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="h-5 w-5" />
+                  Videos
+                </CardTitle>
+                <CardDescription>
+                  Promo video and attendee posts for this event
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Organizer promo video */}
+                {event.promoVideoUrl && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">Promo Video</p>
+                    <video
+                      src={event.promoVideoUrl}
+                      controls
+                      className="w-full rounded-lg max-h-72 bg-black"
+                      preload="metadata"
+                    />
+                  </div>
+                )}
+
+                {/* Attendee posts strip */}
+                {attendeePosts.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-medium text-gray-700">
+                        Attendee Posts ({attendeePosts.length})
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {attendeePosts.map((post) => (
+                        <div
+                          key={post.id}
+                          className="relative aspect-square rounded-lg overflow-hidden bg-gray-900 group"
+                        >
+                          <video
+                            src={post.videoUrl}
+                            className="w-full h-full object-cover"
+                            preload="none"
+                            muted
+                            onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play()}
+                            onMouseLeave={(e) => {
+                              const v = e.currentTarget as HTMLVideoElement;
+                              v.pause();
+                              v.currentTime = 0;
+                            }}
+                          />
+                          {/* Verification badge */}
+                          <div className="absolute top-1.5 left-1.5">
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                              post.verificationLevel === 'checked_in'
+                                ? 'bg-green-500 text-white'
+                                : 'bg-gray-700/80 text-gray-200'
+                            }`}>
+                              {post.verificationLevel === 'checked_in' ? 'Attended' : 'Ticket'}
+                            </span>
+                          </div>
+                          {/* Stats overlay */}
+                          <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p className="text-white text-xs flex items-center gap-2">
+                              <span>▶ {post.views}</span>
+                              <span>♥ {post.likes}</span>
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

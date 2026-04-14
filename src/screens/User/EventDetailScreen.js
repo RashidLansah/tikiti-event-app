@@ -752,6 +752,15 @@ const EventDetailScreen = ({ navigation, route }) => {
           <Feather name="share-2" size={18} color={isDarkMode ? Colors.black : Colors.white} />
           <Text style={[registeredStyles.shareTicketButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>Share Event</Text>
         </TouchableOpacity>
+
+        {/* Post video button */}
+        <TouchableOpacity
+          style={[registeredStyles.postVideoButton, { borderColor: colors.primary[500] }]}
+          onPress={() => navigation.navigate('PostEventVideo', { event, booking: userBooking })}
+        >
+          <Feather name="video" size={18} color={colors.primary[500]} />
+          <Text style={[registeredStyles.postVideoButtonText, { color: colors.primary[500] }]}>Post a Video</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -2248,6 +2257,21 @@ const registeredStyles = StyleSheet.create({
     fontFamily: Typography.fontFamily.semibold,
     fontSize: 14,
     color: Colors.white,
+  },
+  postVideoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    gap: 9,
+    marginTop: 8,
+  },
+  postVideoButtonText: {
+    fontFamily: Typography.fontFamily.semibold,
+    fontSize: 14,
   },
 
   // ─── Program tab ──────────────────────────────────────

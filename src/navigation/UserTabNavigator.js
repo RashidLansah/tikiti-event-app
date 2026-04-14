@@ -41,6 +41,8 @@ import NetworkScreen from '../screens/User/NetworkScreen';
 import ScanConnectionScreen from '../screens/User/ScanConnectionScreen';
 import ConnectionDetailScreen from '../screens/User/ConnectionDetailScreen';
 import AudienceProfileScreen from '../screens/User/AudienceProfileScreen';
+import PostEventVideoScreen from '../screens/User/PostEventVideoScreen';
+import VideoFeedScreen from '../screens/User/VideoFeedScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -84,6 +86,15 @@ const EventsStack = () => (
     />
     <Stack.Screen name="Ticket" component={TicketScreen} />
     <Stack.Screen name="NotificationCenter" component={NotificationCenterScreen} />
+    <Stack.Screen
+      name="PostEventVideo"
+      component={PostEventVideoScreen}
+      options={{
+        presentation: 'modal',
+        gestureEnabled: true,
+        gestureDirection: 'vertical',
+      }}
+    />
   </Stack.Navigator>
 );
 
@@ -176,6 +187,13 @@ const UserTabNavigator = () => {
             navigation.navigate('Events', { screen: 'EventList' });
           },
         })}
+      />
+      <Tab.Screen
+        name="Feed"
+        component={VideoFeedScreen}
+        options={{
+          tabBarLabel: 'Feed',
+        }}
       />
       <Tab.Screen
         name="My Tickets"

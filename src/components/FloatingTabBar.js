@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 
 // Screens where the tab bar should be hidden
-const HIDDEN_ON_SCREENS = ['EventDetail', 'Ticket', 'NotificationCenter', 'ScanConnection', 'ConnectionDetail', 'SocialCard', 'EditSocialLinks'];
+const HIDDEN_ON_SCREENS = ['EventDetail', 'Ticket', 'NotificationCenter', 'ScanConnection', 'ConnectionDetail', 'SocialCard', 'EditSocialLinks', 'PostEventVideo'];
 
 const FloatingTabBar = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
@@ -17,6 +17,7 @@ const FloatingTabBar = ({ state, descriptors, navigation }) => {
   const focusedRoute = state.routes[state.index];
   const focusedScreenName = getFocusedRouteNameFromRoute(focusedRoute);
 
+  // Hide on specific nested screens
   if (focusedScreenName && HIDDEN_ON_SCREENS.includes(focusedScreenName)) {
     return null;
   }
@@ -24,6 +25,7 @@ const FloatingTabBar = ({ state, descriptors, navigation }) => {
   // Map route names to icons (matching Figma design)
   const iconMap = {
     'Events': 'calendar',
+    'Feed': 'play-circle',
     'My Tickets': 'heart',
     'Network': 'globe',
     'Profile': 'user',
