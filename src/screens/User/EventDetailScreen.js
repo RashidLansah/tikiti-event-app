@@ -753,13 +753,13 @@ const EventDetailScreen = ({ navigation, route }) => {
           <Text style={[registeredStyles.shareTicketButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>Share Event</Text>
         </TouchableOpacity>
 
-        {/* Post video button */}
+        {/* Share photo / video button */}
         <TouchableOpacity
           style={[registeredStyles.postVideoButton, { borderColor: colors.primary[500] }]}
           onPress={() => navigation.navigate('PostEventVideo', { event, booking: userBooking })}
         >
-          <Feather name="video" size={18} color={colors.primary[500]} />
-          <Text style={[registeredStyles.postVideoButtonText, { color: colors.primary[500] }]}>Post a Video</Text>
+          <Feather name="camera" size={18} color={colors.primary[500]} />
+          <Text style={[registeredStyles.postVideoButtonText, { color: colors.primary[500] }]}>Share Photo / Video</Text>
         </TouchableOpacity>
       </View>
     );

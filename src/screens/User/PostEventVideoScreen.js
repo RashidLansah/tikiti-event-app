@@ -9,13 +9,13 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
-  Platform,
+  Image,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
+import { Colors, Typography, Spacing, BorderRadius } from '../../styles/designSystem';
 import eventMediaService from '../../services/eventMediaService';
 
 // ─── Context-aware prompts ───────────────────────────────────────────────────
@@ -25,9 +25,14 @@ const FORMAL_CATEGORIES = [
   'networking', 'finance', 'education', 'health', 'professional',
 ];
 
-function getUploadPrompt(category = '') {
+function getUploadPrompt(category = '', mediaType = 'photo') {
   const cat = (category || '').toLowerCase();
   const isFormal = FORMAL_CATEGORIES.some((k) => cat.includes(k));
+  if (mediaType === 'photo') {
+    return isFormal
+      ? { title: 'Capture the moment', subtitle: 'Share a photo from this event.' }
+      : { title: 'Show the vibe', subtitle: "A picture speaks a thousand words — what's the energy like?" };
+  }
   return isFormal
     ? { title: 'Share a key insight', subtitle: "What's one thing you're taking away from this event?" }
     : { title: 'Capture the vibe', subtitle: "Show people what the energy is like here." };
@@ -48,48 +53,68 @@ function deriveEventPhase(eventDate) {
 const PostEventVideoScreen = ({ navigation, route }) => {
   const { event, booking } = route.params;
   const { user } = useAuth();
-  const { colors, isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
-  const [videoUri, setVideoUri] = useState(null);
-  const [videoFilename, setVideoFilename] = useState('');
+  const [mediaType, setMediaType] = useState('photo'); // 'photo' | 'video'
+  const [mediaUri, setMediaUri] = useState(null);
+  const [mediaFilename, setMediaFilename] = useState('');
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const prompt = getUploadPrompt(event?.category);
+  const prompt = getUploadPrompt(event?.category, mediaType);
 
-  // ── Video picker ────────────────────────────────────────────────────────────
+  // ── Media picker ────────────────────────────────────────────────────────────
 
-  const handlePickVideo = async () => {
+  const handlePickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'Allow access to your photo library to pick a video.');
+      Alert.alert('Permission required', 'Allow access to your photo library to pick media.');
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-      allowsEditing: false,
-      quality: 1,
-      videoMaxDuration: 120, // 2 minutes max
-    });
+    const options =
+      mediaType === 'photo'
+        ? {
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [9, 16],
+            quality: 0.85,
+          }
+        : {
+            mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+            allowsEditing: false,
+            quality: 1,
+            videoMaxDuration: 120,
+          };
+
+    const result = await ImagePicker.launchImageLibraryAsync(options);
 
     if (!result.canceled && result.assets?.[0]) {
       const asset = result.assets[0];
-      setVideoUri(asset.uri);
-      setVideoFilename(asset.fileName || asset.uri.split('/').pop() || 'video.mp4');
+      setMediaUri(asset.uri);
+      setMediaFilename(asset.fileName || asset.uri.split('/').pop() || (mediaType === 'photo' ? 'photo.jpg' : 'video.mp4'));
     }
+  };
+
+  // ── Switch media type ────────────────────────────────────────────────────────
+
+  const handleSwitchType = (type) => {
+    if (type === mediaType) return;
+    setMediaType(type);
+    setMediaUri(null);
+    setMediaFilename('');
   };
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
-    if (!videoUri) {
-      Alert.alert('No video selected', 'Please pick a video to upload.');
+    if (!mediaUri) {
+      Alert.alert('Nothing selected', `Please pick a ${mediaType} to upload.`);
       return;
     }
     if (!user) {
-      Alert.alert('Not signed in', 'Please sign in to post a video.');
+      Alert.alert('Not signed in', 'Please sign in to post.');
       return;
     }
 
@@ -97,22 +122,18 @@ const PostEventVideoScreen = ({ navigation, route }) => {
     setUploadProgress(0);
 
     try {
-      // Determine verification level based on booking check-in status
       const verificationLevel = booking?.checkedIn ? 'checked_in' : 'has_ticket';
       const eventPhase = deriveEventPhase(event?.date);
 
-      // Extract city from event location
       let eventCity = '';
       if (event?.location) {
-        if (typeof event.location === 'string') {
-          eventCity = event.location;
-        } else {
-          eventCity = event.location.city || event.location.name || event.location.address || '';
-        }
+        eventCity = typeof event.location === 'string'
+          ? event.location
+          : event.location.city || event.location.name || event.location.address || '';
       }
 
       await eventMediaService.uploadAttendeePost(
-        videoUri,
+        mediaUri,
         {
           eventId: event.id,
           userId: user.uid,
@@ -120,6 +141,7 @@ const PostEventVideoScreen = ({ navigation, route }) => {
           caption: caption.trim(),
           eventPhase,
           verificationLevel,
+          mediaType,
           eventName: event.name || '',
           eventDate: event.date || '',
           eventCategory: event.category || '',
@@ -130,20 +152,23 @@ const PostEventVideoScreen = ({ navigation, route }) => {
         (pct) => setUploadProgress(pct)
       );
 
-      Alert.alert(
-        'Video posted!',
-        'Your video has been shared. It will appear in the event feed shortly.',
-        [{ text: 'Done', onPress: () => navigation.goBack() }]
-      );
+      const label = mediaType === 'photo' ? 'Photo shared!' : 'Video posted!';
+      const body = mediaType === 'photo'
+        ? 'Your photo has been shared. It will appear in the event feed shortly.'
+        : 'Your video has been shared. It will appear in the event feed shortly.';
+
+      Alert.alert(label, body, [{ text: 'Done', onPress: () => navigation.goBack() }]);
     } catch (error) {
-      console.error('Video upload error:', error);
-      Alert.alert('Upload failed', 'Something went wrong uploading your video. Please try again.');
+      console.error('Media upload error:', error);
+      Alert.alert('Upload failed', 'Something went wrong. Please try again.');
     } finally {
       setUploading(false);
     }
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
+
+  const isReady = !!mediaUri && !uploading;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background.primary }]}>
@@ -157,19 +182,18 @@ const PostEventVideoScreen = ({ navigation, route }) => {
         >
           <Feather name="x" size={22} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text.primary }]}>Post Video</Text>
+        <Text style={[styles.headerTitle, { color: colors.text.primary, fontFamily: Typography.fontFamily.semibold }]}>
+          Share Moment
+        </Text>
         <TouchableOpacity
-          style={[
-            styles.headerPost,
-            { backgroundColor: videoUri && !uploading ? colors.primary[500] : colors.gray[300] },
-          ]}
+          style={[styles.headerPost, { backgroundColor: isReady ? colors.primary[500] : colors.gray[300] }]}
           onPress={handleSubmit}
-          disabled={!videoUri || uploading}
+          disabled={!isReady}
         >
           {uploading ? (
             <ActivityIndicator size="small" color={Colors.white} />
           ) : (
-            <Text style={styles.headerPostText}>Post</Text>
+            <Text style={[styles.headerPostText, { fontFamily: Typography.fontFamily.semibold }]}>Post</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -180,55 +204,106 @@ const PostEventVideoScreen = ({ navigation, route }) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Event context chip */}
+        {/* Event chip */}
         <View style={[styles.eventChip, { backgroundColor: colors.background.secondary }]}>
           <Feather name="calendar" size={14} color={colors.primary[500]} />
-          <Text style={[styles.eventChipText, { color: colors.text.secondary }]} numberOfLines={1}>
+          <Text style={[styles.eventChipText, { color: colors.text.secondary, fontFamily: Typography.fontFamily.medium }]} numberOfLines={1}>
             {event?.name}
           </Text>
         </View>
 
-        {/* Context-aware prompt */}
-        <View style={styles.promptSection}>
-          <Text style={[styles.promptTitle, { color: colors.text.primary }]}>{prompt.title}</Text>
-          <Text style={[styles.promptSubtitle, { color: colors.text.secondary }]}>{prompt.subtitle}</Text>
+        {/* Photo / Video toggle */}
+        <View style={[styles.typeToggle, { backgroundColor: colors.background.secondary }]}>
+          {[
+            { type: 'photo', icon: 'image', label: 'Photo' },
+            { type: 'video', icon: 'video', label: 'Video' },
+          ].map(({ type, icon, label }) => {
+            const active = mediaType === type;
+            return (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.typeTab,
+                  active && { backgroundColor: colors.primary[500] },
+                ]}
+                onPress={() => handleSwitchType(type)}
+                activeOpacity={0.75}
+              >
+                <Feather name={icon} size={15} color={active ? Colors.white : colors.text.secondary} />
+                <Text
+                  style={[
+                    styles.typeLabel,
+                    {
+                      color: active ? Colors.white : colors.text.secondary,
+                      fontFamily: active ? Typography.fontFamily.bold : Typography.fontFamily.medium,
+                    },
+                  ]}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        {/* Video picker area */}
+        {/* Context-aware prompt */}
+        <View style={styles.promptSection}>
+          <Text style={[styles.promptTitle, { color: colors.text.primary, fontFamily: Typography.fontFamily.bold }]}>
+            {prompt.title}
+          </Text>
+          <Text style={[styles.promptSubtitle, { color: colors.text.secondary, fontFamily: Typography.fontFamily.regular }]}>
+            {prompt.subtitle}
+          </Text>
+        </View>
+
+        {/* Media picker area */}
         <TouchableOpacity
           style={[
-            styles.videoPicker,
+            styles.mediaPicker,
             {
               backgroundColor: colors.background.secondary,
-              borderColor: videoUri ? colors.primary[500] : colors.border.light,
+              borderColor: mediaUri ? colors.primary[500] : colors.border.light,
             },
           ]}
-          onPress={handlePickVideo}
+          onPress={handlePickMedia}
           disabled={uploading}
           activeOpacity={0.7}
         >
-          {videoUri ? (
-            <View style={styles.videoSelected}>
-              <View style={[styles.videoIconBadge, { backgroundColor: colors.primary[500] }]}>
-                <Feather name="check" size={20} color={Colors.white} />
+          {mediaUri ? (
+            mediaType === 'photo' ? (
+              // Photo preview
+              <View style={styles.previewContainer}>
+                <Image source={{ uri: mediaUri }} style={styles.photoPreview} resizeMode="cover" />
+                <View style={[styles.changeOverlay]}>
+                  <Feather name="edit-2" size={14} color={Colors.white} />
+                  <Text style={[styles.changeOverlayText, { fontFamily: Typography.fontFamily.medium }]}>Tap to change</Text>
+                </View>
               </View>
-              <Text style={[styles.videoFilename, { color: colors.text.primary }]} numberOfLines={1}>
-                {videoFilename}
-              </Text>
-              <Text style={[styles.videoChangeHint, { color: colors.text.tertiary }]}>
-                Tap to change
-              </Text>
-            </View>
+            ) : (
+              // Video selected state
+              <View style={styles.mediaSelected}>
+                <View style={[styles.mediaIconBadge, { backgroundColor: colors.primary[500] }]}>
+                  <Feather name="check" size={20} color={Colors.white} />
+                </View>
+                <Text style={[styles.mediaFilename, { color: colors.text.primary, fontFamily: Typography.fontFamily.medium }]} numberOfLines={1}>
+                  {mediaFilename}
+                </Text>
+                <Text style={[styles.mediaChangeHint, { color: colors.text.tertiary, fontFamily: Typography.fontFamily.regular }]}>
+                  Tap to change
+                </Text>
+              </View>
+            )
           ) : (
-            <View style={styles.videoEmpty}>
-              <View style={[styles.videoIconBadge, { backgroundColor: colors.background.primary }]}>
-                <Feather name="video" size={28} color={colors.primary[500]} />
+            // Empty state
+            <View style={styles.mediaEmpty}>
+              <View style={[styles.mediaIconBadge, { backgroundColor: colors.background.primary }]}>
+                <Feather name={mediaType === 'photo' ? 'image' : 'video'} size={28} color={colors.primary[500]} />
               </View>
-              <Text style={[styles.videoPickerLabel, { color: colors.text.primary }]}>
-                Select video from library
+              <Text style={[styles.mediaPickerLabel, { color: colors.text.primary, fontFamily: Typography.fontFamily.medium }]}>
+                {mediaType === 'photo' ? 'Select a photo' : 'Select a video'}
               </Text>
-              <Text style={[styles.videoPickerHint, { color: colors.text.tertiary }]}>
-                Up to 2 minutes
+              <Text style={[styles.mediaPickerHint, { color: colors.text.tertiary, fontFamily: Typography.fontFamily.regular }]}>
+                {mediaType === 'photo' ? 'From your library' : 'Up to 2 minutes'}
               </Text>
             </View>
           )}
@@ -238,14 +313,9 @@ const PostEventVideoScreen = ({ navigation, route }) => {
         {uploading && (
           <View style={styles.progressContainer}>
             <View style={[styles.progressTrack, { backgroundColor: colors.border.light }]}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${uploadProgress}%`, backgroundColor: colors.primary[500] },
-                ]}
-              />
+              <View style={[styles.progressFill, { width: `${uploadProgress}%`, backgroundColor: colors.primary[500] }]} />
             </View>
-            <Text style={[styles.progressLabel, { color: colors.text.tertiary }]}>
+            <Text style={[styles.progressLabel, { color: colors.text.tertiary, fontFamily: Typography.fontFamily.regular }]}>
               Uploading {uploadProgress}%
             </Text>
           </View>
@@ -254,8 +324,8 @@ const PostEventVideoScreen = ({ navigation, route }) => {
         {/* Caption input */}
         <View style={[styles.captionContainer, { backgroundColor: colors.background.secondary }]}>
           <TextInput
-            style={[styles.captionInput, { color: colors.text.primary }]}
-            placeholder={`Add a caption... (optional)`}
+            style={[styles.captionInput, { color: colors.text.primary, fontFamily: Typography.fontFamily.regular }]}
+            placeholder="Add a caption... (optional)"
             placeholderTextColor={colors.text.tertiary}
             value={caption}
             onChangeText={setCaption}
@@ -263,18 +333,18 @@ const PostEventVideoScreen = ({ navigation, route }) => {
             maxLength={280}
             editable={!uploading}
           />
-          <Text style={[styles.captionCount, { color: colors.text.tertiary }]}>
+          <Text style={[styles.captionCount, { color: colors.text.tertiary, fontFamily: Typography.fontFamily.regular }]}>
             {caption.length}/280
           </Text>
         </View>
 
-        {/* Verification badge explanation */}
+        {/* Verification note */}
         <View style={[styles.verificationInfo, { backgroundColor: colors.background.secondary }]}>
           <Feather name="shield" size={14} color={colors.primary[500]} />
-          <Text style={[styles.verificationInfoText, { color: colors.text.secondary }]}>
+          <Text style={[styles.verificationInfoText, { color: colors.text.secondary, fontFamily: Typography.fontFamily.regular }]}>
             {booking?.checkedIn
-              ? 'Your video will be marked as posted by a verified attendee.'
-              : 'Your video will be marked as posted by a ticket holder.'}
+              ? 'Your post will be marked as shared by a verified attendee.'
+              : 'Your post will be marked as shared by a ticket holder.'}
           </Text>
         </View>
 
@@ -287,9 +357,7 @@ const PostEventVideoScreen = ({ navigation, route }) => {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -306,7 +374,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
   },
   headerPost: {
     paddingHorizontal: Spacing[4],
@@ -318,11 +385,8 @@ const styles = StyleSheet.create({
   headerPostText: {
     color: Colors.white,
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold,
   },
-  scroll: {
-    flex: 1,
-  },
+  scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: Spacing[4],
     paddingTop: Spacing[5],
@@ -335,44 +399,88 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[2],
     borderRadius: BorderRadius.full,
     gap: Spacing[2],
-    marginBottom: Spacing[5],
+    marginBottom: Spacing[4],
   },
   eventChipText: {
     fontSize: Typography.fontSize.sm,
     maxWidth: 260,
+  },
+  typeToggle: {
+    flexDirection: 'row',
+    borderRadius: BorderRadius.full,
+    padding: 4,
+    marginBottom: Spacing[5],
+    alignSelf: 'flex-start',
+  },
+  typeTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[2],
+    borderRadius: BorderRadius.full,
+  },
+  typeLabel: {
+    fontSize: Typography.fontSize.sm,
   },
   promptSection: {
     marginBottom: Spacing[5],
   },
   promptTitle: {
     fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold,
     marginBottom: Spacing[1],
   },
   promptSubtitle: {
     fontSize: Typography.fontSize.sm,
     lineHeight: 20,
   },
-  videoPicker: {
+  mediaPicker: {
     borderRadius: BorderRadius.xl,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    padding: Spacing[6],
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 160,
+    minHeight: 200,
     marginBottom: Spacing[4],
+    overflow: 'hidden',
   },
-  videoEmpty: {
+  mediaEmpty: {
     alignItems: 'center',
     gap: Spacing[3],
+    padding: Spacing[6],
   },
-  videoSelected: {
+  mediaSelected: {
     alignItems: 'center',
     gap: Spacing[2],
+    padding: Spacing[6],
     width: '100%',
   },
-  videoIconBadge: {
+  previewContainer: {
+    width: '100%',
+    aspectRatio: 9 / 16,
+    position: 'relative',
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  changeOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BorderRadius.full,
+  },
+  changeOverlayText: {
+    color: Colors.white,
+    fontSize: Typography.fontSize.xs,
+  },
+  mediaIconBadge: {
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -380,22 +488,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: Spacing[1],
   },
-  videoPickerLabel: {
+  mediaPickerLabel: {
     fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.medium,
     textAlign: 'center',
   },
-  videoPickerHint: {
+  mediaPickerHint: {
     fontSize: Typography.fontSize.xs,
     textAlign: 'center',
   },
-  videoFilename: {
+  mediaFilename: {
     fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.medium,
     textAlign: 'center',
     maxWidth: '90%',
   },
-  videoChangeHint: {
+  mediaChangeHint: {
     fontSize: Typography.fontSize.xs,
   },
   progressContainer: {

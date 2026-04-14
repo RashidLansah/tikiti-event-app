@@ -7,6 +7,7 @@ import {
   Dimensions,
   ActivityIndicator,
   TouchableWithoutFeedback,
+  Image,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { Feather } from '@expo/vector-icons';
@@ -59,6 +60,8 @@ function VerificationBadge({ level }) {
 
 const VideoFeedItem = ({ item, isActive, onEventPress, onReport }) => {
   const { colors } = useTheme();
+  const isPhoto = item.mediaType === 'photo';
+
   const videoRef = useRef(null);
   const [status, setStatus] = useState({});
   const [liked, setLiked] = useState(false);
@@ -67,15 +70,12 @@ const VideoFeedItem = ({ item, isActive, onEventPress, onReport }) => {
   const [loading, setLoading] = useState(true);
   const [reported, setReported] = useState(false);
 
-  // Play / pause based on active state
+  // Record view when item becomes active
   useEffect(() => {
-    if (!videoRef.current) return;
-    if (isActive) {
-      videoRef.current.playAsync().catch(() => {});
-      if (item.id) eventMediaService.recordView(item.id);
-    } else {
-      videoRef.current.pauseAsync().catch(() => {});
+    if (isActive && item.id) {
+      eventMediaService.recordView(item.id);
     }
+    // For photos there's nothing to play/pause — video handles itself via shouldPlay prop
   }, [isActive]);
 
   const handleLike = useCallback(() => {
@@ -94,35 +94,51 @@ const VideoFeedItem = ({ item, isActive, onEventPress, onReport }) => {
 
   return (
     <View style={styles.container}>
-      {/* Video layer */}
-      <TouchableWithoutFeedback onPress={() => setMuted((m) => !m)}>
+      {/* Media layer — image or video */}
+      {isPhoto ? (
         <View style={StyleSheet.absoluteFill}>
-          <Video
-            ref={videoRef}
+          <Image
             source={{ uri: item.videoUrl }}
             style={StyleSheet.absoluteFill}
-            resizeMode={ResizeMode.COVER}
-            isLooping
-            isMuted={muted}
-            shouldPlay={false}
-            onReadyForDisplay={() => setLoading(false)}
-            onPlaybackStatusUpdate={(s) => setStatus(s)}
+            resizeMode="cover"
+            onLoad={() => setLoading(false)}
           />
-
           {loading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={Colors.white} />
             </View>
           )}
-
-          {muted && (
-            <View style={styles.mutedPill}>
-              <Feather name="volume-x" size={13} color={Colors.white} />
-              <Text style={[styles.mutedText, { fontFamily: Typography.fontFamily.medium }]}>Muted</Text>
-            </View>
-          )}
         </View>
-      </TouchableWithoutFeedback>
+      ) : (
+        <TouchableWithoutFeedback onPress={() => setMuted((m) => !m)}>
+          <View style={StyleSheet.absoluteFill}>
+            <Video
+              ref={videoRef}
+              source={{ uri: item.videoUrl }}
+              style={StyleSheet.absoluteFill}
+              resizeMode={ResizeMode.COVER}
+              isLooping
+              isMuted={muted}
+              shouldPlay={isActive}
+              onReadyForDisplay={() => setLoading(false)}
+              onPlaybackStatusUpdate={(s) => setStatus(s)}
+            />
+
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color={Colors.white} />
+              </View>
+            )}
+
+            {muted && (
+              <View style={styles.mutedPill}>
+                <Feather name="volume-x" size={13} color={Colors.white} />
+                <Text style={[styles.mutedText, { fontFamily: Typography.fontFamily.medium }]}>Muted</Text>
+              </View>
+            )}
+          </View>
+        </TouchableWithoutFeedback>
+      )}
 
       {/* Gradient overlay — always dark for readability */}
       <LinearGradient

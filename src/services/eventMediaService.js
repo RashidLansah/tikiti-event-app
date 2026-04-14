@@ -102,6 +102,7 @@ const eventMediaService = {
       userId: metadata.userId,
       bookingId: metadata.bookingId || null,
       type: 'attendee_post',
+      mediaType: metadata.mediaType || 'video', // 'photo' | 'video'
       videoUrl,
       thumbnailUrl: null,
       storagePath,
