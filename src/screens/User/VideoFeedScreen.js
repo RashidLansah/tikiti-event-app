@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   FlatList,
+  ScrollView,
   StyleSheet,
   StatusBar,
   Text,
