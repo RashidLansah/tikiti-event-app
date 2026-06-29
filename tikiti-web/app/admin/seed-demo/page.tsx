@@ -6,6 +6,8 @@ import { eventService, Event } from '@/lib/services/eventService';
 import { speakerService } from '@/lib/services/speakerService';
 import { surveyService } from '@/lib/services/surveyService';
 import { adminService, PlatformOrganization } from '@/lib/services/adminService';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { Speaker } from '@/types/speaker';
 import { ProgramSession } from '@/types/program';
 import { Cohort } from '@/types/cohort';
@@ -67,7 +69,8 @@ export default function SeedDemoPage() {
       { label: 'Creating speakers', status: 'pending' },
       { label: 'Creating demo event with cohorts, agenda & registration form', status: 'pending' },
       { label: 'Creating post-event survey', status: 'pending' },
-      { label: 'Publishing event', status: 'pending' },
+      { label: 'Publishing event as past', status: 'pending' },
+      { label: 'Seeding demo Moments (attendee photos)', status: 'pending' },
     ];
     setSteps(initialSteps);
 
@@ -337,7 +340,7 @@ export default function SeedDemoPage() {
       const eventData: Partial<Event> = {
         name: '[DEMO] Tikiti Demo Day — Explore All Features',
         description:
-          'THIS IS NOT A REAL EVENT — it is a guided demo to help you learn how to use the Tikiti app.\n\nWelcome to the Tikiti Demo Event! Explore all the features of Tikiti by interacting with this sample event. Try registering for a cohort, checking in with QR codes, viewing the agenda, exploring speaker profiles, and more.\n\nFeel free to experiment — this is your sandbox! Nothing here is real, so go ahead and click around.\n\nThis 2-day hybrid event showcases:\n• Multi-day scheduling with different sessions each day\n• Cohort selection (Morning, Afternoon, or Day 2)\n• Full speaker profiles with bios and LinkedIn links\n• Custom registration form with various field types\n• QR code check-in system\n• Post-event feedback survey\n• Virtual attendance via Google Meet',
+          'THIS IS NOT A REAL EVENT — it is a guided demo to help you learn how to use the Tikiti app.\n\nWelcome to the Tikiti Demo Event! Explore all the features of Tikiti by interacting with this sample event. Try registering for a cohort, checking in with QR codes, viewing the agenda, exploring speaker profiles, and more.\n\nFeel free to experiment — this is your sandbox! Nothing here is real, so go ahead and click around.\n\nThis 2-day hybrid event showcases:\n• Multi-day scheduling with different sessions each day\n• Cohort selection (Morning, Afternoon, or Day 2)\n• Full speaker profiles with bios and LinkedIn links\n• Custom registration form with various field types\n• QR code check-in system\n• Post-event feedback survey\n• Virtual attendance via Google Meet\n• Event Moments — attendee photo album with organiser moderation',
         category: 'Conference',
         venueType: 'hybrid',
         location: 'Tikiti HQ, 14 Kanda Highway, Accra',
@@ -435,10 +438,98 @@ export default function SeedDemoPage() {
       });
       updateStep(2, { status: 'done', detail: '5 survey questions created' });
 
-      // ── Step 4: Publish event ────────────────────────────
+      // ── Step 4: Publish event as past ────────────────────────────
       updateStep(3, { status: 'running' });
-      await eventService.update(createdEvent.id!, { status: 'published' });
-      updateStep(3, { status: 'done', detail: 'Event is now live!' });
+      await eventService.update(createdEvent.id!, { status: 'past' });
+      updateStep(3, { status: 'done', detail: 'Event published (status: past — unlocks Moments tab)' });
+
+      // ── Step 5: Seed demo Moments ────────────────────────────
+      updateStep(4, { status: 'running' });
+
+      const demoPhotos = [
+        {
+          thumbnailUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=600&fit=crop&q=80',
+          caption: 'Amazing keynote! 🔥',
+          likes: 24, views: 112, rankScore: 120, featured: true,
+        },
+        {
+          thumbnailUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=600&fit=crop&q=80',
+          caption: 'Great crowd energy today',
+          likes: 18, views: 87, rankScore: 95,
+        },
+        {
+          thumbnailUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&h=600&fit=crop&q=80',
+          caption: 'Workshop was 🔥',
+          likes: 31, views: 145, rankScore: 150,
+        },
+        {
+          thumbnailUrl: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=600&h=600&fit=crop&q=80',
+          caption: 'Panel discussion highlights',
+          likes: 9, views: 54, rankScore: 60,
+        },
+        {
+          thumbnailUrl: 'https://images.unsplash.com/photo-1498075702571-ecb018f3752d?w=600&h=600&fit=crop&q=80',
+          caption: 'Networking lunch vibes 🍽️',
+          likes: 42, views: 198, rankScore: 200, featured: true,
+        },
+        {
+          thumbnailUrl: 'https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=600&h=600&fit=crop&q=80',
+          caption: 'QR check-in demo was smooth!',
+          likes: 7, views: 39, rankScore: 45,
+        },
+        {
+          thumbnailUrl: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=600&h=600&fit=crop&q=80',
+          caption: 'Day 2 masterclass 💪',
+          likes: 15, views: 71, rankScore: 80,
+        },
+        {
+          thumbnailUrl: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=600&h=600&fit=crop&q=80',
+          caption: 'Amazing speakers, amazing content',
+          likes: 28, views: 133, rankScore: 140,
+          reported: true,
+        },
+        {
+          thumbnailUrl: 'https://images.unsplash.com/photo-1492538368677-f6e0afe31dcc?w=600&h=600&fit=crop&q=80',
+          caption: 'Closing ceremony 🎉',
+          likes: 55, views: 240, rankScore: 210, featured: true,
+        },
+      ];
+
+      const mediaRef = collection(db, 'eventMedia');
+      for (const photo of demoPhotos) {
+        await addDoc(mediaRef, {
+          eventId: createdEvent.id!,
+          userId: `demo-user-${Math.random().toString(36).slice(2, 8)}`,
+          bookingId: null,
+          type: 'attendee_post',
+          mediaType: 'photo',
+          videoUrl: photo.thumbnailUrl,
+          thumbnailUrl: photo.thumbnailUrl,
+          storagePath: null,
+          caption: photo.caption,
+          eventPhase: 'post',
+          verificationLevel: 'checked_in',
+          eventName: '[DEMO] Tikiti Demo Day — Explore All Features',
+          eventDate: '2026-04-16',
+          eventStatus: 'past',
+          eventCategory: 'Conference',
+          eventCity: 'Accra',
+          organizerId: userId,
+          organizationId: orgId,
+          linkedUpcomingEventId: null,
+          views: photo.views,
+          likes: photo.likes,
+          downloads: 0,
+          rankScore: photo.rankScore,
+          featured: photo.featured || false,
+          reported: photo.reported || false,
+          hidden: false,
+          reportCount: photo.reported ? 1 : 0,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+      updateStep(4, { status: 'done', detail: `${demoPhotos.length} demo moments seeded` });
 
       setEventId(createdEvent.id!);
     } catch (err: any) {
@@ -565,6 +656,12 @@ export default function SeedDemoPage() {
                 <p className="font-medium mb-1">1 Post-Event Survey</p>
                 <p className="text-muted-foreground text-xs">
                   5 questions: rating, NPS, multiple choice, free text
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 md:col-span-2">
+                <p className="font-medium mb-1">9 Demo Moments (Event Photo Album)</p>
+                <p className="text-muted-foreground text-xs">
+                  Realistic attendee photos seeded into the Moments tab — including featured posts, a reported post, varied like/view counts, and check-in verification badges. Organiser can feature, hide, share the album link, and send a push notification to all attendees.
                 </p>
               </div>
             </div>
