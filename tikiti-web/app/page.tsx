@@ -113,6 +113,14 @@ export default function LandingPage() {
               >
                 Sign In
               </Link>
+              <a
+                href="https://calendly.com/rashidlansahadam/meet-with-rashid"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[15px] font-semibold text-[#333] px-5 py-2.5 rounded-full border border-black/10 hover:bg-[#f0f0f0] transition-colors"
+              >
+                Book a Demo
+              </a>
               <Link
                 href="/register"
                 className="text-[15px] font-semibold text-white bg-[#333] px-6 py-2.5 rounded-full hover:bg-[#1a1a1a] transition-colors"
@@ -143,6 +151,14 @@ export default function LandingPage() {
               <Link href="/login" className="text-center text-[15px] font-semibold text-[#333] px-6 py-3 rounded-full border border-black/10">
                 Sign In
               </Link>
+              <a
+                href="https://calendly.com/rashidlansahadam/meet-with-rashid"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-center text-[15px] font-semibold text-[#333] px-6 py-3 rounded-full border border-black/10"
+              >
+                Book a Demo
+              </a>
               <Link href="/register" className="text-center text-[15px] font-semibold text-white bg-[#333] px-6 py-3 rounded-full">
                 Get Started
               </Link>
@@ -837,6 +853,45 @@ export default function LandingPage() {
             <p className="text-[16px] text-[#555] leading-relaxed">
               In the future, we may introduce paid features or plans. If we do, we&apos;ll clearly describe the terms and pricing before you&apos;re charged.
             </p>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ════════════════════════════════════════════════════
+          FOUNDER / BOOK A DEMO
+      ════════════════════════════════════════════════════ */}
+      <section className="py-24 px-6 lg:px-12 bg-[#f0f0f0]">
+        <div className="max-w-[1280px] mx-auto">
+          <div className="bg-white rounded-[32px] p-10 md:p-16 flex flex-col md:flex-row items-center md:items-start gap-10">
+            {/* Avatar */}
+            <div className="shrink-0">
+              <div className="w-[96px] h-[96px] rounded-full bg-[#333] flex items-center justify-center text-white text-[32px] font-extrabold">
+                R
+              </div>
+            </div>
+            {/* Text */}
+            <div className="flex-1 text-center md:text-left">
+              <p className="text-[13px] font-semibold text-[#a3a3a3] uppercase tracking-wider mb-3">From the founder</p>
+              <h2 className="text-[28px] md:text-[36px] font-extrabold text-[#333] leading-tight mb-4">
+                Want to see Tikiti in action?
+              </h2>
+              <p className="text-[16px] text-[#86868b] leading-relaxed max-w-[560px] mb-8">
+                I&apos;m Rashid, founder of Tikiti. I&apos;d love to show you how we&apos;re helping organizers across Africa run better events — from ticket sales to QR check-in to the post-event Moments album. Book a 30-minute call and I&apos;ll walk you through everything.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center md:items-start gap-4">
+                <a
+                  href="https://calendly.com/rashidlansahadam/meet-with-rashid"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-[#333] text-white text-[16px] font-semibold px-8 py-4 rounded-full hover:bg-[#1a1a1a] transition-colors"
+                >
+                  <Calendar size={18} />
+                  Book a demo with Rashid
+                </a>
+                <span className="text-[14px] text-[#a3a3a3] self-center">30 min · Free · No pressure</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
