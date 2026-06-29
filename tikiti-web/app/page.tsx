@@ -866,8 +866,15 @@ export default function LandingPage() {
           <div className="bg-white rounded-[32px] p-10 md:p-16 flex flex-col md:flex-row items-center md:items-start gap-10">
             {/* Avatar */}
             <div className="shrink-0 flex flex-col items-center gap-2">
-              <div className="w-[96px] h-[96px] rounded-full bg-[#333] flex items-center justify-center text-white text-[32px] font-extrabold">
-                AR
+              <div className="w-[96px] h-[96px] rounded-full overflow-hidden border-2 border-[#f0f0f0]">
+                <Image
+                  src="/images/founder.png"
+                  alt="Abdul-Rashid Lansah Adam — Founder, Tikiti"
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
               </div>
               <p className="text-[13px] font-semibold text-[#333] text-center">Abdul-Rashid Lansah Adam</p>
               <p className="text-[12px] text-[#a3a3a3] text-center">Founder, Tikiti</p>
