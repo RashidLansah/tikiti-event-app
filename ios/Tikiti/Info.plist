@@ -33,7 +33,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>15</string>
+    <string>18</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>
@@ -51,6 +51,8 @@
     <string>Tikiti needs camera access to scan QR codes for event tickets and to upload event photos.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Tikiti needs permission to save event photos to your photo library.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Tikiti needs photo library access to select and upload event images.</string>
     <key>RCTNewArchEnabled</key>

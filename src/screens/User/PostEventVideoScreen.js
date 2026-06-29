@@ -25,17 +25,12 @@ const FORMAL_CATEGORIES = [
   'networking', 'finance', 'education', 'health', 'professional',
 ];
 
-function getUploadPrompt(category = '', mediaType = 'photo') {
+function getUploadPrompt(category = '') {
   const cat = (category || '').toLowerCase();
   const isFormal = FORMAL_CATEGORIES.some((k) => cat.includes(k));
-  if (mediaType === 'photo') {
-    return isFormal
-      ? { title: 'Capture the moment', subtitle: 'Share a photo from this event.' }
-      : { title: 'Show the vibe', subtitle: "A picture speaks a thousand words — what's the energy like?" };
-  }
   return isFormal
-    ? { title: 'Share a key insight', subtitle: "What's one thing you're taking away from this event?" }
-    : { title: 'Capture the vibe', subtitle: "Show people what the energy is like here." };
+    ? { title: 'Capture the moment', subtitle: 'Share a photo from this event.' }
+    : { title: 'Show the vibe', subtitle: "A picture speaks a thousand words — what's the energy like?" };
 }
 
 // ─── Event phase helper ──────────────────────────────────────────────────────
@@ -55,14 +50,12 @@ const PostEventVideoScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
 
-  const [mediaType, setMediaType] = useState('photo'); // 'photo' | 'video'
   const [mediaUri, setMediaUri] = useState(null);
-  const [mediaFilename, setMediaFilename] = useState('');
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const prompt = getUploadPrompt(event?.category, mediaType);
+  const prompt = getUploadPrompt(event?.category);
 
   // ── Media picker ────────────────────────────────────────────────────────────
 
@@ -73,44 +66,23 @@ const PostEventVideoScreen = ({ navigation, route }) => {
       return;
     }
 
-    const options =
-      mediaType === 'photo'
-        ? {
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [9, 16],
-            quality: 0.85,
-          }
-        : {
-            mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-            allowsEditing: false,
-            quality: 1,
-            videoMaxDuration: 120,
-          };
-
-    const result = await ImagePicker.launchImageLibraryAsync(options);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [9, 16],
+      quality: 0.85,
+    });
 
     if (!result.canceled && result.assets?.[0]) {
-      const asset = result.assets[0];
-      setMediaUri(asset.uri);
-      setMediaFilename(asset.fileName || asset.uri.split('/').pop() || (mediaType === 'photo' ? 'photo.jpg' : 'video.mp4'));
+      setMediaUri(result.assets[0].uri);
     }
-  };
-
-  // ── Switch media type ────────────────────────────────────────────────────────
-
-  const handleSwitchType = (type) => {
-    if (type === mediaType) return;
-    setMediaType(type);
-    setMediaUri(null);
-    setMediaFilename('');
   };
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
     if (!mediaUri) {
-      Alert.alert('Nothing selected', `Please pick a ${mediaType} to upload.`);
+      Alert.alert('Nothing selected', 'Please pick a photo to upload.');
       return;
     }
     if (!user) {
@@ -141,7 +113,7 @@ const PostEventVideoScreen = ({ navigation, route }) => {
           caption: caption.trim(),
           eventPhase,
           verificationLevel,
-          mediaType,
+          mediaType: 'photo',
           eventName: event.name || '',
           eventDate: event.date || '',
           eventCategory: event.category || '',
@@ -152,12 +124,9 @@ const PostEventVideoScreen = ({ navigation, route }) => {
         (pct) => setUploadProgress(pct)
       );
 
-      const label = mediaType === 'photo' ? 'Photo shared!' : 'Video posted!';
-      const body = mediaType === 'photo'
-        ? 'Your photo has been shared. It will appear in the event feed shortly.'
-        : 'Your video has been shared. It will appear in the event feed shortly.';
-
-      Alert.alert(label, body, [{ text: 'Done', onPress: () => navigation.goBack() }]);
+      Alert.alert('Photo shared!', 'Your photo has been shared. It will appear in the event feed shortly.', [
+        { text: 'Done', onPress: () => navigation.goBack() },
+      ]);
     } catch (error) {
       console.error('Media upload error:', error);
       Alert.alert('Upload failed', 'Something went wrong. Please try again.');
@@ -212,40 +181,6 @@ const PostEventVideoScreen = ({ navigation, route }) => {
           </Text>
         </View>
 
-        {/* Photo / Video toggle */}
-        <View style={[styles.typeToggle, { backgroundColor: colors.background.secondary }]}>
-          {[
-            { type: 'photo', icon: 'image', label: 'Photo' },
-            { type: 'video', icon: 'video', label: 'Video' },
-          ].map(({ type, icon, label }) => {
-            const active = mediaType === type;
-            return (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.typeTab,
-                  active && { backgroundColor: colors.primary[500] },
-                ]}
-                onPress={() => handleSwitchType(type)}
-                activeOpacity={0.75}
-              >
-                <Feather name={icon} size={15} color={active ? Colors.white : colors.text.secondary} />
-                <Text
-                  style={[
-                    styles.typeLabel,
-                    {
-                      color: active ? Colors.white : colors.text.secondary,
-                      fontFamily: active ? Typography.fontFamily.bold : Typography.fontFamily.medium,
-                    },
-                  ]}
-                >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
         {/* Context-aware prompt */}
         <View style={styles.promptSection}>
           <Text style={[styles.promptTitle, { color: colors.text.primary, fontFamily: Typography.fontFamily.bold }]}>
@@ -256,7 +191,7 @@ const PostEventVideoScreen = ({ navigation, route }) => {
           </Text>
         </View>
 
-        {/* Media picker area */}
+        {/* Photo picker area */}
         <TouchableOpacity
           style={[
             styles.mediaPicker,
@@ -270,40 +205,23 @@ const PostEventVideoScreen = ({ navigation, route }) => {
           activeOpacity={0.7}
         >
           {mediaUri ? (
-            mediaType === 'photo' ? (
-              // Photo preview
-              <View style={styles.previewContainer}>
-                <Image source={{ uri: mediaUri }} style={styles.photoPreview} resizeMode="cover" />
-                <View style={[styles.changeOverlay]}>
-                  <Feather name="edit-2" size={14} color={Colors.white} />
-                  <Text style={[styles.changeOverlayText, { fontFamily: Typography.fontFamily.medium }]}>Tap to change</Text>
-                </View>
+            <View style={styles.previewContainer}>
+              <Image source={{ uri: mediaUri }} style={styles.photoPreview} resizeMode="cover" />
+              <View style={styles.changeOverlay}>
+                <Feather name="edit-2" size={14} color={Colors.white} />
+                <Text style={[styles.changeOverlayText, { fontFamily: Typography.fontFamily.medium }]}>Tap to change</Text>
               </View>
-            ) : (
-              // Video selected state
-              <View style={styles.mediaSelected}>
-                <View style={[styles.mediaIconBadge, { backgroundColor: colors.primary[500] }]}>
-                  <Feather name="check" size={20} color={Colors.white} />
-                </View>
-                <Text style={[styles.mediaFilename, { color: colors.text.primary, fontFamily: Typography.fontFamily.medium }]} numberOfLines={1}>
-                  {mediaFilename}
-                </Text>
-                <Text style={[styles.mediaChangeHint, { color: colors.text.tertiary, fontFamily: Typography.fontFamily.regular }]}>
-                  Tap to change
-                </Text>
-              </View>
-            )
+            </View>
           ) : (
-            // Empty state
             <View style={styles.mediaEmpty}>
               <View style={[styles.mediaIconBadge, { backgroundColor: colors.background.primary }]}>
-                <Feather name={mediaType === 'photo' ? 'image' : 'video'} size={28} color={colors.primary[500]} />
+                <Feather name="image" size={28} color={colors.primary[500]} />
               </View>
               <Text style={[styles.mediaPickerLabel, { color: colors.text.primary, fontFamily: Typography.fontFamily.medium }]}>
-                {mediaType === 'photo' ? 'Select a photo' : 'Select a video'}
+                Select a photo
               </Text>
               <Text style={[styles.mediaPickerHint, { color: colors.text.tertiary, fontFamily: Typography.fontFamily.regular }]}>
-                {mediaType === 'photo' ? 'From your library' : 'Up to 2 minutes'}
+                Portrait format looks best
               </Text>
             </View>
           )}
@@ -405,24 +323,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     maxWidth: 260,
   },
-  typeToggle: {
-    flexDirection: 'row',
-    borderRadius: BorderRadius.full,
-    padding: 4,
-    marginBottom: Spacing[5],
-    alignSelf: 'flex-start',
-  },
-  typeTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.full,
-  },
-  typeLabel: {
-    fontSize: Typography.fontSize.sm,
-  },
   promptSection: {
     marginBottom: Spacing[5],
   },
@@ -448,12 +348,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing[3],
     padding: Spacing[6],
-  },
-  mediaSelected: {
-    alignItems: 'center',
-    gap: Spacing[2],
-    padding: Spacing[6],
-    width: '100%',
   },
   previewContainer: {
     width: '100%',
@@ -495,14 +389,6 @@ const styles = StyleSheet.create({
   mediaPickerHint: {
     fontSize: Typography.fontSize.xs,
     textAlign: 'center',
-  },
-  mediaFilename: {
-    fontSize: Typography.fontSize.sm,
-    textAlign: 'center',
-    maxWidth: '90%',
-  },
-  mediaChangeHint: {
-    fontSize: Typography.fontSize.xs,
   },
   progressContainer: {
     marginBottom: Spacing[4],

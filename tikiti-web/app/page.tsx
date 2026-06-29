@@ -171,7 +171,7 @@ export default function LandingPage() {
 
           {/* Subheadline */}
           <p className="text-[18px] md:text-[20px] text-[#86868b] max-w-[640px] mx-auto mb-10 leading-relaxed">
-            Create events, sell tickets, scan QR codes at the gate, and let attendees share real photos and videos — all in one place.
+            Create events, sell tickets, scan QR codes at the gate, and let attendees share real photos from every event — all in one place.
           </p>
 
           {/* CTA Buttons */}
@@ -255,7 +255,7 @@ export default function LandingPage() {
                   Relive it
                 </h3>
                 <p className="text-[15px] text-white/50 leading-relaxed">
-                  Verified attendees post photos and videos. Real-time analytics. Everyone downloads memories straight to their camera roll.
+                  Verified attendees post photos from the event. Everyone downloads their favourite shots straight to their camera roll.
                 </p>
               </div>
               <div className="absolute -bottom-16 -right-16 w-[160px] h-[160px] bg-white/5 rounded-full" />
@@ -316,12 +316,12 @@ export default function LandingPage() {
               {
                 icon: <Shield size={22} />,
                 title: 'Verified Attendee Content',
-                description: 'Only real ticket holders can post photos and videos from your event — keeping the media feed authentic and trustworthy.',
+                description: 'Only real ticket holders can post photos from your event — keeping the feed authentic and free from randos.',
               },
               {
                 icon: <Heart size={22} />,
-                title: 'Event Media Feed',
-                description: 'Attendees see a live feed of verified content from the event — photos and videos from people who were actually there.',
+                title: 'Event Photo Feed',
+                description: 'Attendees see a portrait photo feed grouped by event — real shots from people who were actually there, with likes and downloads.',
               },
               {
                 icon: <Smartphone size={22} />,
@@ -468,7 +468,7 @@ export default function LandingPage() {
                 {
                   icon: <Calendar size={20} />,
                   title: 'Discover Events',
-                  description: 'Browse upcoming events in Ghana and across West Africa. Filter by date — today, this week, this month.',
+                  description: 'Browse upcoming events near you. Filter by date — today, this week, this month — and find something worth attending.',
                 },
                 {
                   icon: <Ticket size={20} />,
@@ -503,13 +503,13 @@ export default function LandingPage() {
               {[
                 {
                   icon: <MessageSquare size={20} />,
-                  title: 'Post Photos & Videos',
-                  description: 'Share moments from the event in real time. Only verified ticket holders can post — so the feed is always authentic.',
+                  title: 'Post Photos',
+                  description: 'Share a photo from the event in real time. Only ticket holders can post — so every photo in the feed is from someone who was there.',
                 },
                 {
                   icon: <Share2 size={20} />,
-                  title: 'Event Media Feed',
-                  description: 'See photos and videos from events you attended, posted by other real attendees. Relive the best moments.',
+                  title: 'Event Photo Feed',
+                  description: 'Browse portrait photos from events, grouped by event. Like, download to your camera roll, and relive the best moments.',
                 },
                 {
                   icon: <Smartphone size={20} />,

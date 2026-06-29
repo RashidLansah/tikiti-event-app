@@ -6,7 +6,6 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   Dimensions,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -21,25 +20,19 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const FEED_SECTIONS = [
-  { key: 'all',      label: 'For You' },
-  { key: 'live',     label: 'Live Now' },
-  { key: 'upcoming', label: 'Upcoming' },
-  { key: 'past',     label: 'Moments' },
+  { key: 'all',  label: 'For You' },
+  { key: 'live', label: 'Live Now' },
+  { key: 'past', label: 'Moments' },
 ];
 
 // ─── Grouping helper ──────────────────────────────────────────────────────────
 
-/**
- * Takes a flat array of eventMedia documents and returns an array of event
- * groups, each containing `photos` and `videos` sub-arrays.
- * Groups maintain the order in which their first item appears.
- */
 function groupByEvent(posts) {
   const map = new Map();
 
   for (const post of posts) {
     const id = post.eventId;
-    if (!id) continue;
+    if (!id || post.mediaType !== 'photo') continue; // photos only
 
     if (!map.has(id)) {
       map.set(id, {
@@ -52,32 +45,24 @@ function groupByEvent(posts) {
         eventType: post.eventType || '',
         organizerId: post.organizerId || '',
         photos: [],
-        videos: [],
       });
     }
 
-    const group = map.get(id);
-    if (post.mediaType === 'photo') {
-      group.photos.push(post);
-    } else {
-      group.videos.push(post);
-    }
+    map.get(id).photos.push(post);
   }
 
-  return Array.from(map.values());
+  return Array.from(map.values()).filter((g) => g.photos.length > 0);
 }
 
-// ─── Skeleton card placeholder ────────────────────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+const SKELETON_PHOTO_HEIGHT = Math.round(((SCREEN_WIDTH - 32) / 4) * 5); // 4:5 portrait
 
 const SkeletonCard = ({ colors }) => (
   <View style={[styles.skeletonCard, { backgroundColor: colors.background.secondary, borderColor: colors.border.light }]}>
     <View style={[styles.skeletonLine, { width: '70%', backgroundColor: colors.border.medium }]} />
     <View style={[styles.skeletonLine, { width: '45%', marginTop: Spacing[1], backgroundColor: colors.border.light }]} />
-    <View style={[styles.skeletonPhoto, { backgroundColor: colors.border.medium }]} />
-    <View style={styles.skeletonFooterRow}>
-      <View style={[styles.skeletonPill, { backgroundColor: colors.border.medium }]} />
-      <View style={[styles.skeletonPill, { width: 90, backgroundColor: colors.border.medium }]} />
-    </View>
+    <View style={[styles.skeletonPhoto, { height: SKELETON_PHOTO_HEIGHT, backgroundColor: colors.border.medium }]} />
   </View>
 );
 
@@ -96,13 +81,14 @@ const VideoFeedScreen = ({ navigation }) => {
   const loadFeed = useCallback(async () => {
     setLoading(true);
     try {
-      const filters = { limitCount: 40 };
-      if (activeSection !== 'all') {
+      const filters = { limitCount: 60 };
+      if (activeSection === 'all') {
+        filters.eventStatuses = ['past', 'live']; // feed is for past & live only
+      } else {
         filters.eventStatuses = [activeSection];
       }
       const posts = await eventMediaService.getFeedVideos(filters);
-      const groups = groupByEvent(posts);
-      setEventGroups(groups);
+      setEventGroups(groupByEvent(posts));
     } catch (error) {
       console.error('Error loading feed:', error);
       setEventGroups([]);
@@ -124,22 +110,11 @@ const VideoFeedScreen = ({ navigation }) => {
     });
   }, [navigation]);
 
-  const handleWatchVideos = useCallback((eventId, videos) => {
-    const group = eventGroups.find((g) => g.eventId === eventId);
-    navigation.navigate('EventVideoFeed', {
-      eventId,
-      eventName: group?.eventName || '',
-      videos,
-    });
-  }, [navigation, eventGroups]);
-
   const handleOpenGallery = useCallback((photos, initialIndex, eventName) => {
     navigation.navigate('PhotoGallery', { photos, initialIndex, eventName });
   }, [navigation]);
 
   // ── Render ────────────────────────────────────────────────────────────────
-
-  const hasGroups = eventGroups.length > 0 && !loading;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background.primary }]}>
@@ -191,14 +166,9 @@ const VideoFeedScreen = ({ navigation }) => {
         </ScrollView>
       </View>
 
-      {/* ── Loading state — 3 skeleton cards ──────────────────────────────── */}
+      {/* ── Loading — skeleton cards ───────────────────────────────────────── */}
       {loading && (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <SkeletonCard colors={colors} />
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <SkeletonCard colors={colors} />
           <SkeletonCard colors={colors} />
         </ScrollView>
@@ -208,7 +178,7 @@ const VideoFeedScreen = ({ navigation }) => {
       {!loading && eventGroups.length === 0 && (
         <View style={styles.centeredContainer}>
           <View style={[styles.emptyIcon, { backgroundColor: colors.background.secondary }]}>
-            <Feather name="video-off" size={32} color={colors.text.tertiary} />
+            <Feather name="image" size={32} color={colors.text.tertiary} />
           </View>
           <Text style={[styles.emptyTitle, { fontFamily: Typography.fontFamily.bold, color: colors.text.primary }]}>
             Nothing here yet
@@ -216,7 +186,7 @@ const VideoFeedScreen = ({ navigation }) => {
           <Text style={[styles.emptySubtitle, { fontFamily: Typography.fontFamily.regular, color: colors.text.tertiary }]}>
             {activeSection === 'live'
               ? 'No live events right now. Check back soon.'
-              : 'Photos and videos from events will appear here.'}
+              : 'Photos from events will appear here once attendees start sharing.'}
           </Text>
           <TouchableOpacity
             style={[styles.retryBtn, { borderColor: colors.border.medium }]}
@@ -231,7 +201,7 @@ const VideoFeedScreen = ({ navigation }) => {
         </View>
       )}
 
-      {/* ── Event group cards ─────────────────────────────────────────────── */}
+      {/* ── Event photo cards ─────────────────────────────────────────────── */}
       {!loading && eventGroups.length > 0 && (
         <ScrollView
           style={styles.scrollView}
@@ -243,12 +213,9 @@ const VideoFeedScreen = ({ navigation }) => {
               key={group.eventId}
               event={group}
               onEventPress={handleEventPress}
-              onWatchVideos={handleWatchVideos}
               onOpenGallery={handleOpenGallery}
             />
           ))}
-
-          {/* Bottom spacer so last card clears the floating tab bar */}
           <View style={styles.bottomSpacer} />
         </ScrollView>
       )}
@@ -257,8 +224,6 @@ const VideoFeedScreen = ({ navigation }) => {
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-
-const PHOTO_HEIGHT = Math.round(((SCREEN_WIDTH - 32) / 4) * 3);
 
 const styles = StyleSheet.create({
   root: {
@@ -299,7 +264,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing[3],
   },
   bottomSpacer: {
-    height: 100, // clears the floating tab bar
+    height: 100,
   },
   centeredContainer: {
     flex: 1,
@@ -354,21 +319,8 @@ const styles = StyleSheet.create({
   },
   skeletonPhoto: {
     width: '100%',
-    height: PHOTO_HEIGHT,
     borderRadius: BorderRadius.lg,
     marginTop: Spacing[2],
-    marginBottom: Spacing[1],
-  },
-  skeletonFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Spacing[2],
-    gap: Spacing[2],
-  },
-  skeletonPill: {
-    height: 32,
-    width: 110,
-    borderRadius: BorderRadius.full,
   },
 });
 
