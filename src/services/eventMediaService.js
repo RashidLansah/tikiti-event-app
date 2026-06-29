@@ -13,6 +13,7 @@ import {
   where,
   orderBy,
   limit,
+  startAfter,
   increment,
   serverTimestamp,
   Timestamp,
@@ -138,26 +139,29 @@ const eventMediaService = {
   /**
    * Fetch attendee posts for an event, ranked.
    */
-  getAttendeePosts: async (eventId, limitCount = 20) => {
+  // Returns { docs, lastDoc } — pass lastDoc back as `after` to paginate
+  getAttendeePosts: async (eventId, limitCount = 20, after = null) => {
     try {
-      const q = query(
-        collection(db, COLLECTION),
+      const constraints = [
         where('eventId', '==', eventId),
         where('type', '==', 'attendee_post'),
         where('hidden', '==', false),
         orderBy('rankScore', 'desc'),
-        limit(limitCount)
-      );
+        limit(limitCount),
+      ];
+      if (after) constraints.push(startAfter(after));
+      const q = query(collection(db, COLLECTION), ...constraints);
       const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      return { docs, lastDoc: snap.docs[snap.docs.length - 1] || null, hasMore: snap.docs.length === limitCount };
     } catch {
-      return [];
+      return { docs: [], lastDoc: null, hasMore: false };
     }
   },
 
   /**
    * Feed query: fetch ranked videos across events.
-   * @param {object} filters - { eventStatuses?, eventCity?, limitCount? }
+   * @param {object} filters - { eventStatuses?, eventCity?, limitCount?, after? }
    */
   getFeedVideos: async (filters = {}) => {
     try {
@@ -173,12 +177,14 @@ const eventMediaService = {
       if (filters.eventCity) {
         constraints.unshift(where('eventCity', '==', filters.eventCity));
       }
+      if (filters.after) constraints.push(startAfter(filters.after));
 
       const q = query(collection(db, COLLECTION), ...constraints);
       const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      return { docs, lastDoc: snap.docs[snap.docs.length - 1] || null, hasMore: snap.docs.length === (filters.limitCount || 20) };
     } catch {
-      return [];
+      return { docs: [], lastDoc: null, hasMore: false };
     }
   },
 

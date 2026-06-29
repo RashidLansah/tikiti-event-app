@@ -165,13 +165,13 @@ export default function LandingPage() {
 
           {/* Headline */}
           <h1 className="text-[48px] md:text-[72px] lg:text-[88px] font-extrabold text-[#333] leading-[0.95] tracking-tight mb-6">
-            The event platform<br />
-            <span className="text-[#a3a3a3]">built for Africa.</span>
+            Run the event.<br />
+            <span className="text-[#a3a3a3]">Own the moment.</span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-[18px] md:text-[20px] text-[#86868b] max-w-[640px] mx-auto mb-10 leading-relaxed">
-            Create events, sell tickets, scan QR codes at the gate, and let attendees share real photos from every event — all in one place.
+            Sell tickets, scan QR codes at the gate, and keep attendees connected long after the event ends — with a shared photo album only real ticket holders can post to.
           </p>
 
           {/* CTA Buttons */}
@@ -193,9 +193,10 @@ export default function LandingPage() {
           {/* Social proof points */}
           <div className="flex flex-wrap items-center justify-center gap-8 mt-16">
             {[
-              { value: 'QR Check-In', label: 'Scan at the gate' },
-              { value: 'Verified Content', label: 'Only real ticket holders post' },
-              { value: 'Photo Downloads', label: 'Save memories to your phone' },
+              { value: 'QR Check-In', label: 'Instant scan at the gate' },
+              { value: 'Event Moments', label: 'Shared album for every event' },
+              { value: 'Verified Only', label: 'Real ticket holders post' },
+              { value: 'Save to Camera Roll', label: 'Every photo, yours to keep' },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-[22px] md:text-[26px] font-extrabold text-[#333]">{stat.value}</div>
@@ -255,7 +256,7 @@ export default function LandingPage() {
                   Relive it
                 </h3>
                 <p className="text-[15px] text-white/50 leading-relaxed">
-                  Verified attendees post photos from the event. Everyone downloads their favourite shots straight to their camera roll.
+                  Every event gets a shared photo album. Only verified ticket holders post. Attendees get a push notification when moments are ready — and save every photo to their camera roll.
                 </p>
               </div>
               <div className="absolute -bottom-16 -right-16 w-[160px] h-[160px] bg-white/5 rounded-full" />

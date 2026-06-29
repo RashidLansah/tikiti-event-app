@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  ScrollView,
+  FlatList,
   StyleSheet,
   StatusBar,
   Text,
   TouchableOpacity,
+  ActivityIndicator,
   Dimensions,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -75,20 +76,26 @@ const VideoFeedScreen = ({ navigation }) => {
   const [activeSection, setActiveSection] = useState('all');
   const [eventGroups, setEventGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
 
   // ── Data loading ──────────────────────────────────────────────────────────
 
   const loadFeed = useCallback(async () => {
     setLoading(true);
+    setLastDoc(null);
     try {
-      const filters = { limitCount: 60 };
+      const filters = { limitCount: 20 };
       if (activeSection === 'all') {
-        filters.eventStatuses = ['past', 'live']; // feed is for past & live only
+        filters.eventStatuses = ['past', 'live'];
       } else {
         filters.eventStatuses = [activeSection];
       }
-      const posts = await eventMediaService.getFeedVideos(filters);
-      setEventGroups(groupByEvent(posts));
+      const { docs, lastDoc: last, hasMore: more } = await eventMediaService.getFeedVideos(filters);
+      setEventGroups(groupByEvent(docs));
+      setLastDoc(last);
+      setHasMore(more);
     } catch (error) {
       console.error('Error loading feed:', error);
       setEventGroups([]);
@@ -96,6 +103,23 @@ const VideoFeedScreen = ({ navigation }) => {
       setLoading(false);
     }
   }, [activeSection]);
+
+  const loadMoreFeed = useCallback(async () => {
+    if (loadingMore || !hasMore || !lastDoc) return;
+    setLoadingMore(true);
+    try {
+      const filters = { limitCount: 20, after: lastDoc };
+      if (activeSection !== 'all') filters.eventStatuses = [activeSection];
+      const { docs, lastDoc: last, hasMore: more } = await eventMediaService.getFeedVideos(filters);
+      setEventGroups((prev) => groupByEvent([...prev.flatMap((g) => g.posts || [g]), ...docs]));
+      setLastDoc(last);
+      setHasMore(more);
+    } catch (e) {
+      console.error('loadMoreFeed error', e);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, lastDoc, activeSection]);
 
   useEffect(() => {
     loadFeed();
@@ -203,21 +227,29 @@ const VideoFeedScreen = ({ navigation }) => {
 
       {/* ── Event photo cards ─────────────────────────────────────────────── */}
       {!loading && eventGroups.length > 0 && (
-        <ScrollView
+        <FlatList
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-        >
-          {eventGroups.map((group) => (
+          data={eventGroups}
+          keyExtractor={(item) => item.eventId}
+          renderItem={({ item: group }) => (
             <EventMediaCard
-              key={group.eventId}
               event={group}
               onEventPress={handleEventPress}
               onOpenGallery={handleOpenGallery}
             />
-          ))}
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
+          )}
+          onEndReached={loadMoreFeed}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? (
+              <ActivityIndicator size="small" color="#333" style={{ paddingVertical: 16 }} />
+            ) : (
+              <View style={styles.bottomSpacer} />
+            )
+          }
+        />
       )}
     </View>
   );

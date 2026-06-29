@@ -10,12 +10,14 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Share,
   StatusBar,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import eventMediaService from '../../services/eventMediaService';
+import notificationService from '../../services/notificationService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CELL_SIZE = (SCREEN_WIDTH - 2) / 3;
@@ -69,6 +71,40 @@ const OrgMomentsScreen = ({ navigation, route }) => {
       prev.map((m) => m.id === item.id ? { ...m, featured: !item.featured, rankScore: !item.featured ? 200 : 5 } : m)
     );
     setActionLoading(null);
+  };
+
+  const handleShareAlbum = async () => {
+    const url = `https://tikiti.com/events/${event.id}/moments`;
+    try {
+      await Share.share({
+        message: `📸 Check out the moments from "${event.name}" on Tikiti: ${url}`,
+        url,
+        title: `${event.name} — Moments`,
+      });
+    } catch (e) {
+      console.error('Share error', e);
+    }
+  };
+
+  const handleSendNotification = () => {
+    Alert.alert(
+      'Send Moments Notification',
+      `This will send a push notification to all attendees of "${event.name}" to check out the photos.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send',
+          onPress: async () => {
+            try {
+              await notificationService.sendMomentsNotificationToAllAttendees(event.id, event.name);
+              Alert.alert('Sent!', 'Notification sent to all attendees.');
+            } catch (e) {
+              Alert.alert('Error', 'Failed to send notification. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleHide = (item) => {
@@ -188,6 +224,12 @@ const OrgMomentsScreen = ({ navigation, route }) => {
           <Text style={styles.headerTitle} numberOfLines={1}>Moments</Text>
           <Text style={styles.headerSubtitle} numberOfLines={1}>{event.name}</Text>
         </View>
+        <TouchableOpacity style={styles.headerIconBtn} onPress={handleSendNotification}>
+          <Feather name="send" size={18} color={Colors.primary[700]} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.headerIconBtn} onPress={handleShareAlbum}>
+          <Feather name="share-2" size={18} color={Colors.primary[700]} />
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -254,6 +296,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.secondary[300],
   },
   backBtn: { padding: 4, marginRight: 12 },
+  headerIconBtn: { padding: 6, marginLeft: 4 },
   headerTitles: { flex: 1 },
   headerTitle: {
     fontSize: 18,

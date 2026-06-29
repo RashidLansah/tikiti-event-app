@@ -232,16 +232,58 @@ const DashboardScreen = ({ navigation }) => {
         />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.eventsList}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {loading ? (
+        {/* Reports tab */}
+        {activeTab === 'reports' && !loading && (
+          <View style={{ padding: Spacing[5] }}>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary, marginBottom: Spacing[4] }]}>Overview</Text>
+            <View style={{ flexDirection: 'row', gap: Spacing[3], marginBottom: Spacing[5] }}>
+              {[
+                { label: 'Total Events', value: events.length, icon: 'calendar' },
+                { label: 'Upcoming', value: upcomingEvents.length, icon: 'clock' },
+                { label: 'Past', value: pastEvents.length, icon: 'check-circle' },
+              ].map((s) => (
+                <View key={s.label} style={{ flex: 1, backgroundColor: colors.background.secondary, borderRadius: BorderRadius.lg, padding: Spacing[4], alignItems: 'center', gap: 6 }}>
+                  <Feather name={s.icon} size={18} color={colors.primary[500]} />
+                  <Text style={{ fontSize: Typography.fontSize.xl, fontWeight: '700', color: colors.text.primary }}>{s.value}</Text>
+                  <Text style={{ fontSize: Typography.fontSize.xs, color: colors.text.secondary, textAlign: 'center' }}>{s.label}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={[styles.sectionTitle, { color: colors.text.primary, marginBottom: Spacing[3] }]}>Events by Revenue</Text>
+            {[...events]
+              .filter((e) => e.price > 0)
+              .sort((a, b) => ((b.soldTickets || 0) * b.price) - ((a.soldTickets || 0) * a.price))
+              .map((e) => (
+                <TouchableOpacity key={e.id} onPress={() => navigation.navigate('EventDetail', { event: e })}
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background.secondary, borderRadius: BorderRadius.lg, padding: Spacing[4], marginBottom: Spacing[3], gap: Spacing[3] }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '600', color: colors.text.primary, marginBottom: 2 }} numberOfLines={1}>{e.name}</Text>
+                    <Text style={{ fontSize: Typography.fontSize.xs, color: colors.text.secondary }}>{e.soldTickets || 0}/{e.totalTickets || 0} tickets</Text>
+                  </View>
+                  <Text style={{ fontWeight: '700', color: colors.primary[500] }}>
+                    ₵{((e.soldTickets || 0) * (e.price || 0)).toLocaleString()}
+                  </Text>
+                  <Feather name="chevron-right" size={16} color={colors.text.tertiary} />
+                </TouchableOpacity>
+              ))}
+            {events.filter((e) => e.price > 0).length === 0 && (
+              <Text style={{ color: colors.text.secondary, fontSize: Typography.fontSize.sm, textAlign: 'center', paddingVertical: Spacing[6] }}>
+                No paid events yet
+              </Text>
+            )}
+          </View>
+        )}
+
+        {activeTab !== 'reports' && loading ? (
           <DashboardSkeleton />
-        ) : events.length > 0 ? (
+        ) : activeTab !== 'reports' && events.length > 0 ? (
           <>
             {/* Upcoming Events */}
             {upcomingEvents.length > 0 && (

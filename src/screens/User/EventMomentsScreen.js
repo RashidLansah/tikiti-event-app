@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  Share,
   StatusBar,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -29,13 +30,18 @@ const EventMomentsScreen = ({ navigation, route }) => {
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastDoc, setLastDoc] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
 
   const loadMedia = useCallback(async () => {
     try {
-      const posts = await eventMediaService.getAttendeePosts(event.id, 60);
-      setMedia(posts);
-      setTotalCount(posts.length);
+      const { docs, lastDoc: last, hasMore: more } = await eventMediaService.getAttendeePosts(event.id, 30);
+      setMedia(docs);
+      setLastDoc(last);
+      setHasMore(more);
+      setTotalCount(docs.length);
     } catch (err) {
       console.error('EventMomentsScreen: failed to load media', err);
     } finally {
@@ -43,6 +49,22 @@ const EventMomentsScreen = ({ navigation, route }) => {
       setRefreshing(false);
     }
   }, [event.id]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !lastDoc) return;
+    setLoadingMore(true);
+    try {
+      const { docs, lastDoc: last, hasMore: more } = await eventMediaService.getAttendeePosts(event.id, 30, lastDoc);
+      setMedia((prev) => [...prev, ...docs]);
+      setLastDoc(last);
+      setHasMore(more);
+      setTotalCount((prev) => prev + docs.length);
+    } catch (err) {
+      console.error('EventMomentsScreen: loadMore error', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, lastDoc, event.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -157,6 +179,13 @@ const EventMomentsScreen = ({ navigation, route }) => {
           ListEmptyComponent={renderEmpty}
           ItemSeparatorComponent={() => <View style={{ height: 1 }} />}
           columnWrapperStyle={styles.row}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? (
+              <ActivityIndicator size="small" color={colors.primary?.[500] || Colors.primary[500]} style={{ paddingVertical: 16 }} />
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
