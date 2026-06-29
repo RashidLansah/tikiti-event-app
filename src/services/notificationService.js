@@ -584,6 +584,83 @@ class NotificationService {
     }
   }
 
+  // Post-Event Moments — schedule local notification for current user at event end + 30 min
+  async scheduleMomentsNotification(eventId, eventName, eventDate, eventEndTime) {
+    try {
+      let endDateTime;
+
+      if (typeof eventDate === 'string') {
+        const dateStr = eventDate.includes('T') ? eventDate : `${eventDate}T${eventEndTime || '23:00'}`;
+        endDateTime = new Date(dateStr);
+      } else {
+        endDateTime = new Date(eventDate);
+        if (eventEndTime) {
+          const [hours, minutes] = eventEndTime.split(':');
+          endDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        }
+      }
+
+      // Fire 30 minutes after event ends
+      const triggerTime = new Date(endDateTime.getTime() + 30 * 60 * 1000);
+
+      if (triggerTime <= new Date()) {
+        console.log('Moments notification trigger is in the past, skipping');
+        return null;
+      }
+
+      const title = 'Moments are in 📸';
+      const body = `Photos from "${eventName}" are now available. See what everyone shared!`;
+      const data = { eventId, eventName, type: 'event_moments' };
+
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: { title, body, data, sound: 'default' },
+        trigger: triggerTime,
+      });
+
+      console.log('Moments notification scheduled for:', triggerTime.toISOString());
+      return notificationId;
+    } catch (error) {
+      console.error('Error scheduling moments notification:', error);
+      return null;
+    }
+  }
+
+  // Post-Event Moments — batch push to all confirmed attendees (call from server/organiser)
+  async sendMomentsNotificationToAllAttendees(eventId, eventName) {
+    const title = 'Moments are in 📸';
+    const body = `Photos from "${eventName}" are ready. See what everyone shared!`;
+    const data = { eventId, eventName, type: 'event_moments' };
+
+    try {
+      const tokens = await this.getEventAttendeePushTokens(eventId);
+      await this.sendPushNotificationBatch(tokens, title, body, data);
+
+      const bookingsRef = collection(db, 'bookings');
+      const q = query(
+        bookingsRef,
+        where('eventId', '==', eventId),
+        where('status', '==', 'confirmed')
+      );
+      const bookingsSnapshot = await getDocs(q);
+
+      const savePromises = [];
+      const seenUserIds = new Set();
+      bookingsSnapshot.forEach((docSnap) => {
+        const booking = docSnap.data();
+        if (booking.userId && !seenUserIds.has(booking.userId)) {
+          seenUserIds.add(booking.userId);
+          savePromises.push(
+            this.saveNotification(booking.userId, 'event_moments', title, body, data)
+          );
+        }
+      });
+      await Promise.all(savePromises);
+      console.log(`Moments notifications sent to ${seenUserIds.size} attendees`);
+    } catch (error) {
+      console.error('Error sending moments notifications:', error);
+    }
+  }
+
   // Welcome Notification
   async sendWelcomeNotification(userId, userName) {
     const title = 'Welcome to Tikiti!';

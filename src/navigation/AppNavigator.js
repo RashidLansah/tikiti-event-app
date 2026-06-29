@@ -54,6 +54,20 @@ const AppNavigator = () => {
               }
             }, 500);
           }
+
+          if (data.type === 'event_moments') {
+            setTimeout(() => {
+              if (navigationRef.current) {
+                navigationRef.current.navigate('UserFlow', {
+                  screen: 'Events',
+                  params: {
+                    screen: 'EventMoments',
+                    params: { event: { id: data.eventId, name: data.eventName } },
+                  },
+                });
+              }
+            }, 500);
+          }
         }
 
         if (data?.type === 'connection_made') {

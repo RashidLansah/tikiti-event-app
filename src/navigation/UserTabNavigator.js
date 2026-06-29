@@ -45,6 +45,7 @@ import PostEventVideoScreen from '../screens/User/PostEventVideoScreen';
 import VideoFeedScreen from '../screens/User/VideoFeedScreen';
 import PhotoGalleryScreen from '../screens/User/PhotoGalleryScreen';
 import EventVideoFeedScreen from '../screens/User/EventVideoFeedScreen';
+import EventMomentsScreen from '../screens/User/EventMomentsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -97,6 +98,7 @@ const EventsStack = () => (
         gestureDirection: 'vertical',
       }}
     />
+    <Stack.Screen name="EventMoments" component={EventMomentsScreen} />
   </Stack.Navigator>
 );
 
@@ -126,6 +128,7 @@ const FeedStack = () => (
       component={EventVideoFeedScreen}
       options={{ presentation: 'modal' }}
     />
+    <Stack.Screen name="EventMoments" component={EventMomentsScreen} />
   </Stack.Navigator>
 );
 

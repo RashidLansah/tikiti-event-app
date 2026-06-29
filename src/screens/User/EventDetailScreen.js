@@ -63,6 +63,7 @@ const EventDetailScreen = ({ navigation, route }) => {
     { key: 'ticket', label: 'Ticket', icon: 'tag' },
     { key: 'program', label: 'Program', icon: 'menu' },
     { key: 'updates', label: 'Updates', icon: 'bell' },
+    { key: 'moments', label: 'Moments', icon: 'camera' },
     { key: 'messages', label: 'Messages', icon: 'message-square' },
     { key: 'feedback', label: 'Feedback', icon: 'message-circle' },
   ];
@@ -618,6 +619,18 @@ const EventDetailScreen = ({ navigation, route }) => {
         console.log('Reminder scheduling error (non-critical):', notifError);
       }
 
+      // Schedule post-event moments notification (fires 30 min after event ends)
+      try {
+        await notificationService.scheduleMomentsNotification(
+          event.id,
+          event.name,
+          event.date,
+          event.endTime || event.time
+        );
+      } catch (notifError) {
+        console.log('Moments notification scheduling error (non-critical):', notifError);
+      }
+
       // Update local state
       setUserBooking({
         id: docRef.id,
@@ -1001,6 +1014,30 @@ const EventDetailScreen = ({ navigation, route }) => {
     );
   };
 
+  // ──── Moments Tab — navigates to full EventMomentsScreen ──────────────────
+  const renderMomentsTab = () => (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48, paddingHorizontal: 24, gap: 16 }}>
+      <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primary[500], alignItems: 'center', justifyContent: 'center' }}>
+        <Feather name="camera" size={28} color={Colors.white} />
+      </View>
+      <Text style={{ fontSize: 18, fontWeight: '700', fontFamily: 'PlusJakartaSans-Bold', color: colors.text?.primary || Colors.primary[800], textAlign: 'center' }}>
+        Event Moments
+      </Text>
+      <Text style={{ fontSize: 13, fontFamily: 'PlusJakartaSans-Regular', color: colors.text?.tertiary || Colors.secondary[600], textAlign: 'center', lineHeight: 20 }}>
+        Photos and videos shared by everyone who attended this event.
+      </Text>
+      <TouchableOpacity
+        style={{ backgroundColor: colors.primary[500], paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+        onPress={() => navigation.navigate('EventMoments', { event })}
+      >
+        <Feather name="grid" size={16} color={Colors.white} />
+        <Text style={{ color: Colors.white, fontSize: 14, fontFamily: 'PlusJakartaSans-SemiBold', fontWeight: '600' }}>
+          View Moments
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   // ──── Main tab content router ──────────────────────────
   const renderTabContent = () => {
     switch (activeEventTab) {
@@ -1012,6 +1049,8 @@ const EventDetailScreen = ({ navigation, route }) => {
         return renderUpdatesContent();
       case 'feedback':
         return renderFeedbackContent();
+      case 'moments':
+        return renderMomentsTab();
       case 'messages':
         // Messages are sent via email/SMS from dashboard — no persistent storage
         return renderEmptyState('messages');
