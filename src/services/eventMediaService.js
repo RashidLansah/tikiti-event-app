@@ -252,6 +252,82 @@ const eventMediaService = {
       });
     } catch { /* silent */ }
   },
+
+  // ─── Organiser Moderation ─────────────────────────────
+
+  featurePost: async (mediaId, featured) => {
+    try {
+      await updateDoc(doc(db, COLLECTION, mediaId), {
+        featured: featured,
+        rankScore: featured ? 200 : 5,
+        updatedAt: Timestamp.now(),
+      });
+    } catch { /* silent */ }
+  },
+
+  hidePost: async (mediaId) => {
+    try {
+      await updateDoc(doc(db, COLLECTION, mediaId), {
+        hidden: true,
+        updatedAt: Timestamp.now(),
+      });
+    } catch { /* silent */ }
+  },
+
+  unhidePost: async (mediaId) => {
+    try {
+      await updateDoc(doc(db, COLLECTION, mediaId), {
+        hidden: false,
+        updatedAt: Timestamp.now(),
+      });
+    } catch { /* silent */ }
+  },
+
+  getOrganizerPosts: async (eventId) => {
+    try {
+      const q = query(
+        collection(db, COLLECTION),
+        where('eventId', '==', eventId),
+        where('type', '==', 'attendee_post'),
+        orderBy('rankScore', 'desc'),
+        limit(100)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      console.error('getOrganizerPosts error', e);
+      return [];
+    }
+  },
+
+  getEventStats: async (eventId) => {
+    try {
+      const q = query(
+        collection(db, COLLECTION),
+        where('eventId', '==', eventId),
+        where('type', '==', 'attendee_post')
+      );
+      const snap = await getDocs(q);
+      let totalViews = 0, totalLikes = 0, totalDownloads = 0, reported = 0;
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        totalViews += data.views || 0;
+        totalLikes += data.likes || 0;
+        totalDownloads += data.downloads || 0;
+        if (data.reported) reported += 1;
+      });
+      return {
+        posts: snap.size,
+        views: totalViews,
+        likes: totalLikes,
+        downloads: totalDownloads,
+        reported,
+      };
+    } catch (e) {
+      console.error('getEventStats error', e);
+      return { posts: 0, views: 0, likes: 0, downloads: 0, reported: 0 };
+    }
+  },
 };
 
 export default eventMediaService;

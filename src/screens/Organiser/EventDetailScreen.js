@@ -21,6 +21,7 @@ import CopyLinkButton from '../../components/CopyLinkButton';
 import { Colors, Typography, Spacing, BorderRadius, Shadows, Components } from '../../styles/designSystem';
 import { eventService, bookingService } from '../../services/firestoreService';
 import notificationService from '../../services/notificationService';
+import eventMediaService from '../../services/eventMediaService';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +39,7 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [attendeeCount, setAttendeeCount] = useState(0);
   const [loadingAttendees, setLoadingAttendees] = useState(false);
+  const [momentsStats, setMomentsStats] = useState({ posts: 0, views: 0, likes: 0, reported: 0 });
 
   // Fetch real-time attendee count
   const fetchAttendeeCount = async () => {
@@ -61,6 +63,9 @@ const EventDetailScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     fetchAttendeeCount();
+    if (event?.id) {
+      eventMediaService.getEventStats(event.id).then(setMomentsStats).catch(() => {});
+    }
   }, [event?.id]);
 
   // Use the real event data directly
@@ -501,6 +506,47 @@ const EventDetailScreen = ({ navigation, route }) => {
           </View>
         </View>
 
+        {/* Moments Section */}
+        <View style={styles.momentsContainer}>
+          <View style={styles.momentsTitleRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Feather name="camera" size={18} color={Colors.primary[500]} />
+              <Text style={styles.sectionTitle}>Moments</Text>
+            </View>
+            {momentsStats.reported > 0 && (
+              <View style={styles.reportedBadge}>
+                <Text style={styles.reportedBadgeText}>{momentsStats.reported} reported</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.momentsStatsRow}>
+            {[
+              { icon: 'camera', value: momentsStats.posts, label: 'Posts' },
+              { icon: 'eye', value: momentsStats.views, label: 'Views' },
+              { icon: 'heart', value: momentsStats.likes, label: 'Likes' },
+            ].map((s) => (
+              <View key={s.label} style={styles.momentsStat}>
+                <Text style={styles.momentsStatValue}>
+                  {s.value >= 1000 ? `${(s.value / 1000).toFixed(1)}k` : s.value}
+                </Text>
+                <Text style={styles.momentsStatLabel}>{s.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={styles.momentsBtn}
+            onPress={() => navigation.navigate('OrgMoments', { event: eventData })}
+          >
+            <Feather name="grid" size={15} color={Colors.primary[500]} />
+            <Text style={styles.momentsBtnText}>
+              {momentsStats.posts > 0 ? 'View & Manage Moments' : 'No moments yet'}
+            </Text>
+            <Feather name="chevron-right" size={15} color={Colors.secondary[600]} />
+          </TouchableOpacity>
+        </View>
+
         {/* Danger Zone */}
         <View style={styles.dangerZone}>
           <View style={styles.dangerHeader}>
@@ -876,6 +922,74 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.semibold,
     textAlign: 'center',
     lineHeight: Typography.lineHeight.tight * Typography.fontSize.sm,
+  },
+  momentsContainer: {
+    ...Components.card.primary,
+    margin: Spacing[5],
+    marginBottom: 0,
+    padding: Spacing[5],
+    gap: Spacing[4],
+  },
+  momentsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionTitle: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: Colors.primary[800],
+  },
+  reportedBadge: {
+    backgroundColor: Colors.error[100],
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  reportedBadgeText: {
+    fontSize: 11,
+    color: Colors.error[600],
+    fontFamily: 'PlusJakartaSans-SemiBold',
+  },
+  momentsStatsRow: {
+    flexDirection: 'row',
+    gap: Spacing[3],
+  },
+  momentsStat: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: Colors.secondary[100],
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing[3],
+    gap: 2,
+  },
+  momentsStatValue: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    fontFamily: 'PlusJakartaSans-Bold',
+    color: Colors.primary[800],
+  },
+  momentsStatLabel: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: 'PlusJakartaSans-Regular',
+    color: Colors.secondary[600],
+  },
+  momentsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[4],
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.secondary[300],
+  },
+  momentsBtnText: {
+    flex: 1,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: 'PlusJakartaSans-SemiBold',
+    color: Colors.primary[600],
   },
   dangerZone: {
     ...Components.card.primary,

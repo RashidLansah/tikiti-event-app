@@ -8,6 +8,7 @@ import CreateEventFlow from '../screens/Organiser/CreateEventFlow';
 import ScanTicketScreen from '../screens/Organiser/ScanTicketScreen';
 import EventAttendeesScreen from '../screens/Organiser/EventAttendeesScreen';
 import EventDetailScreen from '../screens/Organiser/EventDetailScreen';
+import OrgMomentsScreen from '../screens/Organiser/OrgMomentsScreen';
 
 const Stack = createStackNavigator();
 
@@ -83,6 +84,11 @@ const OrganiserStack = () => {
           title: 'Event Attendees',
           headerShown: false,
         }}
+      />
+      <Stack.Screen
+        name="OrgMoments"
+        component={OrgMomentsScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
