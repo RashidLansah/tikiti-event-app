@@ -6,8 +6,8 @@ import { eventService, Event } from '@/lib/services/eventService';
 import { speakerService } from '@/lib/services/speakerService';
 import { surveyService } from '@/lib/services/surveyService';
 import { adminService, PlatformOrganization } from '@/lib/services/adminService';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Speaker } from '@/types/speaker';
 import { ProgramSession } from '@/types/program';
 import { Cohort } from '@/types/cohort';
@@ -443,68 +443,31 @@ export default function SeedDemoPage() {
       await eventService.update(createdEvent.id!, { status: 'past' });
       updateStep(3, { status: 'done', detail: 'Event published (status: past — unlocks Moments tab)' });
 
-      // ── Step 5: Seed demo Moments ────────────────────────────
+      // ── Step 5: Seed demo Moments (client-side, userId = auth.uid) ──
       updateStep(4, { status: 'running' });
 
       const demoPhotos = [
-        {
-          thumbnailUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=600&fit=crop&q=80',
-          caption: 'Amazing keynote! 🔥',
-          likes: 24, views: 112, rankScore: 120, featured: true,
-        },
-        {
-          thumbnailUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=600&fit=crop&q=80',
-          caption: 'Great crowd energy today',
-          likes: 18, views: 87, rankScore: 95,
-        },
-        {
-          thumbnailUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&h=600&fit=crop&q=80',
-          caption: 'Workshop was 🔥',
-          likes: 31, views: 145, rankScore: 150,
-        },
-        {
-          thumbnailUrl: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=600&h=600&fit=crop&q=80',
-          caption: 'Panel discussion highlights',
-          likes: 9, views: 54, rankScore: 60,
-        },
-        {
-          thumbnailUrl: 'https://images.unsplash.com/photo-1498075702571-ecb018f3752d?w=600&h=600&fit=crop&q=80',
-          caption: 'Networking lunch vibes 🍽️',
-          likes: 42, views: 198, rankScore: 200, featured: true,
-        },
-        {
-          thumbnailUrl: 'https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=600&h=600&fit=crop&q=80',
-          caption: 'QR check-in demo was smooth!',
-          likes: 7, views: 39, rankScore: 45,
-        },
-        {
-          thumbnailUrl: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=600&h=600&fit=crop&q=80',
-          caption: 'Day 2 masterclass 💪',
-          likes: 15, views: 71, rankScore: 80,
-        },
-        {
-          thumbnailUrl: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=600&h=600&fit=crop&q=80',
-          caption: 'Amazing speakers, amazing content',
-          likes: 28, views: 133, rankScore: 140,
-          reported: true,
-        },
-        {
-          thumbnailUrl: 'https://images.unsplash.com/photo-1492538368677-f6e0afe31dcc?w=600&h=600&fit=crop&q=80',
-          caption: 'Closing ceremony 🎉',
-          likes: 55, views: 240, rankScore: 210, featured: true,
-        },
+        { url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=600&fit=crop&q=80', caption: 'Amazing keynote! 🔥', likes: 24, views: 112, rankScore: 120, featured: true },
+        { url: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&h=600&fit=crop&q=80', caption: 'Great crowd energy today', likes: 18, views: 87, rankScore: 95 },
+        { url: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&h=600&fit=crop&q=80', caption: 'Workshop was 🔥', likes: 31, views: 145, rankScore: 150 },
+        { url: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=600&h=600&fit=crop&q=80', caption: 'Panel discussion highlights', likes: 9, views: 54, rankScore: 60 },
+        { url: 'https://images.unsplash.com/photo-1498075702571-ecb018f3752d?w=600&h=600&fit=crop&q=80', caption: 'Networking lunch vibes 🍽️', likes: 42, views: 198, rankScore: 200, featured: true },
+        { url: 'https://images.unsplash.com/photo-1560523160-754a9e25c68f?w=600&h=600&fit=crop&q=80', caption: 'QR check-in demo was smooth!', likes: 7, views: 39, rankScore: 45 },
+        { url: 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=600&h=600&fit=crop&q=80', caption: 'Day 2 masterclass 💪', likes: 15, views: 71, rankScore: 80 },
+        { url: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=600&h=600&fit=crop&q=80', caption: 'Amazing speakers, amazing content', likes: 28, views: 133, rankScore: 140, reportAfter: true },
+        { url: 'https://images.unsplash.com/photo-1492538368677-f6e0afe31dcc?w=600&h=600&fit=crop&q=80', caption: 'Closing ceremony 🎉', likes: 55, views: 240, rankScore: 210, featured: true },
       ];
 
-      const mediaRef = collection(db, 'eventMedia');
+      const mediaCol = collection(db, 'eventMedia');
       for (const photo of demoPhotos) {
-        await addDoc(mediaRef, {
+        const docRef = await addDoc(mediaCol, {
           eventId: createdEvent.id!,
-          userId: `demo-user-${Math.random().toString(36).slice(2, 8)}`,
+          userId,           // must match auth.uid per Firestore rules
           bookingId: null,
           type: 'attendee_post',
           mediaType: 'photo',
-          videoUrl: photo.thumbnailUrl,
-          thumbnailUrl: photo.thumbnailUrl,
+          videoUrl: photo.url,
+          thumbnailUrl: photo.url,
           storagePath: null,
           caption: photo.caption,
           eventPhase: 'post',
@@ -521,13 +484,17 @@ export default function SeedDemoPage() {
           likes: photo.likes,
           downloads: 0,
           rankScore: photo.rankScore,
-          featured: photo.featured || false,
-          reported: photo.reported || false,
+          featured: (photo as any).featured || false,
+          reported: false,
           hidden: false,
-          reportCount: photo.reported ? 1 : 0,
+          reportCount: 0,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+        // Mark as reported after creation (separate rule allows this)
+        if ((photo as any).reportAfter) {
+          await updateDoc(docRef, { reported: true, reportCount: 1, updatedAt: serverTimestamp() });
+        }
       }
       updateStep(4, { status: 'done', detail: `${demoPhotos.length} demo moments seeded` });
 

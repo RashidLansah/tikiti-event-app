@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { Feather } from '@expo/vector-icons';
-import { View, Text, Dimensions } from 'react-native';
+import { View, Text, Dimensions, Platform } from 'react-native';
 import { Colors, Typography, Spacing, Shadows } from '../styles/designSystem';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -63,7 +63,7 @@ const EventsStack = () => (
       component={EventDetailScreen}
       options={{
         presentation: 'transparentModal',
-        gestureEnabled: true,
+        gestureEnabled: Platform.OS === 'ios',
         gestureDirection: 'vertical',
         cardOverlayEnabled: true,
         cardStyleInterpolator: ({ current: { progress }, layouts }) => ({

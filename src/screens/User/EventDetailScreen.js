@@ -1305,6 +1305,8 @@ const EventDetailScreen = ({ navigation, route }) => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         bounces={false}
+        nestedScrollEnabled={true}
+        scrollEventThrottle={16}
       >
         {/* Hero Image Section — Full bleed with gradient overlay */}
         <View style={styles.heroSection}>
