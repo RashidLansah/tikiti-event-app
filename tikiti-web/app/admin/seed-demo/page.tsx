@@ -440,7 +440,7 @@ export default function SeedDemoPage() {
 
       // ── Step 4: Publish event as past ────────────────────────────
       updateStep(3, { status: 'running' });
-      await eventService.update(createdEvent.id!, { status: 'past' });
+      await eventService.update(createdEvent.id!, { status: 'past' as any });
       updateStep(3, { status: 'done', detail: 'Event published (status: past — unlocks Moments tab)' });
 
       // ── Step 5: Seed demo Moments (client-side, userId = auth.uid) ──
