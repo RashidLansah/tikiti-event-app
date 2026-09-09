@@ -62,7 +62,7 @@ function RegisterForm() {
     setLoading(true);
     try {
       await register(formData.email, formData.password, formData.name);
-      await createOrganization(formData.companyName);
+      await createOrganization({ name: formData.companyName });
       setShowLoadingScreen(true);
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
