@@ -51,6 +51,11 @@ const PG = `
   .pg-card-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.07); }
   .pg-card-foot span { font-size: 12px; color: #999; }
   .pg-card-price { font-size: 15px; font-weight: 700; color: #f44929; }
+  .pg-tabs { display: flex; gap: 0; border-bottom: 2px solid rgba(0,0,0,0.08); margin-bottom: 0; }
+  .pg-tab { background: none; border: none; font: inherit; font-size: 15px; font-weight: 600; color: #65675d; cursor: pointer; padding: 14px 24px; position: relative; transition: color 0.15s; }
+  .pg-tab:hover { color: #202220; }
+  .pg-tab.active { color: #f44929; }
+  .pg-tab.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px; background: #f44929; border-radius: 2px 2px 0 0; }
   .pg-empty { text-align: center; padding: 64px 24px; }
   .pg-skeleton-card { border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; overflow: hidden; }
   .pg-skeleton-img { height: 260px; background: linear-gradient(90deg, #e8e8e0 25%, #f0f0e8 50%, #e8e8e0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
@@ -98,6 +103,7 @@ function getShortName(name: string): string {
 }
 
 export default function EventsPage() {
+  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [dateFilter, setDateFilter] = useState('');
@@ -129,7 +135,16 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
-  const filtered = events.filter(ev => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tabEvents = events.filter(ev => {
+    if (!ev.date) return tab === 'upcoming';
+    const evDate = new Date(ev.date + 'T00:00:00');
+    return tab === 'upcoming' ? evDate >= today : evDate < today;
+  });
+
+  const filtered = tabEvents.filter(ev => {
     const cat = ev.category ?? '';
     const matchCat = category === 'All' || cat.toLowerCase().includes(category.toLowerCase());
     const name = ev.name ?? '';
@@ -194,8 +209,13 @@ export default function EventsPage() {
           ))}
         </div>
 
+        <div className="pg-tabs">
+          <button className={`pg-tab${tab === 'upcoming' ? ' active' : ''}`} onClick={() => setTab('upcoming')}>Upcoming</button>
+          <button className={`pg-tab${tab === 'past' ? ' active' : ''}`} onClick={() => setTab('past')}>Past</button>
+        </div>
+
         <div className="pg-results-heading">
-          <h2>Upcoming events</h2>
+          <h2>{tab === 'upcoming' ? 'Upcoming events' : 'Past events'}</h2>
           <span>{loading ? '…' : `${filtered.length} event${filtered.length !== 1 ? 's' : ''}`}</span>
         </div>
 
@@ -220,12 +240,16 @@ export default function EventsPage() {
         ) : filtered.length === 0 ? (
           <div className="pg-empty">
             <div className="pg-display" style={{ fontSize: 48, fontWeight: 800, textTransform: 'uppercase', marginBottom: 12 }}>
-              {events.length === 0 ? 'No events yet.' : 'No events found.'}
+              {tabEvents.length === 0
+                ? (tab === 'upcoming' ? 'No upcoming events.' : 'No past events.')
+                : 'No events found.'}
             </div>
             <p style={{ color: '#65675d', marginBottom: 24 }}>
-              {events.length === 0 ? 'Check back soon — something is coming.' : 'Try another topic or category.'}
+              {tabEvents.length === 0
+                ? (tab === 'upcoming' ? 'Check back soon — something is coming.' : 'Past events will appear here.')
+                : 'Try another topic or category.'}
             </p>
-            {events.length > 0 && (
+            {tabEvents.length > 0 && (
               <button className="pg-cat" onClick={() => { setQuery(''); setCategory('All'); setDateFilter(''); }}>Clear filters ↗</button>
             )}
           </div>
