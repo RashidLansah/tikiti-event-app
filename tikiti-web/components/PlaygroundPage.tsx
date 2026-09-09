@@ -85,10 +85,12 @@ export default function PlaygroundPage() {
         .pg-nav { display: flex; gap: 28px; font-size: 14px; }
         .pg-nav a:hover { opacity: 0.6; }
         .pg-nav-cta {
-          border: 1px solid var(--pg-line);
+          border: 1.5px solid rgba(34,34,34,0.35);
           padding: 11px 18px;
           border-radius: 30px;
           font-size: 13px;
+          color: #222;
+          font-weight: 600;
         }
         .pg-nav-cta span { margin-left: 20px; }
 
@@ -434,9 +436,9 @@ export default function PlaygroundPage() {
           <a className="pg-logo" href="#">tikiti<span>{'✱'}</span></a>
           <nav className="pg-nav">
             <a href="/events">Discover events</a>
-            <a href="https://www.gettikiti.com/register" target="_blank" rel="noopener">For organizers ↗</a>
+            <a href="https://www.gettikiti.com/register" target="_blank" rel="noopener">For organizers →</a>
           </nav>
-          <a className="pg-nav-cta" href="/events">Find your next event <span>↗</span></a>
+          <a className="pg-nav-cta" href="/events">Find your next event <span>→</span></a>
         </header>
 
         {/* Hero */}
@@ -453,7 +455,7 @@ export default function PlaygroundPage() {
             Learn something new. Share what you know. Meet the people behind the next big thing.
           </p>
           <a className="pg-primary" href="#discover">
-            Find your next moment <span>↗</span>
+            Find your next moment <span>→</span>
           </a>
 
           {/* Floating posters */}
@@ -483,7 +485,7 @@ export default function PlaygroundPage() {
               </div>
             </div>
             <div className="pg-stamp">
-              YOU HAD<br />TO BE<br /><b>THERE ↗</b>
+              YOU HAD<br />TO BE<br /><b>THERE →</b>
             </div>
           </div>
 
@@ -555,7 +557,7 @@ export default function PlaygroundPage() {
             <div className="pg-wheel-center">
               <span className="pg-wheel-caption">UP NEXT</span>
               <h3>{ev.name}</h3>
-              <a className="pg-wheel-link" href={`/events/${ev.id}`}>View event ↗</a>
+              <a className="pg-wheel-link" href={`/events/${ev.id}`}>View event →</a>
             </div>
           </div>
 
@@ -566,7 +568,7 @@ export default function PlaygroundPage() {
           </div>
 
           <div className="pg-view-all">
-            <a className="pg-primary" href="/events">View all events <span>↗</span></a>
+            <a className="pg-primary" href="/events">View all events <span>→</span></a>
           </div>
           <p className="pg-sample-note">Sample events for this design preview · Dates, prices, and programmes are illustrative.</p>
         </section>
@@ -580,7 +582,7 @@ export default function PlaygroundPage() {
           <div>
             <p>Create your event. Sell tickets.<br />Welcome your people.</p>
             <a className="pg-org-cta" href="https://www.gettikiti.com/register" target="_blank" rel="noopener">
-              Create an event <span>↗</span>
+              Create an event <span>→</span>
             </a>
           </div>
         </section>
@@ -589,7 +591,7 @@ export default function PlaygroundPage() {
         <footer className="pg-footer">
           <a className="pg-logo" href="#">tikiti<span style={{ color: 'var(--pg-accent)', fontSize: 26 }}>{'✱'}</span></a>
           <span>Good ideas start with people.</span>
-          <a href="https://gettikiti.com" target="_blank" rel="noopener">Visit Tikiti ↗</a>
+          <a href="https://gettikiti.com" target="_blank" rel="noopener">Visit Tikiti →</a>
           <span>© 2026 Tikiti</span>
         </footer>
       </div>
