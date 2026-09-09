@@ -1,441 +1,165 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import {
-  Calendar, Users, Clock, MapPin, ArrowRight, Search,
-  ArrowLeft, Filter, X, ChevronDown, Globe, Ticket
-} from 'lucide-react';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { techEvents } from '@/data/techEvents';
 
-interface EventItem {
-  id: string;
-  name: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  category: string;
-  type: 'free' | 'paid';
-  price?: number;
-  imageUrl?: string;
-  imageBase64?: string;
-  organizerName?: string;
-  totalTickets: number;
-  availableTickets: number;
-  venueType?: string;
-}
+const CATEGORIES = ['All', 'Conferences', 'Workshops', 'Meetups', 'Startups', 'Community'];
 
-const CATEGORIES = [
-  'All',
-  'Conference',
-  'Workshop',
-  'Seminar',
-  'Networking',
-  'Concert',
-  'Festival',
-  'Sports',
-  'Charity',
-  'Education',
-  'Technology',
-  'Business',
-  'Arts',
-  'Health',
-  'Other',
-];
-
-function formatEventDate(dateStr: string) {
-  try {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  } catch {
-    return dateStr;
+const PG = `
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .pg { font-family: 'DM Sans', Arial, sans-serif; background: #faf9f2; color: #202220; }
+  .pg-display { font-family: 'Barlow Condensed', Impact, sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  .pg-header {
+    background: #f5ee3d; height: 80px; padding: 0 5%;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100; transition: background 0.25s, box-shadow 0.25s;
   }
-}
-
-function formatEventTime(timeStr: string) {
-  try {
-    const [h, m] = timeStr.split(':');
-    const hour = parseInt(h);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${m} ${ampm}`;
-  } catch {
-    return timeStr;
+  .pg-main { max-width: 1280px; margin: 0 auto; padding: 40px 5% 80px; }
+  .pg-title { display: flex; justify-content: space-between; align-items: flex-end; padding: 32px 0 24px; flex-wrap: wrap; gap: 16px; }
+  .pg-controls { display: flex; gap: 16px; padding: 16px 0; flex-wrap: wrap; align-items: center; }
+  .pg-search {
+    display: flex; align-items: center; gap: 12px; border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 10px; padding: 0 20px; flex: 1; min-width: 260px; background: #fff;
   }
-}
-
-function getRelativeDateLabel(dateStr: string) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const eventDate = new Date(dateStr + 'T00:00:00');
-  const diffDays = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Tomorrow';
-  if (diffDays <= 7) return `In ${diffDays} days`;
-  return null;
-}
+  .pg-search input { padding: 18px 0; background: none; border: 0; color: #202220; font: inherit; width: 100%; outline: none; font-size: 15px; }
+  .pg-search input::placeholder { color: #999; }
+  .pg-date select { background: #fff; color: #202220; font: inherit; padding: 18px 16px; border: 1px solid rgba(0,0,0,0.12); border-radius: 10px; outline: none; font-size: 14px; cursor: pointer; }
+  .pg-cats { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0 28px; }
+  .pg-cat { border: 1px solid rgba(0,0,0,0.12); color: #202220; border-radius: 25px; padding: 10px 18px; background: none; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .pg-cat:hover { border-color: #f44929; }
+  .pg-cat.active { background: #f44929; color: #fff; border-color: #f44929; }
+  .pg-results-heading { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(0,0,0,0.1); padding: 20px 0; margin-bottom: 8px; }
+  .pg-results-heading h2 { font-size: 18px; font-weight: 500; }
+  .pg-results-heading span { font-size: 14px; color: #65675d; }
+  .pg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 22px; }
+  .pg-card { border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; overflow: hidden; transition: transform 0.25s; display: flex; flex-direction: column; }
+  .pg-card:hover { transform: translateY(-5px); }
+  .pg-card-img { height: 260px; position: relative; overflow: hidden; background: #333; }
+  .pg-card-img img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6); transition: transform 0.4s; }
+  .pg-card:hover .pg-card-img img { transform: scale(1.05); }
+  .pg-card-date { position: absolute; top: 18px; left: 18px; background: #f44929; color: #fff; border-radius: 6px; padding: 6px 10px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+  .pg-card-cat { position: absolute; right: 14px; top: 20px; font-size: 11px; color: #fff; background: rgba(0,0,0,0.5); padding: 6px 10px; border-radius: 20px; letter-spacing: 0.5px; }
+  .pg-card-name { position: absolute; bottom: 20px; left: 20px; color: #fff; font-family: 'Barlow Condensed', Impact, sans-serif; font-size: 46px; font-weight: 800; line-height: 0.9; letter-spacing: -1px; }
+  .pg-card-body { padding: 20px; background: #fff; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .pg-card-body h3 { font-size: 16px; font-weight: 700; }
+  .pg-card-body p { font-size: 13px; color: #65675d; line-height: 1.5; flex: 1; }
+  .pg-card-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.07); }
+  .pg-card-foot span { font-size: 12px; color: #999; }
+  .pg-card-price { font-size: 15px; font-weight: 700; color: #f44929; }
+  .pg-empty { text-align: center; padding: 64px 24px; }
+  @media (max-width: 900px) { .pg-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .pg-grid { grid-template-columns: 1fr; } }
+`;
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [priceFilter, setPriceFilter] = useState<'all' | 'free' | 'paid'>('all');
-  const [showFilters, setShowFilters] = useState(false);
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('All');
+  const [dateFilter, setDateFilter] = useState('');
 
-  useEffect(() => {
-    async function fetchEvents() {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const eventsRef = collection(db, 'events');
-        const q = query(
-          eventsRef,
-          where('date', '>=', today),
-          orderBy('date', 'asc')
-        );
-        const snapshot = await getDocs(q);
-        const fetched: EventItem[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as EventItem[];
-        setEvents(fetched);
-      } catch (err) {
-        console.error('Failed to fetch events:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchEvents();
-  }, []);
-
-  const filteredEvents = useMemo(() => {
-    return events.filter((event) => {
-      // Search
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const matchesSearch =
-          event.name.toLowerCase().includes(q) ||
-          event.location.toLowerCase().includes(q) ||
-          event.category.toLowerCase().includes(q) ||
-          (event.organizerName && event.organizerName.toLowerCase().includes(q));
-        if (!matchesSearch) return false;
-      }
-      // Category
-      if (selectedCategory !== 'All' && event.category.toLowerCase() !== selectedCategory.toLowerCase()) {
-        return false;
-      }
-      // Price
-      if (priceFilter === 'free' && event.type !== 'free') return false;
-      if (priceFilter === 'paid' && event.type !== 'paid') return false;
-
-      return true;
-    });
-  }, [events, searchQuery, selectedCategory, priceFilter]);
-
-  const activeFilterCount = (selectedCategory !== 'All' ? 1 : 0) + (priceFilter !== 'all' ? 1 : 0);
+  const filtered = techEvents.filter(ev => {
+    const matchCat = category === 'All' || ev.category === category;
+    const matchQ = !query || ev.name.toLowerCase().includes(query.toLowerCase()) || ev.tag.toLowerCase().includes(query.toLowerCase());
+    const matchDate = !dateFilter || ev.date.includes(dateFilter);
+    return matchCat && matchQ && matchDate;
+  });
 
   return (
-    <div className="min-h-screen bg-[#fefff7]">
-      {/* ── HEADER ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#fefff7]/80 backdrop-blur-xl border-b border-black/5">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-12">
-          <div className="flex items-center justify-between h-[72px]">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2 text-[#86868b] hover:text-[#333] transition-colors">
-                <ArrowLeft size={20} />
-                <span className="text-[14px] font-medium hidden sm:inline">Back to Home</span>
-              </Link>
-              <Link href="/" className="text-[28px] font-extrabold text-[#333] tracking-tight">
-                Tikiti
-              </Link>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/login"
-                className="text-[15px] font-semibold text-[#333] px-5 py-2.5 rounded-full hover:bg-[#f0f0f0] transition-colors hidden sm:block"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="text-[15px] font-semibold text-white bg-[#333] px-6 py-2.5 rounded-full hover:bg-[#1a1a1a] transition-colors"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="pg">
+      <style>{PG}</style>
 
-      {/* ── HERO / SEARCH ── */}
-      <section className="pt-[120px] pb-8 px-6 lg:px-12">
-        <div className="max-w-[1280px] mx-auto">
-          <h1 className="text-[36px] md:text-[56px] font-extrabold text-[#333] leading-tight mb-3">
-            Discover Events
-          </h1>
-          <p className="text-[16px] md:text-[18px] text-[#86868b] mb-8 max-w-[500px]">
-            Browse upcoming events and register directly. No app needed.
+      <header className="pg-header">
+        <Link href="/" style={{ fontSize: 36, fontWeight: 700, letterSpacing: -2.5, color: '#202220' }}>
+          tikiti<span style={{ color: '#f44929' }}>✳</span>
+        </Link>
+        <nav style={{ display: 'flex', gap: 28, alignItems: 'center', fontSize: 14 }}>
+          <Link href="/events" style={{ fontWeight: 600 }}>Discover events</Link>
+          <Link href="/organisers" style={{ color: '#65675d' }}>For organisers ↗</Link>
+          <Link href="/login" style={{ border: '1px solid rgba(0,0,0,0.15)', padding: '10px 18px', borderRadius: 30, fontSize: 13, fontWeight: 600 }}>Sign in</Link>
+        </nav>
+      </header>
+
+      <main className="pg-main">
+        <div className="pg-title">
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 700, color: '#65675d', marginBottom: 10 }}>YOUR PEOPLE ARE OUT THERE</div>
+            <h1 className="pg-display" style={{ fontSize: 'clamp(60px, 8vw, 100px)', fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.88, letterSpacing: -2 }}>
+              Find your<br /><em style={{ fontStyle: 'normal', color: '#f44929' }}>next spark.</em>
+            </h1>
+          </div>
+          <p style={{ fontSize: 15, color: '#65675d', lineHeight: 1.65, maxWidth: 280, paddingBottom: 8 }}>
+            New skills. Fresh perspectives.<br />A room full of possibilities.
           </p>
+        </div>
 
-          {/* Search + Filter Bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search Input */}
-            <div className="flex-1 relative">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#a3a3a3]" />
-              <input
-                type="text"
-                placeholder="Search events, locations, or organizers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#f0f0f0] rounded-full pl-12 pr-4 py-3.5 text-[15px] text-[#333] placeholder-[#a3a3a3] outline-none focus:ring-2 focus:ring-[#333]/10 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#a3a3a3] hover:text-[#333]"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
+        <div className="pg-controls">
+          <label className="pg-search">
+            <span style={{ fontSize: 24, color: '#ccc' }}>⌕</span>
+            <input
+              type="search"
+              placeholder="Search events, topics..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+          </label>
+          <label className="pg-date">
+            <select value={dateFilter} onChange={e => setDateFilter(e.target.value)}>
+              <option value="">Any date</option>
+              <option value="November">November 2026</option>
+              <option value="December">December 2026</option>
+            </select>
+          </label>
+        </div>
 
-            {/* Filter Toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-6 py-3.5 rounded-full text-[15px] font-semibold transition-colors shrink-0 ${
-                showFilters || activeFilterCount > 0
-                  ? 'bg-[#333] text-white'
-                  : 'bg-[#f0f0f0] text-[#333] hover:bg-[#e5e5e5]'
-              }`}
-            >
-              <Filter size={16} />
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="bg-white/20 text-[12px] px-2 py-0.5 rounded-full">{activeFilterCount}</span>
-              )}
+        <div className="pg-cats">
+          {CATEGORIES.map(c => (
+            <button key={c} className={`pg-cat${category === c ? ' active' : ''}`} onClick={() => setCategory(c)}>
+              {c}
             </button>
+          ))}
+        </div>
+
+        <div className="pg-results-heading">
+          <h2>Upcoming events</h2>
+          <span>{filtered.length} event{filtered.length !== 1 ? 's' : ''}</span>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="pg-empty">
+            <div className="pg-display" style={{ fontSize: 48, fontWeight: 800, textTransform: 'uppercase', marginBottom: 12 }}>No events found.</div>
+            <p style={{ color: '#65675d', marginBottom: 24 }}>Try another topic or category.</p>
+            <button className="pg-cat" onClick={() => { setQuery(''); setCategory('All'); setDateFilter(''); }}>Clear filters ↗</button>
           </div>
-
-          {/* Filter Options */}
-          {showFilters && (
-            <div className="mt-4 bg-[#f0f0f0] rounded-[20px] p-6 space-y-5 animate-in slide-in-from-top-2">
-              {/* Category */}
-              <div>
-                <label className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider block mb-3">Category</label>
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-4 py-2 rounded-full text-[13px] font-medium transition-colors ${
-                        selectedCategory === cat
-                          ? 'bg-[#333] text-white'
-                          : 'bg-white text-[#333] hover:bg-[#e5e5e5]'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+        ) : (
+          <div className="pg-grid">
+            {filtered.map(ev => (
+              <Link href={`/events/${ev.id}`} key={ev.id} className="pg-card">
+                <div className="pg-card-img">
+                  <img src={`/assets/photo${ev.photo}.jpg`} alt={ev.name} />
+                  <div className="pg-card-date">{ev.dateShort}</div>
+                  <div className="pg-card-cat">{ev.category}</div>
+                  <div className="pg-card-name" style={{ whiteSpace: 'pre-line' }}>{ev.short}</div>
                 </div>
-              </div>
-
-              {/* Price */}
-              <div>
-                <label className="text-[13px] font-semibold text-[#86868b] uppercase tracking-wider block mb-3">Price</label>
-                <div className="flex gap-2">
-                  {[
-                    { value: 'all', label: 'All Prices' },
-                    { value: 'free', label: 'Free' },
-                    { value: 'paid', label: 'Paid' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setPriceFilter(opt.value as 'all' | 'free' | 'paid')}
-                      className={`px-4 py-2 rounded-full text-[13px] font-medium transition-colors ${
-                        priceFilter === opt.value
-                          ? 'bg-[#333] text-white'
-                          : 'bg-white text-[#333] hover:bg-[#e5e5e5]'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Clear Filters */}
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={() => {
-                    setSelectedCategory('All');
-                    setPriceFilter('all');
-                  }}
-                  className="text-[14px] font-medium text-[#86868b] hover:text-[#333] transition-colors"
-                >
-                  Clear all filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── RESULTS COUNT ── */}
-      <section className="px-6 lg:px-12 pb-4">
-        <div className="max-w-[1280px] mx-auto">
-          {!loading && (
-            <p className="text-[14px] text-[#86868b]">
-              {filteredEvents.length} {filteredEvents.length === 1 ? 'event' : 'events'} found
-              {searchQuery && <> for &ldquo;{searchQuery}&rdquo;</>}
-              {selectedCategory !== 'All' && <> in {selectedCategory}</>}
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* ── EVENTS GRID ── */}
-      <section className="px-6 lg:px-12 pb-24">
-        <div className="max-w-[1280px] mx-auto">
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-[#f0f0f0] rounded-[24px] overflow-hidden animate-pulse">
-                  <div className="h-[200px] bg-[#e5e5e5]" />
-                  <div className="p-6 space-y-3">
-                    <div className="h-4 bg-[#e5e5e5] rounded-full w-1/3" />
-                    <div className="h-6 bg-[#e5e5e5] rounded-full w-3/4" />
-                    <div className="h-4 bg-[#e5e5e5] rounded-full w-1/2" />
-                    <div className="flex justify-between">
-                      <div className="h-4 bg-[#e5e5e5] rounded-full w-1/4" />
-                      <div className="h-4 bg-[#e5e5e5] rounded-full w-1/5" />
-                    </div>
+                <div className="pg-card-body">
+                  <h3>{ev.name}</h3>
+                  <p>{ev.intro}</p>
+                  <div className="pg-card-foot">
+                    <span>{ev.venue}</span>
+                    <span className="pg-card-price">{ev.price === 0 ? 'Free' : `₵${ev.price}`}</span>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : filteredEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredEvents.map((event) => {
-                const relativeLabel = getRelativeDateLabel(event.date);
-                return (
-                  <Link
-                    key={event.id}
-                    href={`/event/${event.id}`}
-                    className="bg-[#f0f0f0] rounded-[24px] overflow-hidden hover:shadow-lg transition-all duration-300 group"
-                  >
-                    {/* Event Image */}
-                    <div className="h-[200px] bg-[#e5e5e5] relative overflow-hidden">
-                      {(event.imageUrl || event.imageBase64) ? (
-                        <img
-                          src={event.imageUrl || event.imageBase64}
-                          alt={event.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-[#333]">
-                          <Calendar size={48} className="text-white/20" />
-                        </div>
-                      )}
-                      {/* Price Badge */}
-                      <div className="absolute top-4 right-4">
-                        <span className="bg-white/90 backdrop-blur-sm text-[#333] text-[13px] font-semibold px-3 py-1.5 rounded-full">
-                          {event.type === 'free' ? 'Free' : `KES ${event.price?.toLocaleString()}`}
-                        </span>
-                      </div>
-                      {/* Category Badge */}
-                      <div className="absolute top-4 left-4">
-                        <span className="bg-[#333]/70 backdrop-blur-sm text-white text-[12px] font-medium px-3 py-1.5 rounded-full">
-                          {event.category}
-                        </span>
-                      </div>
-                      {/* Relative Date Label */}
-                      {relativeLabel && (
-                        <div className="absolute bottom-4 left-4">
-                          <span className="bg-white/90 backdrop-blur-sm text-[#333] text-[12px] font-bold px-3 py-1.5 rounded-full">
-                            {relativeLabel}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Event Info */}
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 text-[13px] text-[#86868b] font-medium mb-2">
-                        <Calendar size={13} />
-                        <span>{formatEventDate(event.date)}</span>
-                        <span className="text-[#d4d4d4]">&middot;</span>
-                        <Clock size={13} />
-                        <span>{formatEventTime(event.time)}</span>
-                      </div>
-                      <h3 className="text-[18px] font-bold text-[#333] mb-2 line-clamp-2 group-hover:text-[#1a1a1a]">
-                        {event.name}
-                      </h3>
-                      <div className="flex items-center gap-1.5 text-[13px] text-[#86868b] mb-1">
-                        <MapPin size={13} />
-                        <span className="truncate">{event.location}</span>
-                      </div>
-                      {event.venueType && event.venueType !== 'in_person' && (
-                        <div className="flex items-center gap-1.5 text-[12px] text-[#a3a3a3] mb-3">
-                          <Globe size={12} />
-                          <span>{event.venueType === 'hybrid' ? 'Hybrid event' : 'Virtual event'}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-black/5">
-                        <div className="flex items-center gap-1.5 text-[12px] text-[#a3a3a3]">
-                          <Ticket size={12} />
-                          <span>{event.availableTickets > 0 ? `${event.availableTickets} spots left` : 'Sold out'}</span>
-                        </div>
-                        <span className="text-[13px] font-semibold text-[#333] flex items-center gap-1 group-hover:gap-2 transition-all">
-                          Register <ArrowRight size={14} />
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-20 bg-[#f0f0f0] rounded-[32px]">
-              <div className="w-[64px] h-[64px] bg-white rounded-[20px] flex items-center justify-center mx-auto mb-5">
-                <Search size={28} className="text-[#a3a3a3]" />
-              </div>
-              <h3 className="text-[20px] font-bold text-[#333] mb-2">No events found</h3>
-              <p className="text-[15px] text-[#86868b] max-w-[400px] mx-auto mb-6">
-                {searchQuery || selectedCategory !== 'All' || priceFilter !== 'all'
-                  ? 'Try adjusting your search or filters to find what you\'re looking for.'
-                  : 'There are no upcoming events at the moment. Check back soon!'}
-              </p>
-              {(searchQuery || selectedCategory !== 'All' || priceFilter !== 'all') && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('All');
-                    setPriceFilter('all');
-                  }}
-                  className="inline-flex items-center gap-2 bg-[#333] text-white text-[15px] font-semibold px-6 py-3 rounded-full hover:bg-[#1a1a1a] transition-colors"
-                >
-                  Clear all filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── FOOTER ── */}
-      <footer className="bg-[#333] py-12 px-6 lg:px-12">
-        <div className="max-w-[1280px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <Link href="/" className="text-[24px] font-extrabold text-white">Tikiti</Link>
-          <p className="text-[13px] text-white/30">&copy; {new Date().getFullYear()} Tikiti. All rights reserved.</p>
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-[13px] text-white/40 hover:text-white transition-colors">Home</Link>
-            <Link href="/login" className="text-[13px] text-white/40 hover:text-white transition-colors">Sign In</Link>
-            <Link href="/register" className="text-[13px] text-white/40 hover:text-white transition-colors">Get Started</Link>
+              </Link>
+            ))}
           </div>
-        </div>
+        )}
+      </main>
+
+      <footer style={{ background: '#faf9f2', padding: '40px 5%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(0,0,0,0.08)', flexWrap: 'wrap', gap: 12 }}>
+        <Link href="/" style={{ fontSize: 26, fontWeight: 700, letterSpacing: -1.5, color: '#202220' }}>tikiti<span style={{ color: '#f44929' }}>✳</span></Link>
+        <span style={{ fontSize: 13, color: '#65675d' }}>Good ideas start with people.</span>
+        <span style={{ fontSize: 12, color: '#999' }}>© 2026 Tikiti</span>
       </footer>
     </div>
   );
