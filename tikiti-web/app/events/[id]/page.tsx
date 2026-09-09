@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { techEvents } from '@/data/techEvents';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 
 const PG = `
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -33,6 +34,10 @@ const PG = `
   /* Main */
   .detail-main { max-width: 1440px; margin: 0 auto; padding: 30px 5% 75px; }
   .back-link { display: inline-block; font-size: 14px; color: var(--muted); margin: 4px 0 32px; }
+
+  /* Loading / skeleton */
+  .skeleton-block { background: linear-gradient(90deg, #e8e8e0 25%, #f0f0e8 50%, #e8e8e0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
   /* Hero grid */
   .event-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 6%; align-items: center; overflow: visible; }
@@ -93,20 +98,11 @@ const PG = `
   .ticket-panel h2 { font-family: var(--display); font-size: 35px; font-weight: 700; line-height: 1; }
   .ticket-panel fieldset { border: 0; padding: 0; margin: 28px 0 20px; }
   .ticket-panel legend { font-size: 13px; margin-bottom: 13px; color: rgba(255,255,255,0.7); }
-  .ticket-option { display: flex; align-items: flex-start; gap: 10px; border: 1px solid var(--accent); padding: 16px; border-radius: 7px; cursor: pointer; }
-  .ticket-option input { accent-color: var(--accent); margin: 4px 0; flex-shrink: 0; }
-  .ticket-option strong { display: block; font-size: 14px; }
-  .ticket-option small { display: block; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,0.5); margin-top: 5px; }
-  .ticket-option b { white-space: nowrap; font-size: 13px; margin-left: auto; }
   .quantity-row, .total-row { display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
   .quantity-row { color: rgba(255,255,255,0.7); }
   .quantity-row select { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px 12px; border-radius: 6px; font: inherit; }
   .total-row { border-top: 1px solid rgba(255,255,255,0.1); margin-top: 22px; padding: 20px 0; }
   .total-row strong { font-size: 22px; }
-  .reserve { width: 100%; height: 52px; background: var(--accent); color: #fff; border: 0; border-radius: 40px; font: 700 15px 'DM Sans', sans-serif; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; transition: transform 0.2s; }
-  .reserve:hover { transform: translateY(-2px); }
-  .ticket-note { font-size: 11px; text-align: center; color: rgba(255,255,255,0.35); margin-top: 14px; }
-  .ticket-bottom { border-top: 1px dashed rgba(255,255,255,0.12); margin: 25px -28px -6px; padding: 23px 28px 0; font-size: 12px; text-align: center; color: rgba(255,255,255,0.35); line-height: 1.6; }
 
   /* Bottom CTA */
   .all-bottom { display: flex; justify-content: space-between; font-family: var(--display); font-size: 45px; font-weight: 600; border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); padding: 28px 0; margin-top: 60px; }
@@ -126,13 +122,92 @@ const PG = `
   }
 `;
 
+interface AgendaItem {
+  time?: string;
+  startTime?: string;
+  title?: string;
+  name?: string;
+  description?: string;
+  desc?: string;
+}
+
+interface FirestoreEventDetail {
+  name: string;
+  category: string;
+  description: string;
+  location: string;
+  address?: string;
+  date: string;
+  time: string;
+  endDate?: string;
+  type: string;
+  ticketPrice?: number;
+  price?: number;
+  coverImage?: string;
+  imageUrl?: string;
+  status: string;
+  organizerName?: string;
+  program?: { sessions?: AgendaItem[] };
+  agenda?: AgendaItem[];
+  venueType?: string;
+}
+
+function formatDateLong(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function getShortName(name: string): string {
+  const words = name.toUpperCase().split(' ');
+  if (words.length <= 2) return words.join('\n');
+  const mid = Math.ceil(words.length / 2);
+  return words.slice(0, mid).join(' ') + '\n' + words.slice(mid).join(' ');
+}
+
+function getAgenda(ev: FirestoreEventDetail): AgendaItem[] {
+  if (ev.agenda && Array.isArray(ev.agenda) && ev.agenda.length > 0) return ev.agenda;
+  if (ev.program?.sessions && ev.program.sessions.length > 0) return ev.program.sessions;
+  return [];
+}
+
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const ev = techEvents.find(e => e.id === id);
-  if (!ev) notFound();
-
+  const [ev, setEv] = useState<FirestoreEventDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [missing, setMissing] = useState(false);
   const [qty, setQty] = useState(1);
-  const total = ev.price * qty;
+
+  useEffect(() => {
+    async function fetchEvent() {
+      try {
+        const snap = await getDoc(doc(db, 'events', id));
+        if (!snap.exists()) {
+          setMissing(true);
+        } else {
+          setEv(snap.data() as FirestoreEventDetail);
+        }
+      } catch (err) {
+        console.error('Failed to fetch event:', err);
+        setMissing(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEvent();
+  }, [id]);
+
+  if (missing) {
+    notFound();
+  }
+
+  const price = ev ? (ev.type === 'free' ? 0 : (ev.ticketPrice ?? ev.price ?? 0)) : 0;
+  const total = price * qty;
+  const agenda = ev ? getAgenda(ev) : [];
+  const imgSrc = ev ? (ev.coverImage || ev.imageUrl || '') : '';
+  const shortName = ev ? getShortName(ev.name) : '';
+  const category = ev?.category ?? '';
+  const intro = ev ? (ev.description?.split('\n')[0] ?? '') : '';
 
   return (
     <>
@@ -150,156 +225,176 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       <main className="detail-main">
         <Link href="/events" className="back-link">← Back to events</Link>
 
-        {/* Hero */}
-        <section className="event-hero">
-          <div className="event-art">
-            <img src={`/assets/photo${ev.photo}.jpg`} alt={ev.name} />
-            <div className="event-art-copy">
-              <span>{ev.tag}</span>
-              <strong style={{ whiteSpace: 'pre-line' }}>{ev.short}</strong>
-              <div className="art-bottom">
-                <span>IDEAS ARE BETTER<br />WHEN WE&apos;RE TOGETHER.</span>
-                <b>↗</b>
-              </div>
-            </div>
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div className="skeleton-block" style={{ height: 510, width: '100%' }} />
+            <div className="skeleton-block" style={{ height: 32, width: '60%' }} />
+            <div className="skeleton-block" style={{ height: 20, width: '40%' }} />
           </div>
-
-          <div className="event-overview">
-            <span className="eyebrow">{ev.label}</span>
-            <h1>{ev.name}</h1>
-            <p className="event-intro">{ev.intro}</p>
-            <div className="event-facts">
-              <div>
-                <span>WHEN</span>
-                <strong>{ev.date}</strong>
-                <p>{ev.time}</p>
-              </div>
-              <div>
-                <span>WHERE</span>
-                <strong>{ev.venue}</strong>
-                <p>In person</p>
-              </div>
-            </div>
-            <div className="host-line">
-              <span className="host-avatar">TB</span>
-              <span>Hosted by<br /><b>Tikiti Builders Community</b></span>
-            </div>
-          </div>
-        </section>
-
-        {/* Body */}
-        <div className="event-body">
-          <div className="event-editorial">
-            <nav className="detail-nav">
-              <a href="#about">Overview</a>
-              <a href="#agenda">Agenda</a>
-              <a href="#speakers">Speakers</a>
-              <a href="#know">Good to know</a>
-            </nav>
-
-            <section id="about">
-              <span className="eyebrow">THE IDEA</span>
-              <h2>Be part of the conversation.</h2>
-              <p>{ev.about}</p>
-              <p>{ev.audience}</p>
-            </section>
-
-            {ev.agenda && ev.agenda.length > 0 && (
-              <section id="agenda">
-                <span className="eyebrow">YOUR DAY, AT A GLANCE</span>
-                <h2>The programme.</h2>
-                {ev.agenda.map(([time, title, desc]) => (
-                  <div key={time} className="agenda-row">
-                    <time>{time}</time>
-                    <div>
-                      <h3>{title}</h3>
-                      <p>{desc}</p>
-                    </div>
+        ) : ev ? (
+          <>
+            {/* Hero */}
+            <section className="event-hero">
+              <div className="event-art">
+                {imgSrc ? (
+                  <img src={imgSrc} alt={ev.name} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: '#2a2a2a' }} />
+                )}
+                <div className="event-art-copy">
+                  <span>{category.toUpperCase()}</span>
+                  <strong style={{ whiteSpace: 'pre-line' }}>{shortName}</strong>
+                  <div className="art-bottom">
+                    <span>IDEAS ARE BETTER<br />WHEN WE&apos;RE TOGETHER.</span>
+                    <b>↗</b>
                   </div>
-                ))}
-              </section>
-            )}
+                </div>
+              </div>
 
-            <section id="speakers">
-              <span className="eyebrow">PEOPLE BEHIND THE IDEAS</span>
-              <h2>Speakers &amp; facilitators.</h2>
-              <p>The speaker lineup will be announced here.</p>
-              <div className="speaker-placeholder">
-                <span>↗</span>
-                <div>
-                  <strong>Fresh perspectives. Practical experience.</strong>
-                  <p>Hear from the people doing the work.</p>
+              <div className="event-overview">
+                <span className="eyebrow">{category.toUpperCase()} · {(ev.location ?? 'ACCRA').toUpperCase()}</span>
+                <h1>{ev.name}</h1>
+                <p className="event-intro">{intro}</p>
+                <div className="event-facts">
+                  <div>
+                    <span>WHEN</span>
+                    <strong>{formatDateLong(ev.date)}</strong>
+                    <p>{ev.time}{ev.endDate && ev.endDate !== ev.date ? ` – ends ${formatDateLong(ev.endDate)}` : ''}</p>
+                  </div>
+                  <div>
+                    <span>WHERE</span>
+                    <strong>{ev.location || 'Accra · venue to be announced'}</strong>
+                    <p>{ev.venueType === 'virtual' ? 'Online' : ev.venueType === 'hybrid' ? 'In person & online' : 'In person'}</p>
+                  </div>
+                </div>
+                <div className="host-line">
+                  <span className="host-avatar">{(ev.organizerName ?? 'TB').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</span>
+                  <span>Hosted by<br /><b>{ev.organizerName || 'Tikiti Builders Community'}</b></span>
                 </div>
               </div>
             </section>
 
-            <section id="know">
-              <span className="eyebrow">BEFORE YOU COME</span>
-              <h2>A few useful details.</h2>
-              <details>
-                <summary>What should I bring?</summary>
-                <p>Bring your ticket confirmation. For a hands-on workshop, bring a charged laptop and your charger.</p>
-              </details>
-              <details>
-                <summary>Where can I find venue and access details?</summary>
-                <p>The confirmed venue, directions, and accessibility information will appear here before the event.</p>
-              </details>
-              <details>
-                <summary>Is there a refund policy?</summary>
-                <p>Refunds are available up to 7 days before the event. After that, tickets can be transferred to another attendee.</p>
-              </details>
-            </section>
-          </div>
+            {/* Body */}
+            <div className="event-body">
+              <div className="event-editorial">
+                <nav className="detail-nav">
+                  <a href="#about">Overview</a>
+                  <a href="#agenda">Agenda</a>
+                  <a href="#speakers">Speakers</a>
+                  <a href="#know">Good to know</a>
+                </nav>
 
-          {/* Ticket panel */}
-          <aside id="tickets" style={{ position: 'sticky', top: 100, padding: 28, borderRadius: 0, background: '#f5ee3d', color: '#202220', border: '2px solid #202220', boxShadow: '7px 7px 0 #202220' }}>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 10, letterSpacing: 2, color: 'rgba(32,34,32,0.5)', marginBottom: 10 }}>YOUR SEAT IN THE ROOM</div>
-              <h2 style={{ fontFamily: "'Barlow Condensed', Impact, sans-serif", fontSize: 35, fontWeight: 700, lineHeight: 1, color: '#202220' }}>Make it a plan.</h2>
-            </div>
+                <section id="about">
+                  <span className="eyebrow">THE IDEA</span>
+                  <h2>Be part of the conversation.</h2>
+                  {ev.description?.split('\n').filter(Boolean).map((para, i) => (
+                    <p key={i}>{para}</p>
+                  ))}
+                </section>
 
-            <fieldset style={{ border: 0, padding: 0, margin: '28px 0 20px' }}>
-              <legend style={{ fontSize: 13, marginBottom: 13, color: '#65675d' }}>Choose your ticket</legend>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, border: '1px solid #202220', padding: 16, borderRadius: 0, cursor: 'pointer', background: 'rgba(255,255,255,0.6)' }}>
-                <input type="radio" name="ticket" value="general" defaultChecked style={{ accentColor: '#f44929', marginTop: 4, flexShrink: 0 }} />
-                <span style={{ flex: 1 }}>
-                  <strong style={{ display: 'block', fontSize: 14, color: '#202220' }}>General admission</strong>
-                  <small style={{ display: 'block', fontSize: 12, lineHeight: 1.5, color: '#65675d', marginTop: 5 }}>Access to all scheduled sessions</small>
-                </span>
-                <b style={{ whiteSpace: 'nowrap', fontSize: 13, color: '#202220' }}>{ev.price === 0 ? 'Free' : `₵${ev.price}`}</b>
-              </label>
-            </fieldset>
+                {agenda.length > 0 && (
+                  <section id="agenda">
+                    <span className="eyebrow">YOUR DAY, AT A GLANCE</span>
+                    <h2>The programme.</h2>
+                    {agenda.map((item, i) => {
+                      const time = item.time || item.startTime || '';
+                      const title = item.title || item.name || '';
+                      const desc = item.description || item.desc || '';
+                      return (
+                        <div key={i} className="agenda-row">
+                          <time>{time}</time>
+                          <div>
+                            <h3>{title}</h3>
+                            {desc && <p>{desc}</p>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </section>
+                )}
 
-            {ev.price > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14, color: '#65675d', marginBottom: 16 }}>
-                <label htmlFor="qty">Tickets</label>
-                <select id="qty" value={qty} onChange={e => setQty(Number(e.target.value))} style={{ background: '#fff', color: '#202220', border: '1px solid #202220', padding: '10px 12px', borderRadius: 4, font: 'inherit' }}>
-                  {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} ticket{n > 1 ? 's' : ''}</option>)}
-                </select>
+                <section id="speakers">
+                  <span className="eyebrow">PEOPLE BEHIND THE IDEAS</span>
+                  <h2>Speakers &amp; facilitators.</h2>
+                  <p>The speaker lineup will be announced here.</p>
+                  <div className="speaker-placeholder">
+                    <span>↗</span>
+                    <div>
+                      <strong>Fresh perspectives. Practical experience.</strong>
+                      <p>Hear from the people doing the work.</p>
+                    </div>
+                  </div>
+                </section>
+
+                <section id="know">
+                  <span className="eyebrow">BEFORE YOU COME</span>
+                  <h2>A few useful details.</h2>
+                  <details>
+                    <summary>What should I bring?</summary>
+                    <p>Bring your ticket confirmation. For a hands-on workshop, bring a charged laptop and your charger.</p>
+                  </details>
+                  <details>
+                    <summary>Where can I find venue and access details?</summary>
+                    <p>The confirmed venue, directions, and accessibility information will appear here before the event.</p>
+                  </details>
+                  <details>
+                    <summary>Is there a refund policy?</summary>
+                    <p>Refunds are available up to 7 days before the event. After that, tickets can be transferred to another attendee.</p>
+                  </details>
+                </section>
               </div>
-            )}
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14, borderTop: '1px solid rgba(32,34,32,0.15)', marginTop: 22, padding: '20px 0', color: '#202220' }}>
-              <span>Total</span>
-              <strong style={{ fontSize: 22, color: '#202220' }}>{ev.price === 0 ? 'Free' : `₵${total}`}</strong>
+              {/* Ticket panel */}
+              <aside id="tickets" style={{ position: 'sticky', top: 100, padding: 28, borderRadius: 0, background: '#f5ee3d', color: '#202220', border: '2px solid #202220', boxShadow: '7px 7px 0 #202220' }}>
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, letterSpacing: 2, color: 'rgba(32,34,32,0.5)', marginBottom: 10 }}>YOUR SEAT IN THE ROOM</div>
+                  <h2 style={{ fontFamily: "'Barlow Condensed', Impact, sans-serif", fontSize: 35, fontWeight: 700, lineHeight: 1, color: '#202220' }}>Make it a plan.</h2>
+                </div>
+
+                <fieldset style={{ border: 0, padding: 0, margin: '28px 0 20px' }}>
+                  <legend style={{ fontSize: 13, marginBottom: 13, color: '#65675d' }}>Choose your ticket</legend>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, border: '1px solid #202220', padding: 16, borderRadius: 0, cursor: 'pointer', background: 'rgba(255,255,255,0.6)' }}>
+                    <input type="radio" name="ticket" value="general" defaultChecked style={{ accentColor: '#f44929', marginTop: 4, flexShrink: 0 }} />
+                    <span style={{ flex: 1 }}>
+                      <strong style={{ display: 'block', fontSize: 14, color: '#202220' }}>General admission</strong>
+                      <small style={{ display: 'block', fontSize: 12, lineHeight: 1.5, color: '#65675d', marginTop: 5 }}>Access to all scheduled sessions</small>
+                    </span>
+                    <b style={{ whiteSpace: 'nowrap', fontSize: 13, color: '#202220' }}>{price === 0 ? 'Free' : `₵${price}`}</b>
+                  </label>
+                </fieldset>
+
+                {price > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14, color: '#65675d', marginBottom: 16 }}>
+                    <label htmlFor="qty">Tickets</label>
+                    <select id="qty" value={qty} onChange={e => setQty(Number(e.target.value))} style={{ background: '#fff', color: '#202220', border: '1px solid #202220', padding: '10px 12px', borderRadius: 4, font: 'inherit' }}>
+                      {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} ticket{n > 1 ? 's' : ''}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14, borderTop: '1px solid rgba(32,34,32,0.15)', marginTop: 22, padding: '20px 0', color: '#202220' }}>
+                  <span>Total</span>
+                  <strong style={{ fontSize: 22, color: '#202220' }}>{price === 0 ? 'Free' : `₵${total}`}</strong>
+                </div>
+
+                <Link href="/register">
+                  <button style={{ width: '100%', height: 52, background: '#f44929', color: '#fff', border: 0, borderRadius: 40, font: "700 15px 'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', cursor: 'pointer', transition: 'transform 0.2s' }}>
+                    <span>{price === 0 ? 'Register free' : 'Get tickets'}</span>
+                    <span>↗</span>
+                  </button>
+                </Link>
+
+                <p style={{ fontSize: 11, textAlign: 'center', color: 'rgba(32,34,32,0.45)', marginTop: 14 }}>{price > 0 ? 'Secure payment via Paystack · Instant confirmation' : 'No payment required'}</p>
+                <div style={{ borderTop: '1px dashed rgba(32,34,32,0.2)', margin: '25px -28px -6px', padding: '23px 28px 0', fontSize: 12, textAlign: 'center', color: 'rgba(32,34,32,0.45)', lineHeight: 1.6 }}>Your next connection starts here.</div>
+              </aside>
             </div>
 
-            <Link href="/register">
-              <button style={{ width: '100%', height: 52, background: '#f44929', color: '#fff', border: 0, borderRadius: 40, font: "700 15px 'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', cursor: 'pointer', transition: 'transform 0.2s' }}>
-                <span>{ev.price === 0 ? 'Register free' : 'Get tickets'}</span>
-                <span>↗</span>
-              </button>
+            <Link href="/events" className="all-bottom">
+              <span>Find your next event</span>
+              <span>↗</span>
             </Link>
-
-            <p style={{ fontSize: 11, textAlign: 'center', color: 'rgba(32,34,32,0.45)', marginTop: 14 }}>{ev.price > 0 ? 'Secure payment via Paystack · Instant confirmation' : 'No payment required'}</p>
-            <div style={{ borderTop: '1px dashed rgba(32,34,32,0.2)', margin: '25px -28px -6px', padding: '23px 28px 0', fontSize: 12, textAlign: 'center', color: 'rgba(32,34,32,0.45)', lineHeight: 1.6 }}>Your next connection starts here.</div>
-          </aside>
-        </div>
-
-        <Link href="/events" className="all-bottom">
-          <span>Find your next event</span>
-          <span>↗</span>
-        </Link>
+          </>
+        ) : null}
       </main>
 
       <footer style={{ margin: '0 5%', padding: '25px 0 36px', borderTop: '1px solid rgba(32,34,32,0.13)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: '#65675d', flexWrap: 'wrap', gap: 12 }}>
@@ -309,10 +404,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       </footer>
 
       {/* Mobile sticky bar */}
-      <div className="mobile-ticket">
-        <span>{ev.price === 0 ? 'Free' : `₵${ev.price}`}</span>
-        <a href="#tickets">Choose ticket ↗</a>
-      </div>
+      {ev && (
+        <div className="mobile-ticket">
+          <span>{price === 0 ? 'Free' : `₵${price}`}</span>
+          <a href="#tickets">Choose ticket ↗</a>
+        </div>
+      )}
     </>
   );
 }

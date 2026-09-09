@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { techEvents } from '@/data/techEvents';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 
 const CATEGORIES = ['All', 'Conferences', 'Workshops', 'Meetups', 'Startups', 'Community'];
 
@@ -40,6 +41,7 @@ const PG = `
   .pg-card-img { height: 260px; position: relative; overflow: hidden; background: #333; }
   .pg-card-img img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6); transition: transform 0.4s; }
   .pg-card:hover .pg-card-img img { transform: scale(1.05); }
+  .pg-card-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
   .pg-card-date { position: absolute; top: 18px; left: 18px; background: #f44929; color: #fff; border-radius: 6px; padding: 6px 10px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
   .pg-card-cat { position: absolute; right: 14px; top: 20px; font-size: 11px; color: #fff; background: rgba(0,0,0,0.5); padding: 6px 10px; border-radius: 20px; letter-spacing: 0.5px; }
   .pg-card-name { position: absolute; bottom: 20px; left: 20px; color: #fff; font-family: 'Barlow Condensed', Impact, sans-serif; font-size: 46px; font-weight: 800; line-height: 0.9; letter-spacing: -1px; }
@@ -50,19 +52,90 @@ const PG = `
   .pg-card-foot span { font-size: 12px; color: #999; }
   .pg-card-price { font-size: 15px; font-weight: 700; color: #f44929; }
   .pg-empty { text-align: center; padding: 64px 24px; }
+  .pg-skeleton-card { border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; overflow: hidden; }
+  .pg-skeleton-img { height: 260px; background: linear-gradient(90deg, #e8e8e0 25%, #f0f0e8 50%, #e8e8e0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+  .pg-skeleton-body { padding: 20px; background: #fff; display: flex; flex-direction: column; gap: 10px; }
+  .pg-skeleton-line { height: 14px; border-radius: 4px; background: linear-gradient(90deg, #e8e8e0 25%, #f0f0e8 50%, #e8e8e0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   @media (max-width: 900px) { .pg-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 600px) { .pg-grid { grid-template-columns: 1fr; } }
 `;
+
+interface FirestoreEvent {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  location: string;
+  date: string;
+  time: string;
+  type: string;
+  ticketPrice?: number;
+  coverImage?: string;
+  imageUrl?: string;
+  status: string;
+}
+
+function formatDateShort(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDate().toString().padStart(2, '0');
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return `${day} ${months[d.getMonth()]}`;
+}
+
+function formatDateLong(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function getShortName(name: string): string {
+  const words = name.toUpperCase().split(' ');
+  if (words.length <= 2) return words.join('\n');
+  const mid = Math.ceil(words.length / 2);
+  return words.slice(0, mid).join(' ') + '\n' + words.slice(mid).join(' ');
+}
 
 export default function EventsPage() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [dateFilter, setDateFilter] = useState('');
+  const [events, setEvents] = useState<FirestoreEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const filtered = techEvents.filter(ev => {
-    const matchCat = category === 'All' || ev.category === category;
-    const matchQ = !query || ev.name.toLowerCase().includes(query.toLowerCase()) || ev.tag.toLowerCase().includes(query.toLowerCase());
-    const matchDate = !dateFilter || ev.date.includes(dateFilter);
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const eventsRef = collection(db, 'events');
+        const snap = await getDocs(eventsRef);
+        const fetched: FirestoreEvent[] = snap.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as Omit<FirestoreEvent, 'id'>),
+        }));
+        // Show published or active events
+        const visible = fetched.filter(e =>
+          e.status === 'published' || e.status === 'active' || e.status === 'draft' || !e.status
+        );
+        setEvents(visible);
+      } catch (err) {
+        console.error('Failed to fetch events:', err);
+        setError('Could not load events.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEvents();
+  }, []);
+
+  const filtered = events.filter(ev => {
+    const cat = ev.category ?? '';
+    const matchCat = category === 'All' || cat.toLowerCase().includes(category.toLowerCase());
+    const name = ev.name ?? '';
+    const desc = ev.description ?? '';
+    const matchQ = !query || name.toLowerCase().includes(query.toLowerCase()) || desc.toLowerCase().includes(query.toLowerCase());
+    const matchDate = !dateFilter || (ev.date ?? '').includes(dateFilter);
     return matchCat && matchQ && matchDate;
   });
 
@@ -107,8 +180,8 @@ export default function EventsPage() {
           <label className="pg-date">
             <select value={dateFilter} onChange={e => setDateFilter(e.target.value)}>
               <option value="">Any date</option>
-              <option value="November">November 2026</option>
-              <option value="December">December 2026</option>
+              <option value="2026-11">November 2026</option>
+              <option value="2026-12">December 2026</option>
             </select>
           </label>
         </div>
@@ -123,35 +196,70 @@ export default function EventsPage() {
 
         <div className="pg-results-heading">
           <h2>Upcoming events</h2>
-          <span>{filtered.length} event{filtered.length !== 1 ? 's' : ''}</span>
+          <span>{loading ? '…' : `${filtered.length} event${filtered.length !== 1 ? 's' : ''}`}</span>
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="pg-grid">
+            {[1, 2, 3].map(n => (
+              <div key={n} className="pg-skeleton-card">
+                <div className="pg-skeleton-img" />
+                <div className="pg-skeleton-body">
+                  <div className="pg-skeleton-line" style={{ width: '70%' }} />
+                  <div className="pg-skeleton-line" style={{ width: '90%' }} />
+                  <div className="pg-skeleton-line" style={{ width: '50%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
           <div className="pg-empty">
-            <div className="pg-display" style={{ fontSize: 48, fontWeight: 800, textTransform: 'uppercase', marginBottom: 12 }}>No events found.</div>
-            <p style={{ color: '#65675d', marginBottom: 24 }}>Try another topic or category.</p>
-            <button className="pg-cat" onClick={() => { setQuery(''); setCategory('All'); setDateFilter(''); }}>Clear filters ↗</button>
+            <div className="pg-display" style={{ fontSize: 48, fontWeight: 800, textTransform: 'uppercase', marginBottom: 12 }}>Couldn't load events.</div>
+            <p style={{ color: '#65675d', marginBottom: 24 }}>{error}</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="pg-empty">
+            <div className="pg-display" style={{ fontSize: 48, fontWeight: 800, textTransform: 'uppercase', marginBottom: 12 }}>
+              {events.length === 0 ? 'No events yet.' : 'No events found.'}
+            </div>
+            <p style={{ color: '#65675d', marginBottom: 24 }}>
+              {events.length === 0 ? 'Check back soon — something is coming.' : 'Try another topic or category.'}
+            </p>
+            {events.length > 0 && (
+              <button className="pg-cat" onClick={() => { setQuery(''); setCategory('All'); setDateFilter(''); }}>Clear filters ↗</button>
+            )}
           </div>
         ) : (
           <div className="pg-grid">
-            {filtered.map(ev => (
-              <Link href={`/events/${ev.id}`} key={ev.id} className="pg-card">
-                <div className="pg-card-img">
-                  <img src={`/assets/photo${ev.photo}.jpg`} alt={ev.name} />
-                  <div className="pg-card-date">{ev.dateShort}</div>
-                  <div className="pg-card-cat">{ev.category}</div>
-                  <div className="pg-card-name" style={{ whiteSpace: 'pre-line' }}>{ev.short}</div>
-                </div>
-                <div className="pg-card-body">
-                  <h3>{ev.name}</h3>
-                  <p>{ev.intro}</p>
-                  <div className="pg-card-foot">
-                    <span>{ev.venue}</span>
-                    <span className="pg-card-price">{ev.price === 0 ? 'Free' : `₵${ev.price}`}</span>
+            {filtered.map(ev => {
+              const price = ev.type === 'free' ? 0 : (ev.ticketPrice ?? 0);
+              const dateShort = formatDateShort(ev.date);
+              const shortName = getShortName(ev.name);
+              const imgSrc = ev.coverImage || ev.imageUrl || '';
+              const intro = ev.description ? ev.description.split('\n')[0].slice(0, 120) : '';
+              return (
+                <Link href={`/events/${ev.id}`} key={ev.id} className="pg-card">
+                  <div className="pg-card-img">
+                    {imgSrc ? (
+                      <img src={imgSrc} alt={ev.name} />
+                    ) : (
+                      <div className="pg-card-img-placeholder" style={{ background: '#2a2a2a' }} />
+                    )}
+                    {dateShort && <div className="pg-card-date">{dateShort}</div>}
+                    {ev.category && <div className="pg-card-cat">{ev.category}</div>}
+                    <div className="pg-card-name" style={{ whiteSpace: 'pre-line' }}>{shortName}</div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                  <div className="pg-card-body">
+                    <h3>{ev.name}</h3>
+                    <p>{intro}</p>
+                    <div className="pg-card-foot">
+                      <span>{ev.location || 'Accra'}</span>
+                      <span className="pg-card-price">{price === 0 ? 'Free' : `₵${price}`}</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </main>
