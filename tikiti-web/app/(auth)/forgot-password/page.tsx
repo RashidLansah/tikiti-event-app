@@ -3,7 +3,39 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { Ticket, ArrowLeft, Mail, Check } from 'lucide-react';
+
+const PG_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
+  .pg-auth { font-family: 'DM Sans', Arial, sans-serif; }
+  .pg-display { font-family: 'Barlow Condensed', Impact, sans-serif; }
+  .pg-input {
+    width: 100%; height: 52px; padding: 0 16px;
+    background: rgba(0,0,0,0.06); border: 1.5px solid transparent;
+    border-radius: 12px; font-size: 15px; font-family: 'DM Sans', sans-serif;
+    color: #202220; outline: none; transition: border-color 0.15s;
+  }
+  .pg-input:focus { border-color: #f44929; background: #fff; }
+  .pg-input::placeholder { color: #999; }
+  .pg-input:disabled { opacity: 0.5; }
+  .pg-btn {
+    width: 100%; height: 52px; background: #f44929; color: #fff;
+    border: none; border-radius: 40px; font-size: 15px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; transition: transform 0.15s, opacity 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .pg-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .pg-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .pg-btn-ghost {
+    width: 100%; height: 52px; background: transparent; color: #202220;
+    border: 1.5px solid rgba(0,0,0,0.15); border-radius: 40px; font-size: 15px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; transition: border-color 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .pg-btn-ghost:hover { border-color: rgba(0,0,0,0.3); }
+  .pg-label { font-size: 13px; font-weight: 600; color: #202220; margin-bottom: 6px; display: block; }
+  .pg-error { background: #fff0ee; border: 1px solid #f4c4bb; color: #c0351a; border-radius: 10px; padding: 12px 16px; font-size: 13px; margin-bottom: 20px; }
+  @media (max-width: 768px) { .lg-only { display: none !important; } }
+`;
 
 export default function ForgotPasswordPage() {
   const { resetPassword } = useAuth();
@@ -16,17 +48,13 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       await resetPassword(email);
       setSent(true);
     } catch (err: any) {
-      // Always show success for security (don't reveal if email exists)
-      // Only show error for network/unexpected issues
       if (err.code === 'auth/network-request-failed') {
         setError('Network error. Please check your connection and try again.');
       } else {
-        // For auth/user-not-found and other errors, still show success
         setSent(true);
       }
     } finally {
@@ -34,173 +62,125 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Success state
   if (sent) {
     return (
-      <div className="min-h-screen flex bg-[#fefff7]">
-        <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 md:px-16 lg:px-24">
-          <div className="max-w-md w-full mx-auto">
-            {/* Logo */}
-            <div className="flex items-center gap-2 mb-12">
-              <div className="w-10 h-10 bg-[#333] rounded-xl flex items-center justify-center">
-                <Ticket className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-semibold text-[#333]">Tikiti</span>
-            </div>
+      <div className="pg-auth" style={{ minHeight: '100vh', display: 'flex', background: '#faf9f2' }}>
+        <style>{PG_STYLES}</style>
 
-            {/* Success Icon */}
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-8">
-              <Check className="w-8 h-8 text-green-600" />
-            </div>
+        {/* Left — form */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 32px' }}>
+          <div style={{ maxWidth: 420, width: '100%' }}>
+            <a href="/" style={{ fontSize: 36, fontWeight: 700, letterSpacing: -2, color: '#202220', textDecoration: 'none', display: 'block', marginBottom: 48 }}>
+              tikiti<span style={{ color: '#f44929' }}>✳</span>
+            </a>
 
-            <h1 className="text-[40px] font-semibold text-[#333] mb-2">Check Your Email</h1>
-            <p className="text-[#86868b] text-base mb-4">
-              We've sent password reset instructions to:
+            <div style={{ width: 56, height: 56, background: '#f5ee3d', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 28 }}>✓</div>
+
+            <h1 className="pg-display" style={{ fontSize: 52, fontWeight: 800, textTransform: 'uppercase', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 12px', color: '#202220' }}>
+              CHECK<br />YOUR<br />EMAIL.
+            </h1>
+            <p style={{ color: '#65675d', fontSize: 15, marginBottom: 6 }}>
+              We&apos;ve sent reset instructions to:
             </p>
-            <p className="text-[#333] font-semibold text-base mb-8">
-              {email}
-            </p>
-            <p className="text-[#86868b] text-sm mb-8">
-              If you don't see the email, check your spam folder. The link will expire in 1 hour.
+            <p style={{ color: '#202220', fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{email}</p>
+            <p style={{ color: '#65675d', fontSize: 13, marginBottom: 36, lineHeight: 1.6 }}>
+              Can&apos;t find it? Check your spam folder. The link expires in 1 hour.
             </p>
 
-            <div className="space-y-3">
-              <Link
-                href="/login"
-                className="w-full h-12 bg-[#333] text-white font-medium rounded-full hover:bg-[#444] transition-colors flex items-center justify-center"
-              >
-                Back to Login
-              </Link>
-              <button
-                onClick={() => {
-                  setSent(false);
-                  setEmail('');
-                }}
-                className="w-full h-12 bg-[#f0f0f0] text-[#333] font-medium rounded-full hover:bg-[#e8e8e8] transition-colors"
-              >
-                Try a Different Email
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Link href="/login"><button className="pg-btn">Back to sign in →</button></Link>
+              <button className="pg-btn-ghost" onClick={() => { setSent(false); setEmail(''); }}>
+                Try a different email
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right Side */}
-        <div className="hidden lg:flex w-1/2 bg-[#333] items-center justify-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl" />
-            <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl" />
-          </div>
-          <div className="relative z-10 text-center max-w-md px-12">
-            <Mail className="w-16 h-16 text-white/80 mx-auto mb-8" />
-            <h2 className="text-3xl font-semibold text-white mb-4">Email Sent</h2>
-            <p className="text-white/70 text-base">
-              Follow the instructions in the email to reset your password and regain access to your account.
+        {/* Right — yellow panel */}
+        <div className="lg-only" style={{ width: '45%', background: '#f5ee3d', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px 48px' }}>
+          <a href="/" style={{ fontSize: 38, fontWeight: 700, letterSpacing: -2.5, color: '#202220', textDecoration: 'none' }}>
+            tikiti<span style={{ color: '#f44929' }}>✳</span>
+          </a>
+          <div>
+            <div style={{ fontSize: 64, marginBottom: 24, lineHeight: 1 }}>📬</div>
+            <h2 className="pg-display" style={{ fontSize: 72, fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.88, letterSpacing: -2, color: '#202220' }}>
+              EMAIL<br />SENT.
+            </h2>
+            <p style={{ color: '#303327', fontSize: 15, lineHeight: 1.6, marginTop: 20, maxWidth: 300 }}>
+              Follow the link in your inbox to reset your password and get back in.
             </p>
           </div>
+          <div style={{ fontSize: 10, letterSpacing: 2, color: '#303327', opacity: 0.6 }}>TIKITI · ACCRA & BEYOND</div>
         </div>
       </div>
     );
   }
 
-  // Form state
   return (
-    <div className="min-h-screen flex bg-[#fefff7]">
-      {/* Left Side - Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 md:px-16 lg:px-24">
-        <div className="max-w-md w-full mx-auto">
-          {/* Logo */}
-          <div className="flex items-center gap-2 mb-12">
-            <div className="w-10 h-10 bg-[#333] rounded-xl flex items-center justify-center">
-              <Ticket className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-semibold text-[#333]">Tikiti</span>
-          </div>
+    <div className="pg-auth" style={{ minHeight: '100vh', display: 'flex', background: '#faf9f2' }}>
+      <style>{PG_STYLES}</style>
 
-          {/* Back Link */}
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 text-sm text-[#86868b] hover:text-[#333] transition-colors mb-8"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Login
+      {/* Left — form */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 32px' }}>
+        <div style={{ maxWidth: 420, width: '100%' }}>
+          <a href="/" style={{ fontSize: 36, fontWeight: 700, letterSpacing: -2, color: '#202220', textDecoration: 'none', display: 'block', marginBottom: 32 }}>
+            tikiti<span style={{ color: '#f44929' }}>✳</span>
+          </a>
+
+          <Link href="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#65675d', marginBottom: 28, fontWeight: 600 }}>
+            ← Back to sign in
           </Link>
 
-          {/* Heading */}
-          <h1 className="text-[40px] font-semibold text-[#333] mb-2">Forgot Password?</h1>
-          <p className="text-[#86868b] text-base mb-8">
-            Enter the email address associated with your account and we'll send you a link to reset your password.
+          <h1 className="pg-display" style={{ fontSize: 52, fontWeight: 800, textTransform: 'uppercase', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 10px', color: '#202220' }}>
+            FORGOT<br />PASSWORD?
+          </h1>
+          <p style={{ color: '#65675d', fontSize: 15, marginBottom: 32, lineHeight: 1.6 }}>
+            Enter your email and we&apos;ll send you a link to reset your password.
           </p>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-[16px]">
-              {error}
-            </div>
-          )}
+          {error && <div className="pg-error">{error}</div>}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#333] mb-2">
-                Email
-              </label>
+              <label className="pg-label" htmlFor="email">Email address</label>
               <input
+                className="pg-input"
                 id="email"
                 type="email"
                 placeholder="hello@company.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 required
                 disabled={loading}
                 autoFocus
-                className="w-full h-12 px-4 bg-[#f0f0f0] border-0 rounded-[16px] text-[#333] placeholder:text-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#333]/20 transition-all disabled:opacity-50"
               />
             </div>
-
-            <button
-              type="submit"
-              disabled={loading || !email}
-              className="w-full h-12 bg-[#333] text-white font-medium rounded-full hover:bg-[#444] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Sending...
-                </>
-              ) : (
-                'Send Reset Link'
-              )}
+            <button className="pg-btn" type="submit" disabled={loading || !email}>
+              {loading ? 'Sending...' : 'Send reset link →'}
             </button>
           </form>
 
-          {/* Footer */}
-          <p className="text-center text-sm text-[#86868b] mt-8">
-            Remember your password?{' '}
-            <Link href="/login" className="text-[#333] font-medium hover:underline">
-              Sign in
-            </Link>
+          <p style={{ textAlign: 'center', marginTop: 28, fontSize: 14, color: '#65675d' }}>
+            Remember it?{' '}
+            <Link href="/login" style={{ color: '#f44929', fontWeight: 700 }}>Sign in</Link>
           </p>
         </div>
       </div>
 
-      {/* Right Side - Decorative */}
-      <div className="hidden lg:flex w-1/2 bg-[#333] items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl" />
-        </div>
-        <div className="relative z-10 text-center max-w-md px-12">
-          <div className="w-20 h-20 bg-white/10 rounded-[24px] flex items-center justify-center mx-auto mb-8">
-            <Ticket className="w-10 h-10 text-white" />
-          </div>
-          <h2 className="text-3xl font-semibold text-white mb-4">Reset Your Password</h2>
-          <p className="text-white/70 text-base">
-            We'll help you get back into your account. Just enter your email and follow the instructions.
+      {/* Right — yellow panel */}
+      <div className="lg-only" style={{ width: '45%', background: '#f5ee3d', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px 48px' }}>
+        <a href="/" style={{ fontSize: 38, fontWeight: 700, letterSpacing: -2.5, color: '#202220', textDecoration: 'none' }}>
+          tikiti<span style={{ color: '#f44929' }}>✳</span>
+        </a>
+        <div>
+          <h2 className="pg-display" style={{ fontSize: 80, fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.88, letterSpacing: -2, color: '#202220' }}>
+            RESET<br />YOUR<br /><span style={{ color: '#f44929' }}>PASS.</span>
+          </h2>
+          <p style={{ color: '#303327', fontSize: 15, lineHeight: 1.6, marginTop: 24, maxWidth: 300 }}>
+            We&apos;ll send a secure link to your inbox. Follow it to choose a new password.
           </p>
         </div>
+        <div style={{ fontSize: 10, letterSpacing: 2, color: '#303327', opacity: 0.6 }}>TIKITI · ACCRA & BEYOND</div>
       </div>
     </div>
   );
