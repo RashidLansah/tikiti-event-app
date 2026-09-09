@@ -81,7 +81,7 @@ export default function PlaygroundPage() {
           align-items: center;
           gap: 4px;
         }
-        .pg-logo span { font-size: 26px; color: var(--pg-accent); letter-spacing: 0; }
+        .pg-logo span { font-size: 26px; color: var(--pg-accent); letter-spacing: 0; font-variant-emoji: text; }
         .pg-nav { display: flex; gap: 28px; font-size: 14px; }
         .pg-nav a:hover { opacity: 0.6; }
         .pg-nav-cta {
@@ -409,6 +409,9 @@ export default function PlaygroundPage() {
         /* Responsive */
         @media (max-width: 768px) {
           .pg-nav { display: none; }
+          .pg-nav-cta { display: none; }
+          .pg-logo { font-size: 28px; letter-spacing: -2px; }
+          .pg-header { padding: 0 4%; height: 64px; }
           .pg-h1 { font-size: clamp(62px, 16vw, 88px); letter-spacing: -2px; }
           .pg-visual { height: 330px; }
           .pg-poster-one { width: 44%; left: 2%; height: 255px; }
@@ -421,13 +424,14 @@ export default function PlaygroundPage() {
           .pg-disc-intro { text-align: left; max-width: none; padding-bottom: 0; }
           .pg-organisers { flex-direction: column; padding: 32px; align-items: flex-start; }
           .pg-footer { flex-wrap: wrap; gap: 20px; }
+          .pg-hero-bottom { font-size: 9px; letter-spacing: 1px; }
         }
       `}</style>
 
       <div className="pg">
         {/* Header */}
         <header className={`pg-header${scrolled ? ' scrolled' : ''}`}>
-          <a className="pg-logo" href="#">tikiti<span>✳</span></a>
+          <a className="pg-logo" href="#">tikiti<span>{'✱'}</span></a>
           <nav className="pg-nav">
             <a href="/events">Discover events</a>
             <a href="https://www.gettikiti.com/register" target="_blank" rel="noopener">For organizers ↗</a>
@@ -493,7 +497,7 @@ export default function PlaygroundPage() {
         {/* Ticker */}
         <div className="pg-ticker" aria-hidden="true">
           <div className="pg-ticker-inner">
-            BE THERE ✳ BUILD WHAT'S NEXT ✳ FIND YOUR PEOPLE ✳ SHARE BIG IDEAS ✳ BE THERE ✳ BUILD WHAT'S NEXT ✳ FIND YOUR PEOPLE ✳ SHARE BIG IDEAS ✳&nbsp;
+            {'BE THERE ✱ BUILD WHAT\'S NEXT ✱ FIND YOUR PEOPLE ✱ SHARE BIG IDEAS ✱ BE THERE ✱ BUILD WHAT\'S NEXT ✱ FIND YOUR PEOPLE ✱ SHARE BIG IDEAS ✱ '}
           </div>
         </div>
 
@@ -583,7 +587,7 @@ export default function PlaygroundPage() {
 
         {/* Footer */}
         <footer className="pg-footer">
-          <a className="pg-logo" href="#">tikiti<span style={{ color: 'var(--pg-accent)', fontSize: 26 }}>✳</span></a>
+          <a className="pg-logo" href="#">tikiti<span style={{ color: 'var(--pg-accent)', fontSize: 26 }}>{'✱'}</span></a>
           <span>Good ideas start with people.</span>
           <a href="https://gettikiti.com" target="_blank" rel="noopener">Visit Tikiti ↗</a>
           <span>© 2026 Tikiti</span>

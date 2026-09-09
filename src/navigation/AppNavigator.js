@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Linking from 'expo-linking';
@@ -32,6 +32,8 @@ const AppNavigator = () => {
   const { user, userProfile, loading } = useAuth();
   const navigationRef = useRef(null);
   const notificationResponseListener = useRef(null);
+  // Always show splash on launch; only dismiss once animation completes
+  const [splashDone, setSplashDone] = useState(false);
 
   // Handle notification taps (navigate to relevant screen)
   useEffect(() => {
@@ -102,9 +104,14 @@ const AppNavigator = () => {
   // Show loading if we're still loading auth state, OR if we have a user but no profile yet
   const shouldShowLoading = loading || (user && !userProfile);
 
-  // Show branded loading screen while authentication state is being determined
+  // Always show splash on first launch for the full animation duration
+  if (!splashDone) {
+    return <TikitiLoader duration={2100} onComplete={() => setSplashDone(true)} />;
+  }
+
+  // After splash: keep a blank yellow screen if auth is still resolving
   if (shouldShowLoading) {
-    return <TikitiLoader duration={2000} />;
+    return null;
   }
 
   // Determine the initial route
