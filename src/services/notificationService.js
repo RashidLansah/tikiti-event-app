@@ -213,7 +213,7 @@ class NotificationService {
           data,
           sound: 'default',
         },
-        trigger: triggerDate,
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
       });
       return notificationId;
     } catch (error) {
@@ -614,7 +614,7 @@ class NotificationService {
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: { title, body, data, sound: 'default' },
-        trigger: triggerTime,
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerTime },
       });
 
       console.log('Moments notification scheduled for:', triggerTime.toISOString());

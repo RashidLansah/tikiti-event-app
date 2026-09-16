@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { verifyWebhookSignature } from '@/lib/billing/billingService';
 import { normalizePlanId } from '@/lib/billing/plans';
+import { markBookingPaid } from '@/lib/payments/tickets';
 
 // Disable Next.js body parsing — we need the raw body for signature verification
 export const runtime = 'nodejs';
@@ -34,7 +35,25 @@ export async function POST(req: NextRequest) {
       }
 
       case 'charge.success': {
-        await handleChargeSuccess(db, data);
+        if (data.metadata?.type === 'ticket' && data.metadata?.bookingId) {
+          const result = await markBookingPaid(db, data.metadata.bookingId, {
+            reference: data.reference, amountPesewas: data.amount, channel: data.channel || data.authorization?.channel,
+          });
+          console.log(`[Paystack Webhook] ticket ${data.metadata.bookingId}: ${result}`);
+        } else {
+          await handleChargeSuccess(db, data);
+        }
+        break;
+      }
+
+      case 'transfer.success':
+      case 'transfer.failed':
+      case 'transfer.reversed': {
+        const status = eventType === 'transfer.success' ? 'success' : eventType === 'transfer.failed' ? 'failed' : 'reversed';
+        const snap = await db.collection('payouts').where('reference', '==', data.reference).limit(1).get();
+        if (!snap.empty) {
+          await snap.docs[0].ref.update({ status, transferCode: data.transfer_code || null, failureReason: data.reason || null, updatedAt: new Date() });
+        }
         break;
       }
 

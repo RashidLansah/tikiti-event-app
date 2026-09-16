@@ -109,3 +109,8 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 .vercel
+
+# Firebase service account keys
+tikiti-web/serviceAccount*.json
+serviceAccount*.json
+.env*

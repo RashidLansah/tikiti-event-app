@@ -1,6 +1,7 @@
 // Firebase Admin SDK for server-side operations (API routes)
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getAuth, type Auth } from 'firebase-admin/auth';
 
 let adminApp: App;
 let adminDb: Firestore;
@@ -43,4 +44,20 @@ export function getAdminFirestore(): Firestore {
     adminDb = getFirestore(app);
   }
   return adminDb;
+}
+
+export function getAdminAuth(): Auth {
+  return getAuth(getAdminApp());
+}
+
+/** Verifies a Firebase ID token from an Authorization: Bearer header. Returns uid or null. */
+export async function verifyRequestUser(authHeader: string | null): Promise<{ uid: string; email?: string } | null> {
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return null;
+  try {
+    const decoded = await getAdminAuth().verifyIdToken(token);
+    return { uid: decoded.uid, email: decoded.email };
+  } catch {
+    return null;
+  }
 }

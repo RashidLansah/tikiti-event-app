@@ -324,7 +324,7 @@ const DashboardScreen = ({ navigation }) => {
             </View>
             
             <Text style={[styles.emptyStateTitle, { color: colors.text.primary }]}>
-              Welcome to Organiser Mode! 🎉
+              Welcome to Organiser Mode
             </Text>
             
             <Text style={[styles.emptyStateSubtitle, { color: colors.text.secondary }]}>

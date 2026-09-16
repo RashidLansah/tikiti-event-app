@@ -16,7 +16,8 @@ import {
   BarChart3,
   MessageSquare,
   FileText,
-  CreditCard
+  CreditCard,
+  Wallet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +36,7 @@ const navigation = [
   { name: 'Events', href: '/dashboard/events', icon: Calendar },
   { name: 'Attendees', href: '/dashboard/attendees', icon: Users },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+  { name: 'Earnings', href: '/dashboard/earnings', icon: Wallet },
   { name: 'Messaging', href: '/dashboard/messaging', icon: MessageSquare },
   { name: 'Reports', href: '/dashboard/reports', icon: FileText },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },

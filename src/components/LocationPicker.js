@@ -268,8 +268,9 @@ const LocationPicker = ({
               </View>
               
               <View style={styles.mapInfo}>
+                <Feather name="info" size={14} color="#65675d" style={{ marginRight: 6 }} />
                 <Text style={styles.mapInfoText}>
-                  💡 Map integration coming soon! For now, use search or manual entry.
+                  Map integration coming soon. For now, use search or manual entry.
                 </Text>
               </View>
             </View>
@@ -689,6 +690,8 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   mapInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[4],
     backgroundColor: Colors.primary[50],

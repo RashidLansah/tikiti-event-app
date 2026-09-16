@@ -167,39 +167,47 @@ export const eventService = {
     }
   },
 
-  // Get all events (simple query without ordering)
+  // Get all events — merges organiser events + scraped events
   getAll: async (limitCount = 20, lastDoc = null) => {
     try {
+      // Newest first so recently published events always make the first page
       let q = query(
         collection(db, COLLECTIONS.EVENTS),
-        where('isActive', '==', true),
-        limit(limitCount)
+        orderBy('createdAt', 'desc'),
+        limit(Math.max(limitCount, 50))
+      );
+      if (lastDoc) q = query(q, startAfter(lastDoc));
+      const orgSnap = await getDocs(q);
+
+      // Scraped events (most recent 30)
+      const scrapedSnap = await getDocs(
+        query(collection(db, 'scraped_events'), where('status', '==', 'active'), limit(30))
       );
 
-      if (lastDoc) {
-        q = query(q, startAfter(lastDoc));
-      }
-
-      const querySnapshot = await getDocs(q);
       const events = [];
       const now = new Date();
-      
-      querySnapshot.forEach((doc) => {
+
+      orgSnap.forEach((doc) => {
         const eventData = doc.data();
-        const eventDate = new Date(eventData.date);
+        // Skip explicitly deactivated events
+        if (eventData.isActive === false) return;
         const eventEndTime = new Date(`${eventData.date} ${eventData.endTime || '23:59'}`);
-        
-        // Only include events that haven't ended yet (with 2-hour buffer)
-        const bufferTime = new Date(eventEndTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after event ends
-        
-        if (now <= bufferTime) {
-          events.push({ id: doc.id, ...eventData });
-        }
+        const bufferTime = new Date(eventEndTime.getTime() + 2 * 60 * 60 * 1000);
+        if (now <= bufferTime) events.push({ id: doc.id, ...eventData });
+      });
+
+      scrapedSnap.forEach((doc) => {
+        const d = doc.data();
+        // Only show free scraped events
+        if (d.price && d.price !== '0' && d.price !== 'Free') return;
+        const loc = (d.location || '').toLowerCase();
+        const isOnline = loc.includes('online') || loc.includes('virtual') || loc.includes('zoom') || loc.includes('teams') || loc.includes('remote');
+        events.push({ id: doc.id, ...d, isOnline });
       });
 
       return {
         events,
-        lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1]
+        lastDoc: orgSnap.docs[orgSnap.docs.length - 1],
       };
     } catch (error) {
       logger.error('Error getting events:', error);
@@ -319,7 +327,8 @@ export const eventService = {
       const q = query(
         collection(db, COLLECTIONS.EVENTS),
         where('isActive', '==', true),
-        limit(limitCount * 2) // Get more to filter by location
+        orderBy('createdAt', 'desc'),
+        limit(Math.max(limitCount * 2, 60))
       );
 
       const querySnapshot = await getDocs(q);
@@ -422,24 +431,36 @@ export const eventService = {
     try {
       const q = query(
         collection(db, COLLECTIONS.EVENTS),
-        where('isActive', '==', true),
         orderBy('createdAt', 'desc')
       );
 
-      return onSnapshot(q, (querySnapshot) => {
+      return onSnapshot(q, async (querySnapshot) => {
         const events = [];
         const now = new Date();
 
         querySnapshot.forEach((doc) => {
           const eventData = doc.data();
-          // Filter out past events (2-hour buffer after event ends)
+          if (eventData.isActive === false) return;
           const eventEndTime = new Date(`${eventData.date} ${eventData.endTime || '23:59'}`);
           const bufferTime = new Date(eventEndTime.getTime() + 2 * 60 * 60 * 1000);
-
-          if (now <= bufferTime) {
-            events.push({ id: doc.id, ...eventData });
-          }
+          if (now <= bufferTime) events.push({ id: doc.id, ...eventData });
         });
+
+        // Also fetch scraped events (free + online only)
+        try {
+          const scrapedSnap = await getDocs(
+            query(collection(db, 'scraped_events'), where('status', '==', 'active'), limit(30))
+          );
+          scrapedSnap.forEach((doc) => {
+            const d = doc.data();
+            if (d.price && d.price !== '0' && d.price !== 'Free') return;
+            const loc = (d.location || '').toLowerCase();
+            const isOnline = loc.includes('online') || loc.includes('virtual') || loc.includes('zoom') || loc.includes('teams') || loc.includes('remote');
+            if (!isOnline) return;
+            events.push({ id: doc.id, ...d, isOnline: true });
+          });
+        } catch (_) {}
+
         callback(events);
       });
     } catch (error) {

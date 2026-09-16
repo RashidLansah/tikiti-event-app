@@ -18,7 +18,7 @@ function headers(): Record<string, string> {
   };
 }
 
-async function paystackRequest<T = any>(
+export async function paystackRequest<T = any>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   endpoint: string,
   body?: Record<string, any>
@@ -295,4 +295,50 @@ export function verifyWebhookSignature(
     .update(body)
     .digest('hex');
   return hash === signature;
+}
+
+
+// ─── Transfers (organiser payouts to mobile money) ──────────
+
+export const GH_MOMO_BANK_CODES: Record<string, string> = {
+  mtn: 'MTN',
+  telecel: 'VOD',
+  vodafone: 'VOD',
+  airteltigo: 'ATL',
+};
+
+export async function createTransferRecipient(params: {
+  name: string;
+  provider: string; // mtn | telecel | airteltigo
+  phone: string; // 0XXXXXXXXX
+}): Promise<{ recipient_code: string }> {
+  const bank_code = GH_MOMO_BANK_CODES[params.provider.toLowerCase()];
+  if (!bank_code) throw new Error('Unsupported mobile money provider');
+  const result = await paystackRequest<{ recipient_code: string }>('POST', '/transferrecipient', {
+    type: 'mobile_money',
+    name: params.name,
+    account_number: params.phone,
+    bank_code,
+    currency: 'GHS',
+  });
+  return result.data;
+}
+
+export async function initiateTransfer(params: {
+  amount: number; // pesewas
+  recipient: string;
+  reference: string;
+  reason?: string;
+}): Promise<{ transfer_code: string; status: string; reference: string }> {
+  const result = await paystackRequest<{ transfer_code: string; status: string; reference: string }>(
+    'POST',
+    '/transfer',
+    { source: 'balance', currency: 'GHS', ...params }
+  );
+  return result.data;
+}
+
+export async function fetchTransfer(idOrCode: string): Promise<{ status: string; transfer_code: string; reason?: string; reference: string }> {
+  const result = await paystackRequest<{ status: string; transfer_code: string; reason?: string; reference: string }>('GET', `/transfer/${idOrCode}`);
+  return result.data;
 }

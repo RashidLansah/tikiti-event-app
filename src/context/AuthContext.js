@@ -146,8 +146,8 @@ export const AuthProvider = ({ children }) => {
         updatedAt: new Date(),
       };
       
-      await setDoc(userRef, updatedData, { merge: true });
       setUserProfile(updatedData);
+      await setDoc(userRef, updatedData, { merge: true });
     } catch (error) {
       logger.error('Error updating user profile:', error);
       throw error;

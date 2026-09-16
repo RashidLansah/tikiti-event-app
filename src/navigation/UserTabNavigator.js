@@ -1,62 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
+import { createStackNavigator } from '@react-navigation/stack';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { View, Text, Dimensions, Platform } from 'react-native';
-import { Colors, Typography, Spacing, Shadows } from '../styles/designSystem';
-import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
-import notificationService from '../services/notificationService';
-import FloatingTabBar from '../components/FloatingTabBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// Fallback design tokens in case imports fail
-const defaultColors = {
-  primary: { 500: '#333333' },
-  text: { tertiary: '#7a7a7a' },
-  white: '#FFFFFF',
-  border: { light: '#f0f0f0' },
-  background: { secondary: '#fafafa' },
-  error: { 500: '#EF4444' },
-};
-
-const defaultSpacing = [0, 4, 8, 12, 16, 20, 24, 32, 40, 48];
-const defaultTypography = {
-  fontSize: { xs: 12 },
-  fontWeight: { semibold: '600' }
-};
-const defaultShadows = { lg: {} };
-
-// Import User screens
 import EventListScreen from '../screens/User/EventListScreen';
 import EventDetailScreen from '../screens/User/EventDetailScreen';
 import TicketScreen from '../screens/User/TicketScreen';
+import NotificationCenterScreen from '../screens/User/NotificationCenterScreen';
+import RegistrationSuccessScreen from '../screens/User/RegistrationSuccessScreen';
+import SavedScreen from '../screens/User/SavedScreen';
 import MyTicketsScreen from '../screens/User/MyTicketsScreen';
 import ProfileScreen from '../screens/User/ProfileScreen';
-import NotificationCenterScreen from '../screens/User/NotificationCenterScreen';
-import SocialCardScreen from '../screens/User/SocialCardScreen';
-import EditSocialLinksScreen from '../screens/User/EditSocialLinksScreen';
-import NetworkScreen from '../screens/User/NetworkScreen';
-import ScanConnectionScreen from '../screens/User/ScanConnectionScreen';
-import ConnectionDetailScreen from '../screens/User/ConnectionDetailScreen';
-import AudienceProfileScreen from '../screens/User/AudienceProfileScreen';
-import PostEventVideoScreen from '../screens/User/PostEventVideoScreen';
-import VideoFeedScreen from '../screens/User/VideoFeedScreen';
-import PhotoGalleryScreen from '../screens/User/PhotoGalleryScreen';
-import EventVideoFeedScreen from '../screens/User/EventVideoFeedScreen';
-import EventMomentsScreen from '../screens/User/EventMomentsScreen';
+
+const PG = {
+  red: '#f44929',
+  fg: '#202220',
+  bg: '#faf9f2',
+  muted: '#65675d',
+  line: '#deded4',
+};
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
-// Stack navigator for Events (to handle EventDetail navigation)
+const HIDE_TAB_ON = ['EventDetail', 'Ticket', 'NotificationCenter', 'RegistrationSuccess'];
+
 const EventsStack = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerShown: false,
-    }}
-  >
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="EventList" component={EventListScreen} />
     <Stack.Screen
       name="EventDetail"
@@ -68,21 +41,16 @@ const EventsStack = () => (
         cardOverlayEnabled: true,
         cardStyleInterpolator: ({ current: { progress }, layouts }) => ({
           cardStyle: {
-            transform: [
-              {
-                translateY: progress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [layouts.screen.height, 0],
-                  extrapolate: 'clamp',
-                }),
-              },
-            ],
+            transform: [{
+              translateY: progress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [layouts.screen.height, 0],
+                extrapolate: 'clamp',
+              }),
+            }],
           },
           overlayStyle: {
-            opacity: progress.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 0.5],
-            }),
+            opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0, 0.5] }),
           },
         }),
       }}
@@ -90,172 +58,88 @@ const EventsStack = () => (
     <Stack.Screen name="Ticket" component={TicketScreen} />
     <Stack.Screen name="NotificationCenter" component={NotificationCenterScreen} />
     <Stack.Screen
-      name="PostEventVideo"
-      component={PostEventVideoScreen}
-      options={{
-        presentation: 'modal',
-        gestureEnabled: true,
-        gestureDirection: 'vertical',
-      }}
+      name="RegistrationSuccess"
+      component={RegistrationSuccessScreen}
+      options={{ presentation: 'modal', gestureEnabled: false }}
     />
-    <Stack.Screen name="EventMoments" component={EventMomentsScreen} />
   </Stack.Navigator>
 );
 
-// Stack navigator for My Tickets (to handle Ticket navigation)
 const MyTicketsStack = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerShown: false,
-    }}
-  >
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="MyTicketsList" component={MyTicketsScreen} />
     <Stack.Screen name="Ticket" component={TicketScreen} />
   </Stack.Navigator>
 );
 
-// Stack navigator for Feed (main feed + photo gallery + event video feed)
-const FeedStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="FeedMain" component={VideoFeedScreen} />
-    <Stack.Screen
-      name="PhotoGallery"
-      component={PhotoGalleryScreen}
-      options={{ presentation: 'modal' }}
-    />
-    <Stack.Screen
-      name="EventVideoFeed"
-      component={EventVideoFeedScreen}
-      options={{ presentation: 'modal' }}
-    />
-    <Stack.Screen name="EventMoments" component={EventMomentsScreen} />
-  </Stack.Navigator>
-);
+// Reference-style tab bar: sticky bottom, paper bg with blur, red for active
+function PGTabBar({ state, descriptors, navigation }) {
+  const insets = useSafeAreaInsets();
 
-// Stack navigator for Network (connections + QR scanning)
-const NetworkStack = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerShown: false,
-    }}
-  >
-    <Stack.Screen name="NetworkMain" component={NetworkScreen} />
-    <Stack.Screen name="ScanConnection" component={ScanConnectionScreen} />
-    <Stack.Screen name="ConnectionDetail" component={ConnectionDetailScreen} />
-  </Stack.Navigator>
-);
+  // Hide on deep screens
+  const focusedRoute = state.routes[state.index];
+  const focusedScreen = getFocusedRouteNameFromRoute(focusedRoute);
+  if (focusedScreen && HIDE_TAB_ON.includes(focusedScreen)) return null;
 
-// Stack navigator for Profile (social card + edit links + audience profile)
-const ProfileStack = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerShown: false,
-    }}
-  >
-    <Stack.Screen name="ProfileMain" component={ProfileScreen} />
-    <Stack.Screen name="SocialCard" component={SocialCardScreen} />
-    <Stack.Screen name="EditSocialLinks" component={EditSocialLinksScreen} />
-    <Stack.Screen name="AudienceProfile" component={AudienceProfileScreen} />
-  </Stack.Navigator>
-);
-
-const UserTabNavigator = () => {
-  const { colors, isDarkMode } = useTheme();
-  const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
-  
-  // Safe access to design system values
-  const safeColors = colors || defaultColors;
-  const safeTypography = Typography || defaultTypography;
-  const safeSpacing = Spacing || defaultSpacing;
-  const safeShadows = Shadows || defaultShadows;
-
-  // Load unread count
-  useEffect(() => {
-    const loadUnreadCount = async () => {
-      if (user?.uid) {
-        try {
-          const count = await notificationService.getUnreadCount(user.uid);
-          setUnreadCount(count);
-        } catch (error) {
-          console.error('Error loading unread count:', error);
-        }
-      }
-    };
-
-    loadUnreadCount();
-    
-    // Refresh count every 30 seconds
-    const interval = setInterval(loadUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [user?.uid]);
+  const tabs = [
+    { name: 'Events', icon: 'compass', label: 'Discover' },
+    { name: 'Saved', icon: 'heart', label: 'Saved' },
+    { name: 'My Tickets', icon: 'credit-card', label: 'Tickets' },
+    { name: 'Profile', icon: 'user', label: 'You' },
+  ];
 
   return (
-    <Tab.Navigator
-      tabBar={(props) => <FloatingTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Tab.Screen
-        name="Events"
-        component={EventsStack}
-        options={{
-          tabBarLabel: 'Events',
-        }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            // Reset the stack to the root screen when tab is pressed
-            navigation.navigate('Events', { screen: 'EventList' });
-          },
-        })}
-      />
-      <Tab.Screen
-        name="Feed"
-        component={FeedStack}
-        options={{
-          tabBarLabel: 'Feed',
-        }}
-      />
-      <Tab.Screen
-        name="My Tickets"
-        component={MyTicketsStack}
-        options={{
-          tabBarLabel: 'My Events',
-        }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            // Reset the stack to the root screen when tab is pressed
-            navigation.navigate('My Tickets', { screen: 'MyTicketsList' });
-          },
-        })}
-      />
-      <Tab.Screen
-        name="Network"
-        component={NetworkStack}
-        options={{
-          tabBarLabel: 'Network',
-        }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            navigation.navigate('Network', { screen: 'NetworkMain' });
-          },
-        })}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileStack}
-        options={{
-          tabBarLabel: 'Profile',
-        }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            navigation.navigate('Profile', { screen: 'ProfileMain' });
-          },
-        })}
-      />
-    </Tab.Navigator>
+    <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {tabs.map(({ name, icon, label }, i) => {
+        const route = state.routes.find((r) => r.name === name);
+        if (!route) return null;
+        const index = state.routes.indexOf(route);
+        const focused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) navigation.navigate(name);
+        };
+
+        return (
+          <TouchableOpacity key={name} style={styles.tabItem} onPress={onPress} activeOpacity={0.7}>
+            <View style={styles.tabInner}>
+              <Feather name={icon} size={22} color={focused ? PG.red : PG.muted} />
+              <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
   );
-};
+}
+
+const UserTabNavigator = () => (
+  <Tab.Navigator
+    tabBar={(props) => <PGTabBar {...props} />}
+    screenOptions={{ headerShown: false }}
+  >
+    <Tab.Screen name="Events" component={EventsStack} />
+    <Tab.Screen name="Saved" component={SavedScreen} />
+    <Tab.Screen name="My Tickets" component={MyTicketsStack} />
+    <Tab.Screen name="Profile" component={ProfileScreen} />
+  </Tab.Navigator>
+);
+
+const styles = StyleSheet.create({
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(250,249,242,0.96)',
+    borderTopWidth: 1,
+    borderTopColor: PG.line,
+    paddingTop: 11,
+    paddingHorizontal: 5,
+  },
+  tabItem: { flex: 1, alignItems: 'center' },
+  tabTouch: { width: '100%' },
+  tabInner: { alignItems: 'center', gap: 5 },
+  tabLabel: { fontSize: 12, color: PG.muted, marginTop: 2 },
+  tabLabelActive: { color: PG.red, fontWeight: '700' },
+});
 
 export default UserTabNavigator;

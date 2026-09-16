@@ -7,571 +7,281 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
-  Image,
-  Animated,
   StatusBar,
+  SafeAreaView,
+  Linking,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
-import PillTabBar from '../../components/PillTabBar';
-import { MyEventsSkeleton } from '../../components/Skeleton';
-import { useTheme } from '../../context/ThemeContext';
-import { bookingService, eventService, getFirestoreErrorMessage } from '../../services/firestoreService';
-import logger from '../../utils/logger';
 import { useAuth } from '../../context/AuthContext';
+import { bookingService, eventService } from '../../services/firestoreService';
+import QRCode from 'react-native-qrcode-svg';
+import { Barcode } from './RegistrationSuccessScreen';
+import { paymentsApi } from '../../services/paymentsApi';
+
+const PG = {
+  yellow: '#f5ee3d',
+  red: '#f44929',
+  purple: '#6256e8',
+  fg: '#202220',
+  bg: '#faf9f2',
+  muted: '#65675d',
+  line: '#deded4',
+};
 
 const MyTicketsScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const { colors, isDarkMode } = useTheme();
-  const [registeredEvents, setRegisteredEvents] = useState([]);
-  const [allBookings, setAllBookings] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('active');
+  const [tab, setTab] = useState('Upcoming');
 
-  // Filter options (PillTabBar format)
-  const filterOptions = [
-    { key: 'active', label: 'Upcoming', icon: 'calendar' },
-    { key: 'attended', label: 'Past', icon: 'check-circle' },
-    { key: 'all', label: 'All', icon: 'list' },
-  ];
-
-  const loadRegisteredEvents = async () => {
-    if (!user) return;
-
+  const load = async () => {
+    if (!user) { setLoading(false); return; }
     try {
-      const userBookings = await bookingService.getUserBookings(user.uid);
-
-      // Enhance bookings with computed status and fetch event details
-      const enhancedBookings = await Promise.all(
-        userBookings.map(async (booking) => {
-          const eventDate = new Date(booking.eventDate);
-          const now = new Date();
-
-          // Try to fetch full event data for image and other details
-          let fullEvent = null;
-          try {
-            fullEvent = await eventService.getById(booking.eventId);
-          } catch (err) {
-            // Silently fail — we'll use booking data as fallback
-          }
-
-          return {
-            ...booking,
-            fullEvent,
-            isActive: booking.status === 'confirmed' && eventDate >= now,
-            isAttended:
-              (booking.status === 'used' || booking.status === 'confirmed') &&
-              eventDate < now,
-            isCancelled: booking.status === 'cancelled',
-          };
-        })
-      );
-
-      setAllBookings(enhancedBookings);
-      applyFilter(activeFilter, enhancedBookings);
-    } catch (error) {
-      logger.error('Error loading registered events:', error);
-      Alert.alert('Error', getFirestoreErrorMessage(error));
-    }
-  };
-
-  const applyFilter = (filter, bookingsToFilter = allBookings) => {
-    let filtered = [];
-
-    switch (filter) {
-      case 'active':
-        filtered = bookingsToFilter.filter((b) => b.isActive);
-        break;
-      case 'attended':
-        filtered = bookingsToFilter.filter((b) => b.isAttended);
-        break;
-      case 'all':
-        filtered = bookingsToFilter.filter((b) => !b.isCancelled);
-        break;
-      default:
-        filtered = bookingsToFilter.filter((b) => b.isActive);
-    }
-
-    setRegisteredEvents(filtered);
-    setActiveFilter(filter);
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadRegisteredEvents();
+      try { await paymentsApi.reconcileTickets(); } catch (_) {}
+      const raw = (await bookingService.getUserBookings(user.uid))
+        .filter((b) => b.status !== 'cancelled' && b.paymentStatus !== 'pending' && b.status !== 'abandoned');
+      const enhanced = await Promise.all(raw.map(async (b) => {
+        let event = null;
+        try { event = await eventService.getById(b.eventId); } catch (_) {}
+        const isPast = new Date(b.eventDate) < new Date();
+        return { ...b, event, isPast };
+      }));
+      setBookings(enhanced);
+    } catch (_) {}
+    setLoading(false);
     setRefreshing(false);
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      await loadRegisteredEvents();
-      setLoading(false);
-    };
-    fetchData();
-  }, [user]);
+  useEffect(() => { load(); }, [user]);
 
-  // Reapply filter when activeFilter changes
-  useEffect(() => {
-    if (allBookings.length > 0) {
-      applyFilter(activeFilter, allBookings);
-    }
-  }, [activeFilter]);
-
-  // Format date for card pill (e.g., "Fri.14 May 2026" or "Mar 15 - Mar 17, 2026")
-  const getCardFormattedDate = (dateStr, endDateStr) => {
-    if (!dateStr) return '';
-    try {
-      const eventDate = new Date(dateStr);
-
-      // Multi-day: show date range
-      if (endDateStr && endDateStr !== dateStr) {
-        const endDate = new Date(endDateStr);
-        const startStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        return `${startStr} - ${endStr}`;
-      }
-
-      const weekday = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
-      const day = eventDate.getDate();
-      const month = eventDate.toLocaleDateString('en-US', { month: 'short' });
-      const year = eventDate.getFullYear();
-      return `${weekday}.${day} ${month} ${year}`;
-    } catch {
-      return dateStr;
-    }
-  };
-
-  // Calculate days left until event
-  const getDaysLeft = (dateStr) => {
-    if (!dateStr) return null;
-    try {
-      const eventDate = new Date(dateStr);
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-      const diffTime = eventDay - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
-    } catch {
-      return null;
-    }
-  };
-
-  // Get location string
-  const getLocationString = (location) => {
-    if (!location) return 'Location TBA';
-    if (typeof location === 'object') {
-      return location.name || location.address || 'Location TBA';
-    }
-    return location;
-  };
-
-  // Get days left label
-  const getDaysLeftLabel = (daysLeft) => {
-    if (daysLeft === null) return '';
-    if (daysLeft < 0) return 'Event passed';
-    if (daysLeft === 0) return 'Today';
-    if (daysLeft === 1) return 'Tomorrow';
-    return `${daysLeft} days left`;
-  };
-
-  const RegisteredEventCard = ({ booking, index }) => {
-    const animatedValue = new Animated.Value(0);
-    const event = booking.fullEvent || {};
-    const daysLeft = getDaysLeft(booking.eventDate);
-    const daysLeftLabel = getDaysLeftLabel(daysLeft);
-
-    React.useEffect(() => {
-      Animated.timing(animatedValue, {
-        toValue: 1,
-        duration: 300,
-        delay: index * 50,
-        useNativeDriver: true,
-      }).start();
-    }, []);
-
-    const cardTransform = {
-      opacity: 1,
-      transform: [
-        {
-          translateY: animatedValue.interpolate({
-            inputRange: [0, 1],
-            outputRange: [20, 0],
-          }),
-        },
-      ],
-    };
-
-    const eventTime = booking.eventTime || event.startTime || event.time || '';
-    const eventImage = event.imageBase64 || null;
-    const eventLocation = booking.eventLocation || event.location || '';
-
-    return (
-      <Animated.View style={cardTransform}>
-        <TouchableOpacity
-          style={[styles.eventCard, { backgroundColor: colors.background.secondary }]}
-          onPress={() => {
-            // Navigate to event detail with the full event data
-            const eventData = event.id
-              ? event
-              : {
-                  id: booking.eventId,
-                  name: booking.eventName,
-                  date: booking.eventDate,
-                  time: booking.eventTime,
-                  location: booking.eventLocation,
-                  ...event,
-                };
-            navigation.navigate('Events', {
-              screen: 'EventDetail',
-              params: { event: eventData },
-            });
-          }}
-          activeOpacity={0.9}
-        >
-          {/* Event Image */}
-          <View style={styles.eventImageContainer}>
-            {eventImage ? (
-              <Image
-                source={{
-                  uri: eventImage.startsWith('data:')
-                    ? eventImage
-                    : `data:image/jpeg;base64,${eventImage}`,
-                }}
-                style={styles.eventImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={[styles.eventImagePlaceholder, { backgroundColor: colors.primary[200] }]}>
-                <Feather name="image" size={24} color={colors.primary[400]} />
-              </View>
-            )}
-
-            {/* Going badge */}
-            <View style={[styles.goingBadge, { backgroundColor: colors.background.primary }]}>
-              <Text style={[styles.goingBadgeText, { color: colors.text.primary }]}>Going</Text>
-            </View>
-
-            {/* Days left badge */}
-            {daysLeft !== null && daysLeft >= 0 && (
-              <View style={[styles.daysLeftBadge, { backgroundColor: colors.background.primary }]}>
-                <Feather name="clock" size={12} color={colors.text.primary} />
-                <Text style={[styles.daysLeftBadgeText, { color: colors.text.primary }]}>{daysLeftLabel}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Event Title */}
-          <Text style={[styles.eventName, { color: colors.text.primary }]} numberOfLines={2}>
-            {booking.eventName}
-          </Text>
-
-          {/* Date, Time, Location pills */}
-          <View style={styles.cardPillsContainer}>
-            <View style={styles.cardPillRow}>
-              <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
-                <Text style={[styles.cardPillText, { color: colors.text.primary }]}>
-                  {getCardFormattedDate(booking.eventDate, event.endDate)}
-                </Text>
-              </View>
-              {eventTime ? (
-                <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
-                  <Text style={[styles.cardPillText, { color: colors.text.primary }]}>{eventTime}</Text>
-                </View>
-              ) : null}
-            </View>
-            <View style={styles.cardPillRow}>
-              <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
-                <Text style={[styles.cardPillText, { color: colors.text.primary }]}>
-                  {getLocationString(eventLocation)}
-                </Text>
-              </View>
-              {booking.quantity > 1 && (
-                <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
-                  <Text style={[styles.cardPillText, { color: colors.text.primary }]}>
-                    {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
-                  </Text>
-                </View>
-              )}
-              {booking.cohortName ? (
-                <View style={[styles.cardPill, { backgroundColor: colors.background.primary }]}>
-                  <Text style={[styles.cardPillText, { color: colors.text.primary }]}>
-                    {booking.cohortName}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  };
-
-  const EmptyState = () => (
-    <View style={[styles.emptyContainer, { backgroundColor: colors.background.secondary }]}>
-      <Feather name="calendar" size={24} color={colors.text.tertiary} />
-      <View style={styles.emptyTextContainer}>
-        <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>
-          {activeFilter === 'active'
-            ? 'No upcoming events'
-            : activeFilter === 'attended'
-            ? 'No past events'
-            : 'No registered events'}
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: colors.text.secondary }]}>
-          {activeFilter === 'active'
-            ? "You haven't registered for any upcoming events yet. Discover events and RSVP!"
-            : activeFilter === 'attended'
-            ? "You haven't attended any events yet."
-            : "You haven't registered for any events yet."}
-        </Text>
-      </View>
-      <TouchableOpacity
-        style={[styles.browseButton, { backgroundColor: colors.primary[500] }]}
-        onPress={() => navigation.navigate('Events')}
-      >
-        <Feather name="search" size={18} color={Colors.white} />
-        <Text style={styles.browseButtonText}>Browse Events</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  if (loading) {
-    return <MyEventsSkeleton />;
-  }
+  const displayed = bookings.filter((b) => tab === 'Upcoming' ? !b.isPast : b.isPast);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={colors.background.primary}
-      />
+    <View style={styles.screen}>
+      <StatusBar barStyle="dark-content" backgroundColor={PG.bg} />
+      <SafeAreaView style={styles.safe}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+        >
+          {/* Topline */}
+          <View style={styles.topline}>
+            <Text style={styles.logo}>tikiti<Text style={styles.logoStar}>{'✳︎'}</Text></Text>
+            <Feather name="credit-card" size={22} color={PG.fg} />
+          </View>
 
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background.primary }]}>
-        <View>
-          <Text style={[styles.greeting, { color: colors.text.secondary }]}>My</Text>
-          <Text style={[styles.title, { color: colors.text.primary }]}>Registered Events</Text>
-        </View>
-      </View>
+          {/* Headline */}
+          <Text style={styles.h1}>GOOD THINGS{'\n'}<Text style={styles.h1Em}>COMING UP.</Text></Text>
+          <Text style={styles.sub}>Your next experiences, all in one place.</Text>
 
-      {/* Filter PillTabBar */}
-      <View style={styles.filterSection}>
-        <PillTabBar
-          tabs={filterOptions}
-          activeTab={activeFilter}
-          onTabPress={setActiveFilter}
-        />
-      </View>
+          {/* Tabs */}
+          <View style={styles.tabs}>
+            {['Upcoming', 'Past'].map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[styles.tab, tab === t && styles.tabActive]}
+                onPress={() => setTab(t)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+                  {t}{t === 'Upcoming' ? ` (${bookings.filter(b => !b.isPast).length})` : ''}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      <ScrollView
-        style={[styles.eventsList, { backgroundColor: colors.background.primary }]}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.eventsListContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary[500]}
-            colors={[colors.primary[500]]}
-          />
-        }
-      >
-        {registeredEvents.length === 0 ? (
-          <EmptyState />
-        ) : (
-          registeredEvents.map((booking, index) => (
-            <RegisteredEventCard key={booking.id} booking={booking} index={index} />
-          ))
-        )}
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
+          {loading ? (
+            <ActivityIndicator color={PG.red} style={{ marginTop: 40 }} />
+          ) : displayed.length === 0 ? (
+            <Empty tab={tab} />
+          ) : (
+            displayed.map((b) => <TicketCard key={b.id} booking={b} navigation={navigation} />)
+          )}
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 };
 
+function TicketCard({ booking, navigation }) {
+  const isExternal = booking.source === 'external';
+  const qty = booking.quantity || 1;
+  const refId = (booking.id || 'TKT').slice(-8).toUpperCase();
+  const category = (booking.event?.category || booking.eventCategory || 'Event').toUpperCase();
+  const eventName = booking.eventName || booking.event?.name || 'Event';
+
+  if (isExternal) {
+    return (
+      <View style={styles.ticketCard}>
+        {/* External event — grey-toned header */}
+        <View style={[styles.ticketTop, { backgroundColor: PG.fg }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <Feather name="external-link" size={12} color="rgba(255,255,255,0.6)" />
+            <Text style={styles.ticketCategory}>EXTERNAL EVENT / {category}</Text>
+          </View>
+          <Text style={styles.ticketName}>{eventName}</Text>
+          <Text style={styles.ticketVenue}>{booking.eventLocation || 'See event site for details'}</Text>
+        </View>
+
+        {/* Middle */}
+        <View style={styles.ticketMiddle}>
+          <View>
+            <Text style={styles.ticketFieldLabel}>DATE</Text>
+            <Text style={styles.ticketFieldValue}>{booking.eventDate || 'Date TBA'}</Text>
+          </View>
+          <View>
+            <Text style={styles.ticketFieldLabel}>STATUS</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={[styles.ticketFieldValue, { color: '#1a8c4e' }]}>Registered</Text>
+              <Feather name="check" size={14} color="#1a8c4e" />
+            </View>
+          </View>
+        </View>
+
+        {/* Bottom note */}
+        <View style={styles.ticketBottom}>
+          <Barcode width={180} height={50} opacity={0.3} />
+          <Text style={styles.ticketRef}>{refId}{'\n'}<Text style={styles.ticketRefSub}>You registered on the event&apos;s own site</Text></Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.viewEvent}
+          onPress={() => booking.registrationUrl && Linking.openURL(booking.registrationUrl)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.viewEventText}>Open registration page</Text>
+          <Feather name="external-link" size={14} color={PG.red} />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const venue = booking.event?.location || booking.eventLocation || 'Accra · Venue to be announced';
+  const attendee = booking.userName || [booking.firstName, booking.lastName].filter(Boolean).join(' ') || booking.userEmail || '';
+  const qrPayload = JSON.stringify({
+    ticketId: booking.qrCode || `TKT${refId}`,
+    eventId: booking.eventId,
+    eventName,
+    userId: booking.userId,
+    userName: attendee,
+    purchaseId: booking.id,
+    quantity: qty,
+    status: 'confirmed',
+  });
+
+  return (
+    <TouchableOpacity
+      style={styles.ticketCard}
+      activeOpacity={0.9}
+      onPress={() => navigation.navigate('Events', { screen: 'EventDetail', params: { event: booking.event || { id: booking.eventId } } })}
+    >
+      <View style={styles.ticketTop}>
+        <Text style={styles.ticketCategory}>TIKITI / {category}</Text>
+        <Text style={styles.ticketName}>{eventName}</Text>
+        <Text style={styles.ticketVenue}>{venue}</Text>
+      </View>
+
+      <View style={styles.ticketMiddle}>
+        <View>
+          <Text style={styles.ticketFieldLabel}>DATE</Text>
+          <Text style={styles.ticketFieldValue}>{booking.eventDate || 'Date TBA'}</Text>
+        </View>
+        {!!attendee && (
+          <View style={{ flex: 1, paddingHorizontal: 12 }}>
+            <Text style={styles.ticketFieldLabel}>ATTENDEE</Text>
+            <Text style={styles.ticketFieldValue} numberOfLines={1}>{attendee}</Text>
+          </View>
+        )}
+        <View>
+          <Text style={styles.ticketFieldLabel}>ADMISSION</Text>
+          <Text style={styles.ticketFieldValue}>{qty} {qty === 1 ? 'person' : 'people'}</Text>
+        </View>
+      </View>
+
+      <View style={styles.ticketBottom}>
+        <View style={styles.qrWrap}>
+          <QRCode value={qrPayload} size={150} color={PG.fg} backgroundColor="#fff" />
+        </View>
+        <Text style={styles.ticketRef}>{refId}{'\n'}<Text style={styles.ticketRefSub}>Scan at the door</Text></Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function Empty({ tab }) {
+  return (
+    <View style={styles.empty}>
+      <Text style={styles.emptyTitle}>
+        {tab === 'Upcoming' ? 'Your next story is waiting.' : 'The memories start here.'}
+      </Text>
+      <Text style={styles.emptyText}>
+        {tab === 'Upcoming'
+          ? 'Find an event you love and register. Your ticket will appear here.'
+          : 'Your past events will appear here after you attend.'}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  screen: { flex: 1, backgroundColor: PG.bg },
+  safe: { flex: 1 },
+  content: { paddingHorizontal: 22, paddingBottom: 40 },
 
-  // ─── Header ──────────────────────────────────────────
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
-  },
-  greeting: {
-    fontFamily: Typography.fontFamily.regular,
-    fontSize: 14,
-    color: Colors.black,
-    marginBottom: 4,
-  },
-  title: {
-    fontFamily: Typography.fontFamily.extrabold,
-    fontSize: 24,
-    color: Colors.text.primary,
-  },
+  topline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14 },
+  logo: { fontSize: 28, fontWeight: '700', color: PG.fg, letterSpacing: -1 },
+  logoStar: { color: PG.red },
 
-  // ─── Filter PillTabBar ───────────────────────────────
-  filterSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
+  h1: { fontSize: 40, fontWeight: '900', color: PG.fg, letterSpacing: -1.5, lineHeight: 38, marginTop: 4 },
+  h1Em: { color: PG.red },
+  sub: { fontSize: 14, color: PG.muted, lineHeight: 22, marginTop: 10, marginBottom: 4 },
 
-  // ─── Events list ─────────────────────────────────────
-  eventsList: {
-    flex: 1,
-  },
-  eventsListContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 100,
-  },
+  tabs: { flexDirection: 'row', borderBottom: 1, borderBottomColor: PG.line, marginTop: 22, marginBottom: 4, gap: 0 },
+  tab: { paddingBottom: 12, paddingRight: 20, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabActive: { borderBottomColor: PG.fg },
+  tabText: { fontSize: 14, color: PG.muted, fontWeight: '500' },
+  tabTextActive: { color: PG.fg, fontWeight: '700' },
 
-  // ─── Event Card (Figma gray card with pills) ────────
-  eventCard: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 24,
-    padding: 14,
-    paddingBottom: 15,
-    marginBottom: 16,
-  },
-  eventImageContainer: {
-    width: '100%',
-    height: 161,
-    borderRadius: 18,
+  ticketCard: {
+    borderRadius: 19,
+    backgroundColor: '#fffef9',
+    borderWidth: 1,
+    borderColor: PG.line,
+    marginTop: 24,
     overflow: 'hidden',
-    marginBottom: 17,
-    position: 'relative',
   },
-  eventImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 18,
-  },
-  eventImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  goingBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: Colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  goingBadgeText: {
-    fontFamily: Typography.fontFamily.semibold,
-    fontSize: 12,
-    color: Colors.black,
-  },
-  daysLeftBadge: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    gap: 4,
-  },
-  daysLeftBadgeText: {
-    fontFamily: Typography.fontFamily.semibold,
-    fontSize: 12,
-    color: Colors.text.primary,
-  },
-  eventName: {
-    fontFamily: Typography.fontFamily.semibold,
-    fontSize: 24,
-    color: Colors.black,
-    marginBottom: 17,
-  },
-  cardPillsContainer: {
-    gap: 8,
-  },
-  cardPillRow: {
-    flexDirection: 'row',
-    gap: 7,
-  },
-  cardPill: {
-    backgroundColor: Colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-  },
-  cardPillText: {
-    fontFamily: Typography.fontFamily.medium,
-    fontSize: 16,
-    color: Colors.black,
-  },
+  // Purple header
+  ticketTop: { padding: 22, backgroundColor: PG.purple },
+  ticketCategory: { fontSize: 11, letterSpacing: 1, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginBottom: 12 },
+  ticketName: { fontSize: 32, fontWeight: '700', color: '#fff', lineHeight: 32, marginVertical: 12, letterSpacing: -0.5 },
+  ticketVenue: { fontSize: 13, color: '#fff' },
 
-  // ─── Empty State ─────────────────────────────────────
-  emptyContainer: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 24,
-    paddingHorizontal: 62,
-    paddingVertical: 64,
-    alignItems: 'center',
-    gap: 40,
-  },
-  emptyTextContainer: {
-    alignItems: 'center',
-    gap: 8,
-    width: '100%',
-  },
-  emptyTitle: {
-    fontFamily: Typography.fontFamily.semibold,
-    fontSize: 16,
-    color: Colors.text.primary,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontFamily: Typography.fontFamily.regular,
-    fontSize: 12,
-    color: Colors.text.primary,
-    textAlign: 'center',
-  },
-  browseButton: {
+  // Middle
+  ticketMiddle: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#060606',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 30,
-    gap: 9,
-    width: 167,
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#b6b6ad',
+    borderStyle: 'dashed',
   },
-  browseButtonText: {
-    fontFamily: Typography.fontFamily.semibold,
-    fontSize: 14,
-    color: Colors.white,
-  },
+  ticketFieldLabel: { fontSize: 11, color: PG.muted, letterSpacing: 0.5, marginBottom: 5 },
+  ticketFieldValue: { fontSize: 14, fontWeight: '700', color: PG.fg },
 
-  // ─── Loading ─────────────────────────────────────────
-  loadingText: {
-    fontFamily: Typography.fontFamily.medium,
-    fontSize: 14,
-    color: Colors.text.secondary,
-    marginTop: 16,
-    textAlign: 'center',
-  },
+  // Bottom
+  ticketBottom: { padding: 19, alignItems: 'center' },
+  qrWrap: { padding: 10, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: PG.line },
+  ticketRef: { fontSize: 12, color: PG.muted, textAlign: 'center', lineHeight: 18, marginTop: 12 },
+  ticketRefSub: { fontSize: 12, color: PG.muted },
+
+  viewEvent: { flexDirection: 'row', alignItems: 'center', gap: 5, borderTopWidth: 1, borderTopColor: PG.line, paddingHorizontal: 18, paddingVertical: 12 },
+  viewEventText: { fontSize: 13, color: PG.red, fontWeight: '600' },
+
+  empty: { marginTop: 48, alignItems: 'center', paddingHorizontal: 20 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: PG.fg, textAlign: 'center', marginBottom: 10 },
+  emptyText: { fontSize: 14, color: PG.muted, textAlign: 'center', lineHeight: 22 },
 });
 
 export default MyTicketsScreen;

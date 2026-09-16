@@ -27,6 +27,9 @@ import CopyLinkButton from '../../components/CopyLinkButton';
 import PillTabBar from '../../components/PillTabBar';
 import { eventService, bookingService, eventUpdateService, eventSurveyService } from '../../services/firestoreService';
 import { useAuth } from '../../context/AuthContext';
+import * as WebBrowser from 'expo-web-browser';
+import * as ExpoLinking from 'expo-linking';
+import { paymentsApi } from '../../services/paymentsApi';
 import notificationService from '../../services/notificationService';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../styles/designSystem';
 import { useTheme } from '../../context/ThemeContext';
@@ -36,9 +39,16 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const EventDetailScreen = ({ navigation, route }) => {
   const { event: eventParam } = route.params;
-  const { user } = useAuth();
+  const { user, userProfile, updateUserProfile } = useAuth();
   const { colors, isDarkMode } = useTheme();
   const [event, setEvent] = useState(eventParam);
+  const isSaved = !!event?.id && (userProfile?.savedEvents || []).includes(event.id);
+  const toggleSave = async () => {
+    if (!user || !event?.id) return;
+    const current = userProfile?.savedEvents || [];
+    const next = current.includes(event.id) ? current.filter((id) => id !== event.id) : [...current, event.id];
+    try { await updateUserProfile({ savedEvents: next }); } catch (_) {}
+  };
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
   const [ticketQuantity, setTicketQuantity] = useState(1);
@@ -57,6 +67,7 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [formValues, setFormValues] = useState({});
   const [selectedCohort, setSelectedCohort] = useState(null);
   const [submittingRegistration, setSubmittingRegistration] = useState(false);
+  const [detailTab, setDetailTab] = useState('About');
 
   // Tabs for the registered/post-RSVP view
   const eventTabs = [
@@ -129,7 +140,7 @@ const EventDetailScreen = ({ navigation, route }) => {
     try {
       setLoadingAttendees(true);
       const attendees = await bookingService.getEventAttendees(event.id);
-      setAttendeeCount(attendees?.length || 0);
+      setAttendeeCount((attendees || []).filter((a) => a.status !== 'cancelled').length);
     } catch (error) {
       console.error('Error fetching attendee count:', error);
       // Don't show error to user, just set count to 0
@@ -482,7 +493,7 @@ const EventDetailScreen = ({ navigation, route }) => {
 
         return {
           ...field,
-          readOnly: isPreFilled && !!defaultValue,
+          readOnly: false,
           defaultValue,
         };
       });
@@ -491,9 +502,9 @@ const EventDetailScreen = ({ navigation, route }) => {
     // Default fields: firstName, lastName, email (pre-filled), phone, gender
     const nameParts = (user?.displayName || '').split(' ');
     return [
-      { id: 'firstName', label: 'First Name', type: 'text', required: true, readOnly: true, defaultValue: nameParts[0] || '' },
-      { id: 'lastName', label: 'Last Name', type: 'text', required: true, readOnly: true, defaultValue: nameParts.slice(1).join(' ') || '' },
-      { id: 'email', label: 'Email', type: 'email', required: true, readOnly: true, defaultValue: user?.email || '' },
+      { id: 'firstName', label: 'First Name', type: 'text', required: true, readOnly: false, defaultValue: nameParts[0] || '' },
+      { id: 'lastName', label: 'Last Name', type: 'text', required: true, readOnly: false, defaultValue: nameParts.slice(1).join(' ') || '' },
+      { id: 'email', label: 'Email', type: 'email', required: true, readOnly: false, defaultValue: user?.email || '' },
       { id: 'phone', label: 'Phone Number', type: 'phone', required: true, readOnly: false, defaultValue: '' },
       { id: 'gender', label: 'Gender', type: 'radio', required: false, readOnly: false, defaultValue: '', options: ['Male', 'Female', 'Other'] },
     ];
@@ -506,6 +517,67 @@ const EventDetailScreen = ({ navigation, route }) => {
       values[field.id] = field.defaultValue || '';
     });
     return values;
+  };
+
+  // Re-populate form with user data once user loads (handles async auth timing)
+  useEffect(() => {
+    if (showRegistrationModal && user) {
+      setFormValues(prev => {
+        const updated = { ...prev };
+        if (!updated.email && user.email) updated.email = user.email;
+        if (!updated.firstName && user.displayName) {
+          const parts = user.displayName.split(' ');
+          updated.firstName = parts[0] || '';
+          if (!updated.lastName) updated.lastName = parts.slice(1).join(' ') || '';
+        }
+        return updated;
+      });
+    }
+  }, [user, showRegistrationModal]);
+
+  const unitPrice = (() => {
+    const raw = event?.price;
+    if (raw == null) return 0;
+    const n = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(/[^\d.]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  })();
+  const isPaidEvent = unitPrice > 0 && !event?.registrationUrl;
+
+  const finishRegistration = async (bookingRecord) => {
+    setUserBooking({ ...bookingRecord, status: 'confirmed' });
+    const isFree = !isPaidEvent;
+    let ticketCount = 1;
+    try {
+      const all = await bookingService.getUserBookings(user.uid);
+      ticketCount = all.filter((b) => b.status !== 'cancelled').length || 1;
+    } catch (_) {}
+    setShowRegistrationModal(false);
+    navigation.navigate('RegistrationSuccess', { event, booking: bookingRecord, isFree, ticketCount });
+  };
+
+  const payForTickets = async (attendee) => {
+    const init = await paymentsApi.initializeTicket({
+      eventId: event.id,
+      quantity: ticketQuantity,
+      email: attendee.userEmail,
+      attendee,
+    });
+    // Plain in-app browser (no iOS "Sign In" consent prompt); the return deep link closes it
+    const sub = ExpoLinking.addEventListener('url', ({ url }) => {
+      if (url && url.includes('pay/done')) WebBrowser.dismissBrowser();
+    });
+    try {
+      await WebBrowser.openBrowserAsync(init.authorizationUrl, { dismissButtonStyle: 'close', presentationStyle: 'pageSheet' });
+    } finally {
+      sub.remove();
+    }
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const v = await paymentsApi.verifyTicket(init.reference);
+      if (v.status === 'paid') return v.booking;
+      if (v.status === 'failed') throw new Error('Payment failed. You have not been charged.');
+      await new Promise((r) => setTimeout(r, attempt < 2 ? 2000 : 5000));
+    }
+    throw new Error('We could not confirm your payment yet. If you approved the MoMo prompt, your ticket will appear in Tickets shortly.');
   };
 
   const submitRegistration = async () => {
@@ -580,6 +652,23 @@ const EventDetailScreen = ({ navigation, route }) => {
         }
       });
 
+      if (isPaidEvent) {
+        const paid = await payForTickets({
+          userEmail: bookingData.userEmail,
+          userName: bookingData.userName,
+          firstName, lastName,
+          phoneNumber: bookingData.phoneNumber,
+          gender: bookingData.gender,
+          cohortId: bookingData.cohortId || null,
+          cohortName: bookingData.cohortName || null,
+        });
+        try {
+          await notificationService.sendRSVPConfirmation(user.uid, event.name, event.date, event.startTime || event.time);
+        } catch (_) {}
+        await finishRegistration(paid);
+        return;
+      }
+
       const docRef = await bookingService.create(bookingData);
 
       // Send RSVP confirmation notification
@@ -631,25 +720,18 @@ const EventDetailScreen = ({ navigation, route }) => {
         console.log('Moments notification scheduling error (non-critical):', notifError);
       }
 
-      // Update local state
-      setUserBooking({
-        id: docRef.id,
-        ...bookingData,
-        status: 'confirmed',
-      });
-
-      setShowRegistrationModal(false);
-      Alert.alert('🎉 Registration Confirmed!', `You're registered for ${event.name}. Your ticket is ready!`);
+      paymentsApi.emailTicket(docRef.id).catch(() => {});
+      await finishRegistration({ id: docRef.id, ...bookingData });
 
     } catch (error) {
       console.error('Registration error:', error);
-      let errorMsg = 'Failed to complete registration. Please try again.';
+      let errorMsg = error.message || 'Failed to complete registration. Please try again.';
       if (error.message?.includes('no longer accepting')) {
         errorMsg = 'This event is no longer accepting registrations.';
       } else if (error.message?.includes('spots remaining')) {
         errorMsg = error.message;
       }
-      Alert.alert('Registration Failed', errorMsg);
+      Alert.alert(isPaidEvent ? 'Payment not completed' : 'Registration Failed', errorMsg);
     } finally {
       setSubmittingRegistration(false);
     }
@@ -673,106 +755,68 @@ const EventDetailScreen = ({ navigation, route }) => {
 
   // Render the QR code / Ticket tab content
   const renderTicketTabContent = () => {
-    const daysLeft = getDaysLeft();
-    const daysLeftLabel = getDaysLeftLabel();
-    const ticketId = userBooking?.qrCode || `TKT${(userBooking?.id || '').slice(-8).toUpperCase()}`;
+    const qty = userBooking?.quantity || 1;
+    const refId = (userBooking?.id || '').slice(-8).toUpperCase();
+    const attendee = userBooking?.userName
+      || [userBooking?.firstName, userBooking?.lastName].filter(Boolean).join(' ')
+      || user?.displayName || user?.email || '';
 
     return (
       <View style={registeredStyles.ticketTabContainer}>
-        {/* Days left counter */}
-        {daysLeft !== null && daysLeft >= 0 && (
-          <View style={[registeredStyles.daysLeftCard, { backgroundColor: colors.background.secondary }]}>
-            <View style={[registeredStyles.daysLeftIconContainer, { backgroundColor: colors.background.primary }]}>
-              <Feather name="clock" size={20} color={colors.primary[500]} />
+        <View style={registeredStyles.ticketCard}>
+          <View style={registeredStyles.ticketTop}>
+            <Text style={registeredStyles.ticketCategory}>TIKITI / {(event.category || 'EVENT').toUpperCase()}</Text>
+            <Text style={registeredStyles.ticketName}>{event.name}</Text>
+            <Text style={registeredStyles.ticketVenue}>{getLocationString()}</Text>
+          </View>
+          <View style={registeredStyles.ticketMiddle}>
+            <View>
+              <Text style={registeredStyles.ticketFieldLabel}>DATE</Text>
+              <Text style={registeredStyles.ticketFieldValue}>{event.date || 'Date TBA'}</Text>
             </View>
-            <View style={registeredStyles.daysLeftContent}>
-              <Text style={[registeredStyles.daysLeftValue, { color: colors.text.primary }]}>
-                {daysLeft === 0 ? 'Today' : daysLeft === 1 ? '1 day' : `${daysLeft} days`}
-              </Text>
-              <Text style={[registeredStyles.daysLeftLabel, { color: colors.text.secondary }]}>
-                {daysLeft === 0 ? 'Event is happening today!' : 'until the event'}
-              </Text>
+            {!!attendee && (
+              <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                <Text style={registeredStyles.ticketFieldLabel}>ATTENDEE</Text>
+                <Text style={registeredStyles.ticketFieldValue} numberOfLines={1}>{attendee}</Text>
+              </View>
+            )}
+            <View>
+              <Text style={registeredStyles.ticketFieldLabel}>ADMISSION</Text>
+              <Text style={registeredStyles.ticketFieldValue}>{qty} {qty === 1 ? 'person' : 'people'}</Text>
             </View>
           </View>
-        )}
-
-        {/* QR Code Section */}
-        <View style={[registeredStyles.qrSection, { backgroundColor: colors.background.secondary }]}>
-          <Text style={[registeredStyles.qrSectionTitle, { color: colors.text.primary }]}>Your Ticket</Text>
-          <Text style={[registeredStyles.qrSectionSubtitle, { color: colors.text.secondary }]}>Show this QR code at the venue entrance</Text>
-
-          <View style={registeredStyles.qrCodeWrapper}>
-            <QRCode
-              value={generateQRData()}
-              size={200}
-              color="black"
-              backgroundColor="white"
-              logoBackgroundColor="transparent"
-            />
-          </View>
-
-          <View style={registeredStyles.qrLabelContainer}>
-            <Feather name="camera" size={16} color={colors.text.tertiary} style={{ marginRight: 8 }} />
-            <Text style={[registeredStyles.qrLabel, { color: colors.text.tertiary }]}>Scan at venue entrance</Text>
-          </View>
-
-          {/* Ticket ID */}
-          <View style={[registeredStyles.ticketIdContainer, { backgroundColor: colors.background.primary }]}>
-            <Feather name="hash" size={12} color={colors.text.tertiary} style={{ marginRight: 4 }} />
-            <Text style={[registeredStyles.ticketIdText, { color: colors.text.tertiary }]}>{ticketId}</Text>
+          <View style={registeredStyles.ticketBottom}>
+            <View style={registeredStyles.ticketQrWrap}>
+              <QRCode value={generateQRData()} size={160} color="#202220" backgroundColor="#fff" />
+            </View>
+            <Text style={registeredStyles.ticketRef}>{refId}{'\n'}Scan at the door</Text>
           </View>
         </View>
 
-        {/* Ticket details */}
-        <View style={[registeredStyles.ticketDetails, { backgroundColor: colors.background.secondary }]}>
-          <View style={registeredStyles.ticketDetailRow}>
-            <Text style={[registeredStyles.ticketDetailLabel, { color: colors.text.tertiary }]}>Attendee</Text>
-            <Text style={[registeredStyles.ticketDetailValue, { color: colors.text.primary }]}>
-              {user?.displayName || user?.email || 'Attendee'}
-            </Text>
-          </View>
-          <View style={registeredStyles.ticketDetailRow}>
-            <Text style={[registeredStyles.ticketDetailLabel, { color: colors.text.tertiary }]}>Quantity</Text>
-            <Text style={[registeredStyles.ticketDetailValue, { color: colors.text.primary }]}>
-              {userBooking?.quantity || 1} ticket{(userBooking?.quantity || 1) > 1 ? 's' : ''}
-            </Text>
-          </View>
-          <View style={registeredStyles.ticketDetailRow}>
-            <Text style={[registeredStyles.ticketDetailLabel, { color: colors.text.tertiary }]}>Type</Text>
-            <Text style={[registeredStyles.ticketDetailValue, { color: colors.text.primary }]}>
-              {userBooking?.registrationType === 'rsvp' ? 'Free RSVP' : 'Paid Ticket'}
-            </Text>
-          </View>
-          <View style={registeredStyles.ticketDetailRow}>
-            <Text style={[registeredStyles.ticketDetailLabel, { color: colors.text.tertiary }]}>Status</Text>
-            <Text style={[registeredStyles.ticketDetailValue, { color: Colors.success[500] }]}>
-              Confirmed
-            </Text>
-          </View>
-        </View>
-
-        {/* Share event button */}
         <TouchableOpacity
-          style={[registeredStyles.shareTicketButton, { backgroundColor: colors.primary[500] }]}
-          onPress={() => {
-            const eventUrl = generateEventShareUrl(event.id, event.name);
-            Share.share({
-              message: `🎉 ${event.name}\n📅 ${event.date}\n⏰ ${event.startTime || event.time || 'TBA'}\n📍 ${getLocationString()}\n${event.type === 'free' ? '🎟️ Free Event' : `💰 ₵${event.price}`}\n\n🔗 Register here: ${eventUrl}`,
-              title: event.name,
-            });
-          }}
+          style={registeredStyles.secondaryBtn}
+          onPress={() => navigation.navigate('PostEventVideo', { event, booking: userBooking })}
+          activeOpacity={0.8}
         >
-          <Feather name="share-2" size={18} color={isDarkMode ? Colors.black : Colors.white} />
-          <Text style={[registeredStyles.shareTicketButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>Share Event</Text>
+          <Feather name="camera" size={16} color="#202220" />
+          <Text style={registeredStyles.secondaryBtnText}>Share a photo or video</Text>
         </TouchableOpacity>
 
-        {/* Share photo / video button */}
         <TouchableOpacity
-          style={[registeredStyles.postVideoButton, { borderColor: colors.primary[500] }]}
-          onPress={() => navigation.navigate('PostEventVideo', { event, booking: userBooking })}
+          style={registeredStyles.cancelRegistration}
+          onPress={handleCancelBooking}
+          disabled={booking}
         >
-          <Feather name="camera" size={18} color={colors.primary[500]} />
-          <Text style={[registeredStyles.postVideoButtonText, { color: colors.primary[500] }]}>Share Photo / Video</Text>
+          {booking ? (
+            <ActivityIndicator size="small" color="#f44929" />
+          ) : (
+            <>
+              <Feather name="x-circle" size={16} color="#f44929" />
+              <Text style={[registeredStyles.cancelRegistrationText, { color: '#f44929' }]}>
+                {userBooking.registrationType === 'rsvp' ? 'Withdraw RSVP' : 'Cancel booking'}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     );
@@ -1070,138 +1114,139 @@ const EventDetailScreen = ({ navigation, route }) => {
   // REGISTERED VIEW — Card layout matching Figma 45:584
   // ──────────────────────────────────────────────────────
   if (userBooking) {
-    return (
-      <View style={[registeredStyles.container, { backgroundColor: colors.background.primary }]}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.background.primary} />
+    const regTabs = eventTabs.filter((t) => ['ticket', 'program', 'updates', 'moments'].includes(t.key));
+    const heroUri = event.imageBase64
+      ? (event.imageBase64.startsWith('data:') ? event.imageBase64 : `data:image/jpeg;base64,${event.imageBase64}`)
+      : (event.coverImage || event.imageUrl || null);
+    const shareEvent = () => {
+      const eventUrl = generateEventShareUrl(event.id, event.name);
+      Share.share({ message: `${event.name}\n\n${eventUrl}`, title: event.name });
+    };
 
-        {/* Header */}
-        <View style={registeredStyles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={registeredStyles.backButton}>
-            <Feather name="arrow-left" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={[registeredStyles.headerTitle, { color: colors.text.primary }]}>Events details</Text>
-        </View>
+    return (
+      <View style={styles.modalContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
         <ScrollView
+          style={styles.scrollView}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={registeredStyles.scrollContent}
+          contentContainerStyle={{ paddingBottom: 110 }}
         >
-          {/* Event Card */}
-          <View style={[registeredStyles.eventCard, { backgroundColor: colors.background.secondary }]}>
-            {/* Event Image */}
-            <View style={registeredStyles.imageContainer}>
-              {event.imageBase64 ? (
-                <Image
-                  source={{
-                    uri: event.imageBase64.startsWith('data:')
-                      ? event.imageBase64
-                      : `data:image/jpeg;base64,${event.imageBase64}`,
-                  }}
-                  style={registeredStyles.eventImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={[registeredStyles.eventImage, { backgroundColor: colors.primary[200], justifyContent: 'center', alignItems: 'center' }]}>
-                  <Feather name="image" size={32} color={colors.primary[400]} />
-                </View>
-              )}
-
-              {/* Going badge */}
-              <View style={[registeredStyles.goingBadge, { backgroundColor: colors.background.primary }]}>
-                <Text style={[registeredStyles.goingBadgeText, { color: colors.text.primary }]}>Going</Text>
-              </View>
-            </View>
-
-            {/* Event Title */}
-            <Text style={[registeredStyles.eventTitle, { color: colors.text.primary }]}>{event.name}</Text>
-
-            {/* Date, Time, Location pills */}
-            <View style={registeredStyles.pillsContainer}>
-              <View style={registeredStyles.pillRow}>
-                <View style={[registeredStyles.pill, { backgroundColor: colors.background.primary }]}>
-                  <Text style={[registeredStyles.pillText, { color: colors.text.primary }]}>{getFormattedDate()}</Text>
-                </View>
-                <View style={[registeredStyles.pill, { backgroundColor: colors.background.primary }]}>
-                  <Text style={[registeredStyles.pillText, { color: colors.text.primary }]}>{getFormattedTime()}</Text>
-                </View>
-              </View>
-              <View style={[registeredStyles.pill, { backgroundColor: colors.background.primary }]}>
-                <Text style={[registeredStyles.pillText, { color: colors.text.primary }]}>{getLocationString()}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Meeting link for virtual/hybrid events */}
-          {(event.venueType === 'virtual' || event.venueType === 'hybrid') && (
-            <View style={[registeredStyles.meetingLinkCard, { backgroundColor: colors.background.secondary }]}>
-              <View style={registeredStyles.meetingLinkHeader}>
-                <Feather name="video" size={18} color={colors.primary[500]} />
-                <Text style={[registeredStyles.meetingLinkTitle, { color: colors.text.primary }]}>
-                  {event.venueType === 'hybrid' ? 'Join Online (Hybrid)' : 'Join Virtual Event'}
-                </Text>
-              </View>
-              <Text style={[registeredStyles.meetingPlatform, { color: colors.text.secondary }]}>
-                {event.meetingPlatform === 'google_meet' ? 'Google Meet' :
-                 event.meetingPlatform === 'zoom' ? 'Zoom' :
-                 event.meetingPlatform === 'teams' ? 'Microsoft Teams' :
-                 event.meetingPlatform || 'Online Meeting'}
-              </Text>
-              {event.meetingLink ? (
-                <TouchableOpacity
-                  style={[registeredStyles.joinMeetingButton, { backgroundColor: colors.primary[500] }]}
-                  onPress={() => Linking.openURL(event.meetingLink)}
-                >
-                  <Feather name="external-link" size={16} color={isDarkMode ? Colors.black : Colors.white} />
-                  <Text style={[registeredStyles.joinMeetingButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>Join Meeting</Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={[registeredStyles.meetingLinkPending, { color: colors.text.tertiary }]}>
-                  Meeting link will be shared by the organizer
-                </Text>
-              )}
-            </View>
-          )}
-
-          {/* Days left indicator */}
-          {getDaysLeft() !== null && getDaysLeft() >= 0 && (
-            <View style={[registeredStyles.daysLeftPill, { backgroundColor: colors.background.tertiary }]}>
-              <Feather name="clock" size={14} color={colors.primary[500]} />
-              <Text style={[registeredStyles.daysLeftPillText, { color: colors.primary[500] }]}>{getDaysLeftLabel()}</Text>
-            </View>
-          )}
-
-          {/* PillTabBar — Ticket, Program, Updates, Messages, Feedback */}
-          <View style={registeredStyles.tabBarContainer}>
-            <PillTabBar
-              tabs={eventTabs}
-              activeTab={activeEventTab}
-              onTabPress={setActiveEventTab}
-            />
-          </View>
-
-          {/* Tab content area */}
-          {renderTabContent()}
-
-          {/* Cancel registration option */}
-          <TouchableOpacity
-            style={registeredStyles.cancelRegistration}
-            onPress={handleCancelBooking}
-            disabled={booking}
-          >
-            {booking ? (
-              <ActivityIndicator size="small" color={colors.error[500]} />
+          <View style={styles.detailImage}>
+            {heroUri ? (
+              <Image source={{ uri: heroUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             ) : (
-              <>
-                <Feather name="x-circle" size={16} color={colors.error[500]} />
-                <Text style={[registeredStyles.cancelRegistrationText, { color: colors.error[500] }]}>
-                  {userBooking.registrationType === 'rsvp' ? 'Withdraw RSVP' : 'Cancel Booking'}
-                </Text>
-              </>
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: '#6256e8' }]} />
             )}
-          </TouchableOpacity>
+            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={StyleSheet.absoluteFill} pointerEvents="none" />
 
-          <View style={{ height: 100 }} />
+            <View style={styles.detailToolbar}>
+              <TouchableOpacity style={styles.toolbarBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                <Feather name="chevron-left" size={20} color="#202220" />
+              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity style={styles.toolbarBtn} onPress={shareEvent} activeOpacity={0.8}>
+                  <Feather name="share" size={18} color="#202220" />
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.toolbarBtn, isSaved && { backgroundColor: '#f44929' }]} onPress={toggleSave} activeOpacity={0.8}>
+                  <Feather name="heart" size={18} color={isSaved ? '#fff' : '#202220'} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={registeredStyles.goingBadge}>
+              <Feather name="check" size={12} color="#1a8c4e" />
+              <Text style={registeredStyles.goingBadgeText}>You're going</Text>
+            </View>
+          </View>
+
+          <View style={styles.detailBody}>
+            <Text style={styles.labelTag}>{(event.category || 'EVENT').toUpperCase()}</Text>
+            <Text style={styles.detailH1}>{event.name}</Text>
+
+            <View style={styles.infoLine}>
+              <Feather name="calendar" size={18} color="#65675d" style={{ marginTop: 2 }} />
+              <View>
+                <Text style={styles.infoMain}>{getFormattedDate()}</Text>
+                <Text style={styles.infoSub}>{getFormattedTime()}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoLine}>
+              <Feather name="map-pin" size={18} color="#65675d" style={{ marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoMain}>{getLocationString()}</Text>
+                <TouchableOpacity onPress={handleGetDirections}>
+                  <Text style={styles.infoLink}>Get Directions</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {(event.venueType === 'virtual' || event.venueType === 'hybrid') && (
+              <View style={styles.infoLine}>
+                <Feather name="video" size={18} color="#65675d" style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.infoMain}>
+                    {event.meetingPlatform === 'google_meet' ? 'Google Meet' :
+                     event.meetingPlatform === 'zoom' ? 'Zoom' :
+                     event.meetingPlatform === 'teams' ? 'Microsoft Teams' :
+                     event.meetingPlatform || 'Online meeting'}
+                  </Text>
+                  {event.meetingLink ? (
+                    <TouchableOpacity onPress={() => Linking.openURL(event.meetingLink)}>
+                      <Text style={styles.infoLink}>Join meeting</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={styles.infoSub}>Link will be shared by the organiser</Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {getDaysLeft() !== null && getDaysLeft() >= 0 && (
+              <View style={styles.infoLine}>
+                <Feather name="clock" size={18} color="#65675d" style={{ marginTop: 2 }} />
+                <Text style={styles.infoMain}>{getDaysLeftLabel()}</Text>
+              </View>
+            )}
+
+            {attendeeCount > 0 && (
+              <View style={styles.infoLine}>
+                <Feather name="users" size={18} color="#65675d" style={{ marginTop: 2 }} />
+                <Text style={styles.infoMain}>{attendeeCount} attending</Text>
+              </View>
+            )}
+
+            <View style={styles.tabs}>
+              {regTabs.map((t) => (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[styles.tab, activeEventTab === t.key && styles.tabActive]}
+                  onPress={() => setActiveEventTab(t.key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.tabText, activeEventTab === t.key && styles.tabTextActive]}>{t.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {renderTabContent()}
+          </View>
         </ScrollView>
+
+        <View style={styles.bookBar}>
+          <View>
+            <Text style={styles.bookBarLabel}>STATUS</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.bookBarPrice, { color: '#1a8c4e' }]}>Confirmed</Text>
+              <Feather name="check-circle" size={18} color="#1a8c4e" />
+            </View>
+          </View>
+          <TouchableOpacity style={styles.bookBarBtn} onPress={shareEvent} activeOpacity={0.85}>
+            <Text style={styles.bookBarBtnText}>Share event</Text>
+            <Feather name="share" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
 
         {/* Speaker Details Modal */}
         <Modal
@@ -1295,8 +1340,9 @@ const EventDetailScreen = ({ navigation, route }) => {
   }
 
   // ──────────────────────────────────────────────────────
-  // UNREGISTERED VIEW — Hero layout (pre-registration)
+  // UNREGISTERED VIEW — Reference design (detail screen)
   // ──────────────────────────────────────────────────────
+
   return (
     <View style={styles.modalContainer}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
@@ -1304,12 +1350,10 @@ const EventDetailScreen = ({ navigation, route }) => {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        bounces={false}
-        nestedScrollEnabled={true}
-        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* Hero Image Section — Full bleed with gradient overlay */}
-        <View style={styles.heroSection}>
+        {/* ── Full-bleed image ──────────────────────────── */}
+        <View style={styles.detailImage}>
           {event.imageBase64 ? (
             <Image
               source={{
@@ -1317,191 +1361,162 @@ const EventDetailScreen = ({ navigation, route }) => {
                   ? event.imageBase64
                   : `data:image/jpeg;base64,${event.imageBase64}`,
               }}
-              style={styles.heroImage}
+              style={StyleSheet.absoluteFill}
               resizeMode="cover"
             />
           ) : (
-            <View style={[styles.heroImage, { backgroundColor: colors.primary[700] }]}>
-              <Feather name="image" size={48} color="rgba(255,255,255,0.3)" />
-            </View>
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#6256e8' }]} />
           )}
-
-          {/* Gradient overlay */}
+          {/* gradient */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.85)']}
-            locations={[0.35, 0.85]}
-            style={styles.heroGradient}
+            colors={['transparent', 'rgba(0,0,0,0.72)']}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
 
-          {/* Close button */}
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: isDarkMode ? colors.background.tertiary : '#f0f0f0' }]}
-            onPress={() => navigation.goBack()}
-          >
-            <Feather name="x" size={16} color={colors.text.primary} />
-          </TouchableOpacity>
-
-          {/* Content overlaid on hero */}
-          <View style={styles.heroContent}>
-            {/* Live badge */}
-            {event.category && (
-              <View style={styles.liveBadge}>
-                <Feather name="video" size={16} color={Colors.black} />
-                <Text style={styles.liveBadgeText}>{event.category}</Text>
-              </View>
-            )}
-
-            {/* Event title */}
-            <Text style={styles.heroTitle}>{event.name}</Text>
-
-            {/* Date/time */}
-            <Text style={styles.heroDateTime}>{getFormattedDateTime()}</Text>
+          {/* toolbar */}
+          <View style={styles.detailToolbar}>
+            <TouchableOpacity style={styles.toolbarBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+              <Feather name="chevron-left" size={20} color="#202220" />
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={styles.toolbarBtn}
+                onPress={() => {
+                  const eventUrl = generateEventShareUrl(event.id, event.name);
+                  Share.share({ message: `${event.name}\n\n${eventUrl}`, title: event.name });
+                }}
+                activeOpacity={0.8}
+              >
+                <Feather name="share" size={18} color="#202220" />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.toolbarBtn, isSaved && { backgroundColor: '#f44929' }]} onPress={toggleSave} activeOpacity={0.8}>
+                <Feather name="heart" size={18} color={isSaved ? '#fff' : '#202220'} />
+              </TouchableOpacity>
+            </View>
           </View>
+
         </View>
 
-        {/* Bottom white content section */}
-        <View style={[styles.contentSection, { backgroundColor: colors.background.primary }]}>
-          {/* Description */}
-          <Text style={[styles.descriptionTitle, { color: colors.text.primary }]}>
-            {event.description?.substring(0, 80) || 'No description available.'}
-          </Text>
-          <Text style={[styles.descriptionBody, { color: colors.text.secondary }]}>
-            {event.description?.substring(80) || ''}
-          </Text>
+        {/* ── Body ─────────────────────────────────────── */}
+        <View style={styles.detailBody}>
+          {/* label tag */}
+          <Text style={styles.labelTag}>{(event.category || 'EVENT').toUpperCase()}</Text>
 
-          {/* Attendee count */}
-          <View style={styles.attendeeRow}>
-            <Feather name="users" size={16} color={colors.text.tertiary} />
-            <Text style={[styles.attendeeText, { color: colors.text.tertiary }]}>
-              {loadingAttendees ? '...' : `${attendeeCount} attending`}
-            </Text>
+          {/* h1 */}
+          <Text style={styles.detailH1}>{event.name}</Text>
+
+          {/* calendar info-line */}
+          <View style={styles.infoLine}>
+            <Feather name="calendar" size={18} color="#65675d" style={{ marginTop: 2 }} />
+            <View>
+              <Text style={styles.infoMain}>{event.date || 'Date TBA'}</Text>
+              <Text style={styles.infoSub}>{event.startTime || event.time || 'Time TBA'}</Text>
+            </View>
           </View>
 
-          {/* Action buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.registerButton, booking && { opacity: 0.6 }]}
-              onPress={handleBookTicket}
-              disabled={booking}
-            >
-              {booking ? (
-                <ActivityIndicator color={Colors.white} size="small" />
-              ) : (
-                <Text style={styles.registerButtonText}>
-                  {event.type === 'free' ? 'Register' : `Buy · ₵${event.price}`}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.shareButton}
-              onPress={() => {
-                const eventUrl = generateEventShareUrl(event.id, event.name);
-                Share.share({
-                  message: `🎉 ${event.name}\n📅 ${event.date}\n📍 ${getLocationString()}\n${event.type === 'free' ? '🎟️ Free Event' : `💰 ₵${event.price}`}\n\n🔗 Register here: ${eventUrl}`,
-                  title: event.name,
-                });
-              }}
-            >
-              <Feather name="share" size={20} color={Colors.black} />
-              <Text style={styles.shareButtonText}>Share</Text>
-            </TouchableOpacity>
+          {/* pin info-line */}
+          <View style={styles.infoLine}>
+            <Feather name="map-pin" size={18} color="#65675d" style={{ marginTop: 2 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.infoMain}>
+                {typeof event.location === 'object'
+                  ? (event.location.name || event.location.address || 'Venue TBA')
+                  : (event.location || 'Venue TBA')}
+              </Text>
+              <TouchableOpacity onPress={handleGetDirections}>
+                <Text style={styles.infoLink}>Get Directions</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Ticket quantity for paid events */}
-          {event.type !== 'free' && (
-            <View style={[styles.quantitySection, { borderColor: colors.border.light }]}>
-              <Text style={[styles.quantityLabel, { color: colors.text.secondary }]}>Quantity</Text>
-              <View style={styles.quantityControls}>
-                <TouchableOpacity
-                  style={[styles.quantityButton, ticketQuantity <= 1 && { backgroundColor: colors.gray[300] }]}
-                  onPress={() => adjustQuantity(-1)}
-                  disabled={ticketQuantity <= 1}
-                >
-                  <Feather name="minus" size={16} color={Colors.white} />
-                </TouchableOpacity>
-                <Text style={[styles.quantityValue, { color: colors.text.primary }]}>{ticketQuantity}</Text>
-                <TouchableOpacity
-                  style={[styles.quantityButton, ticketQuantity >= 10 && { backgroundColor: colors.gray[300] }]}
-                  onPress={() => adjustQuantity(1)}
-                  disabled={ticketQuantity >= 10}
-                >
-                  <Feather name="plus" size={16} color={Colors.white} />
-                </TouchableOpacity>
-              </View>
+          {/* attendees */}
+          {attendeeCount > 0 && (
+            <View style={styles.infoLine}>
+              <Feather name="users" size={18} color="#65675d" style={{ marginTop: 2 }} />
+              <Text style={styles.infoMain}>{attendeeCount} attending</Text>
             </View>
           )}
 
-          {/* Event details cards */}
-          <View style={styles.detailCards}>
-            <View style={[styles.detailCard, { borderColor: colors.border.light }]}>
-              <Feather name="calendar" size={18} color={colors.primary[500]} />
-              <View style={styles.detailCardContent}>
-                <Text style={[styles.detailCardLabel, { color: colors.text.tertiary }]}>Date & Time</Text>
-                <Text style={[styles.detailCardValue, { color: colors.text.primary }]}>{event.date}</Text>
-                <Text style={[styles.detailCardSub, { color: colors.text.tertiary }]}>
-                  {event.startTime || event.time || 'Time TBA'}{event.endTime ? ` - ${event.endTime}` : ''}
-                </Text>
-              </View>
-            </View>
-
-            <View style={[styles.detailCard, { borderColor: colors.border.light }]}>
-              <Feather name="map-pin" size={18} color={colors.success[500]} />
-              <View style={styles.detailCardContent}>
-                <Text style={[styles.detailCardLabel, { color: colors.text.tertiary }]}>Location</Text>
-                <Text style={[styles.detailCardValue, { color: colors.text.primary }]}>
-                  {typeof event.location === 'object' ? (event.location.name || event.location.address || 'Location TBA') : (event.location || 'Location TBA')}
-                </Text>
-                <TouchableOpacity onPress={handleGetDirections} style={styles.directionsLink}>
-                  <Feather name="navigation" size={14} color={colors.primary[500]} />
-                  <Text style={[styles.directionsText, { color: colors.primary[500] }]}>Get Directions</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Meeting link for virtual/hybrid events */}
-            {(event.venueType === 'virtual' || event.venueType === 'hybrid') && (
-              <View style={[styles.detailCard, { borderColor: colors.border.light }]}>
-                <Feather name="video" size={18} color={colors.info[500]} />
-                <View style={styles.detailCardContent}>
-                  <Text style={[styles.detailCardLabel, { color: colors.text.tertiary }]}>
-                    {event.venueType === 'hybrid' ? 'Online (Hybrid)' : 'Virtual Event'}
-                  </Text>
-                  <Text style={[styles.detailCardValue, { color: colors.text.primary }]}>
-                    {event.meetingPlatform === 'google_meet' ? 'Google Meet' :
-                     event.meetingPlatform === 'zoom' ? 'Zoom' :
-                     event.meetingPlatform === 'teams' ? 'Microsoft Teams' :
-                     event.meetingPlatform || 'Online Meeting'}
-                  </Text>
-                  {event.meetingLink ? (
-                    <TouchableOpacity
-                      onPress={() => Linking.openURL(event.meetingLink)}
-                      style={styles.directionsLink}
-                    >
-                      <Feather name="external-link" size={14} color={colors.primary[500]} />
-                      <Text style={[styles.directionsText, { color: colors.primary[500] }]}>Join Meeting</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <Text style={[styles.detailCardSub, { color: colors.text.tertiary }]}>
-                      Link will be shared after registration
-                    </Text>
-                  )}
-                </View>
-              </View>
-            )}
-
-            <View style={[styles.detailCard, { borderColor: colors.border.light }]}>
-              <Feather name="user" size={18} color={colors.primary[500]} />
-              <View style={styles.detailCardContent}>
-                <Text style={[styles.detailCardLabel, { color: colors.text.tertiary }]}>Organizer</Text>
-                <Text style={[styles.detailCardValue, { color: colors.text.primary }]}>{event.organizerName || 'Event Organizer'}</Text>
-              </View>
-            </View>
+          {/* tabs */}
+          <View style={styles.tabs}>
+            {['About', 'Programme'].map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[styles.tab, detailTab === t && styles.tabActive]}
+                onPress={() => setDetailTab(t)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.tabText, detailTab === t && styles.tabTextActive]}>{t}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
-          <View style={{ height: 60 }} />
+          {/* tab content */}
+          {detailTab === 'About' ? (
+            <View style={styles.bodyCopy}>
+              {event.description ? (
+                <Text style={styles.bodyText}>{event.description}</Text>
+              ) : (
+                <Text style={styles.bodyText}>No description available for this event.</Text>
+              )}
+              {event.organizerName && (
+                <>
+                  <Text style={styles.bodyH3}>Organizer</Text>
+                  <Text style={styles.bodyText}>{event.organizerName}</Text>
+                </>
+              )}
+              <Text style={styles.finePrint}>Illustrative event details. Actual details may vary.</Text>
+            </View>
+          ) : (
+            <View style={styles.bodyCopy}>
+              {event.program?.sessions?.length > 0 ? (
+                event.program.sessions.map((session, i) => (
+                  <View key={i} style={styles.agendaItem}>
+                    <Text style={styles.agendaTime}>{session.startTime || 'TBA'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.agendaTitle}>{session.title}</Text>
+                      {session.description ? (
+                        <Text style={styles.agendaSub}>{session.description}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.bodyText}>Programme not yet published. Check back closer to the event.</Text>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {/* ── Book bar ──────────────────────────────────────── */}
+      <View style={styles.bookBar}>
+        <View>
+          <Text style={styles.bookBarLabel}>
+            {event.price && event.price !== '0' ? 'PER PERSON' : 'ENTRY'}
+          </Text>
+          <Text style={styles.bookBarPrice}>
+            {event.price && event.price !== '0' ? `₵${event.price}` : 'Free'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.bookBarBtn}
+          onPress={() => {
+            if (event.registrationUrl) {
+              Linking.openURL(event.registrationUrl);
+            } else {
+              setShowRegistrationModal(true);
+            }
+          }}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.bookBarBtnText}>
+            {event.registrationUrl ? 'Register on their site' : (event.price && event.price !== '0' ? 'Get tickets' : 'Register for free')}
+          </Text>
+          <Feather name={event.registrationUrl ? 'external-link' : 'arrow-right'} size={18} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
       {/* ──── Registration Bottom Sheet Modal ──────────────── */}
       <Modal
@@ -1525,10 +1540,42 @@ const EventDetailScreen = ({ navigation, route }) => {
               <View style={[registeredStyles.regModalHandle, { backgroundColor: colors.border.medium }]} />
 
               {/* Title */}
-              <Text style={[registeredStyles.regModalTitle, { color: colors.text.primary }]}>Register for Event</Text>
+              <Text style={[registeredStyles.regModalTitle, { color: colors.text.primary }]}>{isPaidEvent ? 'Get tickets' : 'Register for Event'}</Text>
               <Text style={[registeredStyles.regModalSubtitle, { color: colors.text.secondary }]}>
                 {event.name}
               </Text>
+
+              {isPaidEvent && (
+                <View style={registeredStyles.qtyCard}>
+                  <View style={registeredStyles.qtyRow}>
+                    <View>
+                      <Text style={registeredStyles.qtyTitle}>General admission</Text>
+                      <Text style={registeredStyles.qtySub}>GH₵{unitPrice.toFixed(2)} / person</Text>
+                    </View>
+                    <View style={registeredStyles.stepper}>
+                      <TouchableOpacity onPress={() => adjustQuantity(-1)} disabled={ticketQuantity <= 1} style={[registeredStyles.stepBtn, ticketQuantity <= 1 && { opacity: 0.35 }]}>
+                        <Feather name="minus" size={16} color="#202220" />
+                      </TouchableOpacity>
+                      <Text style={registeredStyles.stepValue}>{ticketQuantity}</Text>
+                      <TouchableOpacity onPress={() => adjustQuantity(1)} disabled={ticketQuantity >= 10} style={[registeredStyles.stepBtn, ticketQuantity >= 10 && { opacity: 0.35 }]}>
+                        <Feather name="plus" size={16} color="#202220" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={registeredStyles.totalRow}>
+                    <Text style={registeredStyles.totalLabel}>{ticketQuantity} ticket{ticketQuantity > 1 ? 's' : ''}</Text>
+                    <Text style={registeredStyles.totalLabel}>GH₵{(unitPrice * ticketQuantity).toFixed(2)}</Text>
+                  </View>
+                  <View style={registeredStyles.totalRow}>
+                    <Text style={registeredStyles.totalLabel}>Booking fee</Text>
+                    <Text style={registeredStyles.totalLabel}>GH₵0.00</Text>
+                  </View>
+                  <View style={[registeredStyles.totalRow, registeredStyles.totalRowStrong]}>
+                    <Text style={registeredStyles.totalStrong}>Total</Text>
+                    <Text style={registeredStyles.totalStrong}>GH₵{(unitPrice * ticketQuantity).toFixed(2)}</Text>
+                  </View>
+                </View>
+              )}
 
               <ScrollView
                 style={registeredStyles.regModalScroll}
@@ -1606,15 +1653,15 @@ const EventDetailScreen = ({ navigation, route }) => {
                               key={option}
                               style={[
                                 registeredStyles.regRadioButton,
-                                { borderColor: formValues[field.id] === option ? colors.primary[500] : colors.border.light },
-                                formValues[field.id] === option && { backgroundColor: colors.primary[50] || '#f0f7ff' },
+                                { borderColor: formValues[field.id] === option ? '#6256e8' : '#deded4' },
+                                formValues[field.id] === option && { backgroundColor: '#f0eeff' },
                               ]}
                               onPress={() => !field.readOnly && setFormValues(prev => ({ ...prev, [field.id]: option }))}
                               disabled={field.readOnly}
                             >
                               <Text style={[
                                 registeredStyles.regRadioText,
-                                { color: formValues[field.id] === option ? colors.primary[500] : colors.text.primary },
+                                { color: formValues[field.id] === option ? '#6256e8' : '#202220', fontWeight: formValues[field.id] === option ? '700' : '500' },
                               ]}>
                                 {option}
                               </Text>
@@ -1637,15 +1684,15 @@ const EventDetailScreen = ({ navigation, route }) => {
                               key={option}
                               style={[
                                 registeredStyles.regRadioButton,
-                                { borderColor: formValues[field.id] === option ? colors.primary[500] : colors.border.light },
-                                formValues[field.id] === option && { backgroundColor: colors.primary[50] || '#f0f7ff' },
+                                { borderColor: formValues[field.id] === option ? '#6256e8' : '#deded4' },
+                                formValues[field.id] === option && { backgroundColor: '#f0eeff' },
                               ]}
                               onPress={() => !field.readOnly && setFormValues(prev => ({ ...prev, [field.id]: option }))}
                               disabled={field.readOnly}
                             >
                               <Text style={[
                                 registeredStyles.regRadioText,
-                                { color: formValues[field.id] === option ? colors.primary[500] : colors.text.primary },
+                                { color: formValues[field.id] === option ? '#6256e8' : '#202220', fontWeight: formValues[field.id] === option ? '700' : '500' },
                               ]}>
                                 {option}
                               </Text>
@@ -1701,8 +1748,8 @@ const EventDetailScreen = ({ navigation, route }) => {
                         }
                         autoCapitalize={field.type === 'email' ? 'none' : 'words'}
                       />
-                      {field.readOnly && (
-                        <Text style={[registeredStyles.regFieldHint, { color: colors.text.tertiary }]}>
+                      {field.defaultValue && field.id === 'email' && (
+                        <Text style={[registeredStyles.regFieldHint, { color: '#65675d' }]}>
                           From your profile
                         </Text>
                       )}
@@ -1730,15 +1777,15 @@ const EventDetailScreen = ({ navigation, route }) => {
 
               {/* Submit Button */}
               <TouchableOpacity
-                style={[registeredStyles.regSubmitButton, { backgroundColor: colors.primary[500] }, submittingRegistration && { opacity: 0.6 }]}
+                style={[registeredStyles.regSubmitButton, submittingRegistration && { opacity: 0.6 }]}
                 onPress={submitRegistration}
                 disabled={submittingRegistration}
               >
                 {submittingRegistration ? (
-                  <ActivityIndicator color={isDarkMode ? Colors.black : Colors.white} size="small" />
+                  <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={[registeredStyles.regSubmitButtonText, { color: isDarkMode ? Colors.black : Colors.white }]}>
-                    Confirm Registration
+                  <Text style={registeredStyles.regSubmitButtonText}>
+                    {isPaidEvent ? `Pay GH₵${(unitPrice * ticketQuantity).toFixed(2)} · MoMo or card` : 'Confirm Registration'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -1751,146 +1798,225 @@ const EventDetailScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  // ─── Modal container ─────────────────────────────────
+  // ─── Container ───────────────────────────────────────
   modalContainer: {
     flex: 1,
-    backgroundColor: Colors.black,
+    backgroundColor: '#faf9f2',
   },
   scrollView: {
     flex: 1,
   },
 
-  // ─── Hero section ────────────────────────────────────
-  heroSection: {
-    height: SCREEN_HEIGHT * 0.72,
+  // ─── Detail image (full-bleed hero) ──────────────────
+  detailImage: {
+    height: 290,
     position: 'relative',
-    justifyContent: 'flex-end',
+    overflow: 'hidden',
+    backgroundColor: '#6256e8',
   },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
+  bookBar: {
+    backgroundColor: '#faf9f2',
+    borderTopWidth: 1,
+    borderTopColor: '#deded4',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 30,
+    gap: 20,
   },
-  heroGradient: {
-    ...StyleSheet.absoluteFillObject,
+  bookBarLabel: {
+    fontSize: 11,
+    color: '#65675d',
+    marginBottom: 3,
   },
-  closeButton: {
+  bookBarPrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#202220',
+  },
+  bookBarBtn: {
+    flex: 1,
+    backgroundColor: '#f44929',
+    height: 50,
+    borderRadius: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  bookBarBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  detailToolbar: {
     position: 'absolute',
-    top: 34,
+    top: 50,
+    left: 20,
     right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  heroContent: {
-    paddingHorizontal: 33,
-    paddingBottom: 26,
-    gap: 16,
-  },
-  liveBadge: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    gap: 10,
+    zIndex: 2,
   },
-  liveBadgeText: {
-    fontFamily: Typography.fontFamily.semibold,
-    fontSize: 16,
-    color: Colors.black,
+  toolbarBtn: {
+    backgroundColor: '#faf9f2',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  heroTitle: {
-    fontFamily: Typography.fontFamily.extrabold,
-    fontSize: 40,
-    color: Colors.white,
-    lineHeight: 44,
-  },
-  heroDateTime: {
-    fontFamily: Typography.fontFamily.semibold,
+  toolbarBtnText: {
     fontSize: 20,
-    color: Colors.white,
+    color: '#202220',
+    lineHeight: 24,
+  },
+  posterTitle: {
+    position: 'absolute',
+    bottom: 23,
+    left: 24,
+    right: 20,
+    color: '#fff',
+    fontSize: 44,
+    fontWeight: '800',
+    lineHeight: 40,
+    letterSpacing: -0.5,
+    textTransform: 'uppercase',
+    zIndex: 1,
   },
 
-  // ─── Content section ─────────────────────────────────
-  contentSection: {
-    paddingHorizontal: 33,
-    paddingTop: 26,
+  // ─── Body ────────────────────────────────────────────
+  detailBody: {
+    padding: 23,
+    paddingBottom: 0,
   },
-  descriptionTitle: {
-    fontFamily: Typography.fontFamily.medium,
-    fontSize: 20,
-    color: Colors.text.primary,
-    marginBottom: 16,
-    lineHeight: 26,
+  labelTag: {
+    fontSize: 11,
+    letterSpacing: 1,
+    color: '#6256e8',
+    fontWeight: '700',
+    marginBottom: 4,
   },
-  descriptionBody: {
-    fontFamily: Typography.fontFamily.regular,
-    fontSize: 14,
-    color: Colors.text.secondary,
-    lineHeight: 20,
+  detailH1: {
+    fontSize: 34,
+    fontWeight: '800',
+    lineHeight: 34,
+    color: '#202220',
+    marginTop: 10,
     marginBottom: 20,
-  },
-  attendeeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 24,
-  },
-  attendeeText: {
-    fontFamily: Typography.fontFamily.regular,
-    fontSize: 14,
-    color: Colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: -0.5,
   },
 
-  // ─── Action buttons (Figma: two side-by-side) ───────
-  actionButtons: {
+  // info lines
+  infoLine: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    marginBottom: 17,
+  },
+  infoIcon: {
+    fontSize: 18,
+    marginTop: 1,
+  },
+  infoMain: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#202220',
+  },
+  infoSub: {
+    fontSize: 12,
+    color: '#65675d',
+    marginTop: 3,
+  },
+  infoLink: {
+    fontSize: 12,
+    color: '#f44929',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+
+  // tabs
+  tabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#deded4',
+    marginTop: 8,
+    marginBottom: 19,
+    gap: 24,
+  },
+  tab: {
+    paddingVertical: 12,
+    paddingBottom: 14,
+  },
+  tabActive: {
+    borderBottomWidth: 3,
+    borderBottomColor: '#f44929',
+    marginBottom: -1,
+  },
+  tabText: {
+    fontSize: 14,
+    color: '#65675d',
+  },
+  tabTextActive: {
+    color: '#202220',
+    fontWeight: '700',
+  },
+
+  // body copy
+  bodyCopy: {
+    paddingBottom: 16,
+  },
+  bodyH3: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#202220',
+    marginTop: 20,
+    marginBottom: 6,
+  },
+  bodyText: {
+    fontSize: 14,
+    lineHeight: 24,
+    color: '#65675d',
+  },
+  finePrint: {
+    fontSize: 12,
+    color: '#65675d',
+    marginTop: 20,
+    lineHeight: 18,
+  },
+
+  // agenda (programme tab)
+  agendaItem: {
     flexDirection: 'row',
     gap: 16,
-    marginBottom: 24,
-  },
-  registerButton: {
-    flex: 1,
-    backgroundColor: '#060606',
-    height: 47,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.white,
-  },
-  registerButtonText: {
-    fontFamily: Typography.fontFamily.semibold,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#deded4',
     fontSize: 14,
-    color: Colors.white,
   },
-  shareButton: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: Colors.white,
-    height: 47,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.white,
-    gap: 9,
+  agendaTime: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#f44929',
+    minWidth: 48,
   },
-  shareButtonText: {
-    fontFamily: Typography.fontFamily.semibold,
+  agendaTitle: {
     fontSize: 14,
-    color: Colors.black,
+    fontWeight: '600',
+    color: '#202220',
+  },
+  agendaSub: {
+    fontSize: 12,
+    color: '#65675d',
+    lineHeight: 18,
+    marginTop: 4,
   },
 
-  // ─── Quantity section (paid events) ──────────────────
+  // ─── Quantity section (paid events) — kept for logic ─
   quantitySection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1977,95 +2103,116 @@ const styles = StyleSheet.create({
 const registeredStyles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#faf9f2',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    gap: 12,
+    paddingTop: 54,
+    paddingHorizontal: 18,
+    paddingBottom: 10,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#deded4',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontFamily: Typography.fontFamily.extrabold,
-    fontSize: 24,
-    color: Colors.text.primary,
+    fontSize: 18,
+    color: '#202220',
+    marginLeft: 12,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 32,
   },
 
   // ─── Event card ─────────────────────────────────────
   eventCard: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 24,
+    backgroundColor: '#fff',
+    borderRadius: 20,
     padding: 14,
-    paddingBottom: 15,
+    borderWidth: 1,
+    borderColor: '#deded4',
+    marginBottom: 14,
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: 161,
-    borderRadius: 18,
+    height: 170,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: 17,
+    marginBottom: 16,
   },
   eventImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 18,
+    borderRadius: 14,
   },
   goingBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: Colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    bottom: 20,
+    left: 20,
+    zIndex: 2,
+    backgroundColor: '#e8f5ee',
+    borderWidth: 1,
+    borderColor: '#b7dfc8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
   },
   goingBadgeText: {
-    fontFamily: Typography.fontFamily.semibold,
     fontSize: 12,
-    color: Colors.black,
+    fontWeight: '700',
+    color: '#1a8c4e',
   },
   eventTitle: {
-    fontFamily: Typography.fontFamily.semibold,
-    fontSize: 24,
-    color: Colors.black,
-    marginBottom: 17,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#202220',
+    letterSpacing: -0.5,
+    lineHeight: 26,
+    marginBottom: 14,
   },
   pillsContainer: {
-    gap: 8,
+    gap: 6,
   },
   pillRow: {
     flexDirection: 'row',
-    gap: 7,
+    gap: 6,
   },
   pill: {
-    backgroundColor: Colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    backgroundColor: '#faf9f2',
+    borderWidth: 1,
+    borderColor: '#deded4',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   pillText: {
-    fontFamily: Typography.fontFamily.medium,
-    fontSize: 16,
-    color: Colors.black,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#65675d',
   },
 
   // ─── Tab bar ────────────────────────────────────────
   tabBarContainer: {
-    marginTop: 20,
-    marginBottom: 16,
+    marginTop: 16,
+    marginBottom: 14,
   },
 
   // ─── Empty state ────────────────────────────────────
@@ -2164,22 +2311,37 @@ const registeredStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#deded4',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 30,
     gap: 6,
-    marginTop: 16,
+    marginBottom: 2,
   },
   daysLeftPillText: {
-    fontFamily: Typography.fontFamily.semibold,
-    fontSize: 14,
-    color: Colors.primary[500],
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#65675d',
   },
 
   // ─── Ticket tab content ──────────────────────────────
+  ticketCard: { borderRadius: 19, backgroundColor: '#fffef9', borderWidth: 1, borderColor: '#deded4', overflow: 'hidden', marginBottom: 14 },
+  ticketTop: { padding: 22, backgroundColor: '#6256e8' },
+  ticketCategory: { fontSize: 11, letterSpacing: 1, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginBottom: 12 },
+  ticketName: { fontSize: 28, fontWeight: '700', color: '#fff', lineHeight: 29, marginBottom: 10, letterSpacing: -0.5 },
+  ticketVenue: { fontSize: 13, color: '#fff' },
+  ticketMiddle: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: '#b6b6ad', borderStyle: 'dashed' },
+  ticketFieldLabel: { fontSize: 11, color: '#65675d', letterSpacing: 0.5, marginBottom: 5 },
+  ticketFieldValue: { fontSize: 14, fontWeight: '700', color: '#202220' },
+  ticketBottom: { padding: 19, alignItems: 'center' },
+  ticketQrWrap: { padding: 10, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#deded4' },
+  ticketRef: { fontSize: 12, color: '#65675d', textAlign: 'center', lineHeight: 18, marginTop: 12 },
+  secondaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 50, borderRadius: 40, borderWidth: 1.5, borderColor: '#202220', marginBottom: 6 },
+  secondaryBtnText: { fontSize: 14, fontWeight: '700', color: '#202220' },
   ticketTabContainer: {
-    gap: 16,
+    gap: 0,
   },
   daysLeftCard: {
     backgroundColor: '#f0f0f0',
@@ -2573,7 +2735,7 @@ const registeredStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 24,
+    marginTop: 8,
     paddingVertical: 12,
   },
   cancelRegistrationText: {
@@ -2591,7 +2753,7 @@ const registeredStyles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   regModalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#faf9f2',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -2599,24 +2761,26 @@ const registeredStyles = StyleSheet.create({
     maxHeight: '90%',
   },
   regModalHandle: {
-    width: 40,
+    width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#ddd',
+    backgroundColor: '#deded4',
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   regModalTitle: {
     fontFamily: Typography.fontFamily.bold,
-    fontSize: 22,
-    color: Colors.text.primary,
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#202220',
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   regModalSubtitle: {
     fontFamily: Typography.fontFamily.regular,
-    fontSize: 14,
-    color: Colors.text.secondary,
-    marginBottom: 20,
+    fontSize: 13,
+    color: '#65675d',
+    marginBottom: 24,
   },
   regModalScroll: {
     maxHeight: SCREEN_HEIGHT * 0.55,
@@ -2682,25 +2846,29 @@ const registeredStyles = StyleSheet.create({
   },
   regFieldLabel: {
     fontFamily: Typography.fontFamily.medium,
-    fontSize: 14,
-    color: Colors.text.primary,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#202220',
     marginBottom: 6,
+    letterSpacing: 0.2,
   },
   regFieldInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#deded4',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 13,
     fontSize: 15,
     fontFamily: Typography.fontFamily.regular,
+    backgroundColor: '#fff',
+    color: '#202220',
   },
   regFieldHint: {
     fontFamily: Typography.fontFamily.regular,
     fontSize: 11,
-    color: Colors.text.tertiary,
+    color: '#65675d',
     marginTop: 4,
-    marginLeft: 4,
+    marginLeft: 2,
   },
 
   // ─── Radio / dropdown buttons ─────────────────────────
@@ -2711,14 +2879,16 @@ const registeredStyles = StyleSheet.create({
   },
   regRadioButton: {
     borderWidth: 1.5,
-    borderColor: '#e0e0e0',
+    borderColor: '#deded4',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    backgroundColor: '#fff',
   },
   regRadioText: {
     fontFamily: Typography.fontFamily.medium,
     fontSize: 14,
+    color: '#202220',
   },
 
   // ─── Checkbox / switch ────────────────────────────────
@@ -2736,18 +2906,31 @@ const registeredStyles = StyleSheet.create({
   },
 
   // ─── Submit button ────────────────────────────────────
+  qtyCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#deded4', borderRadius: 16, padding: 16, marginBottom: 20 },
+  qtyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#deded4', marginBottom: 10 },
+  qtyTitle: { fontSize: 15, fontWeight: '700', color: '#202220' },
+  qtySub: { fontSize: 13, color: '#65675d', marginTop: 2 },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#deded4', borderRadius: 30, paddingHorizontal: 6, paddingVertical: 4 },
+  stepBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#faf9f2' },
+  stepValue: { fontSize: 16, fontWeight: '700', color: '#202220', minWidth: 18, textAlign: 'center' },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
+  totalRowStrong: { borderTopWidth: 1, borderTopColor: '#deded4', marginTop: 6, paddingTop: 10 },
+  totalLabel: { fontSize: 13, color: '#65675d' },
+  totalStrong: { fontSize: 16, fontWeight: '800', color: '#202220' },
   regSubmitButton: {
-    backgroundColor: '#060606',
-    borderRadius: 16,
-    paddingVertical: 14,
+    backgroundColor: '#202220',
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 12,
   },
   regSubmitButtonText: {
     fontFamily: Typography.fontFamily.semibold,
     fontSize: 16,
-    color: Colors.white,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.2,
   },
 });
 

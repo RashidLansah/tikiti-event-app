@@ -15,6 +15,7 @@ import {
   Ticket,
 } from 'lucide-react';
 import { DashboardSkeleton } from '@/components/ui/Skeleton';
+import EarningsSection from '@/components/dashboard/EarningsSection';
 
 export default function DashboardPage() {
   const { currentOrganization, userProfile } = useAuth();
@@ -223,6 +224,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <EarningsSection orgId={currentOrganization?.id} />
 
       {/* Quick Actions - Matching Figma design */}
       <div className="flex flex-col gap-6">

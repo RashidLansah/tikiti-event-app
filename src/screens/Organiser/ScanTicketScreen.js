@@ -392,9 +392,9 @@ const ScanTicketScreen = ({ navigation }) => {
               </Text>
               
               <View style={styles.debugInfo}>
-                  <Text style={styles.debugText}>🔍 Scanner Active</Text>
-                  <Text style={styles.debugText}>📱 Looking for QR codes...</Text>
-                  <Text style={styles.debugText}>💡 Try different angles & distances</Text>
+                  <Text style={styles.debugText}>Scanner active</Text>
+                  <Text style={styles.debugText}>Looking for QR codes…</Text>
+                  <Text style={styles.debugText}>Try different angles and distances</Text>
                 </View>
                 
 
