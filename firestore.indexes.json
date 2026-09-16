@@ -4,45 +4,90 @@
       "collectionGroup": "eventMedia",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "hidden", "order": "ASCENDING" },
-        { "fieldPath": "rankScore", "order": "DESCENDING" }
+        {
+          "fieldPath": "hidden",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rankScore",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "eventMedia",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventStatus", "order": "ASCENDING" },
-        { "fieldPath": "hidden", "order": "ASCENDING" },
-        { "fieldPath": "rankScore", "order": "DESCENDING" }
+        {
+          "fieldPath": "eventStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hidden",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rankScore",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "eventMedia",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventCity", "order": "ASCENDING" },
-        { "fieldPath": "hidden", "order": "ASCENDING" },
-        { "fieldPath": "rankScore", "order": "DESCENDING" }
+        {
+          "fieldPath": "eventCity",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hidden",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rankScore",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "eventMedia",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventId", "order": "ASCENDING" },
-        { "fieldPath": "hidden", "order": "ASCENDING" },
-        { "fieldPath": "rankScore", "order": "DESCENDING" }
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hidden",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rankScore",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "eventMedia",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventId", "order": "ASCENDING" },
-        { "fieldPath": "type", "order": "ASCENDING" },
-        { "fieldPath": "hidden", "order": "ASCENDING" },
-        { "fieldPath": "rankScore", "order": "DESCENDING" }
+        {
+          "fieldPath": "eventId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "hidden",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rankScore",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
@@ -140,6 +185,24 @@
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "paymentStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "source",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
         }
       ]
     }
