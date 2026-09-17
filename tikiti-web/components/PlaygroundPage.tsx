@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { techEvents } from '@/data/techEvents';
+import Arrow from '@/components/ui/Arrow';
 
 const WHEEL_EVENTS = techEvents.slice(0, 5);
 
@@ -92,7 +93,9 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
           color: #222;
           font-weight: 600;
         }
-        .pg-nav-cta span { margin-left: 20px; }
+        .pg-nav-cta { display: inline-flex; align-items: center; white-space: nowrap; }
+        .pg-nav-cta span { margin-left: 20px; display: inline-flex; }
+        .pg-nav a { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 40px; }
 
         /* Hero */
         .pg-hero {
@@ -409,12 +412,23 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
         @keyframes pgMarquee { to { transform: translateX(-50%); } }
 
         /* Responsive */
+        .pg-primary span, .pg-org-cta span { display: inline-flex; }
+        .pg-wheel-center h3 { max-width: 90vw; }
+
         @media (max-width: 768px) {
-          .pg-nav { display: none; }
-          .pg-nav-cta { display: none; }
-          .pg-logo { font-size: 28px; letter-spacing: -2px; }
-          .pg-header { padding: 0 4%; height: 64px; }
-          .pg-h1 { font-size: clamp(62px, 16vw, 88px); letter-spacing: -2px; }
+          /* Two-row header: logo + pill, then a compact link row */
+          .pg-header { height: auto; padding: 10px 4% 0; flex-wrap: wrap; row-gap: 4px; }
+          .pg-logo { font-size: 28px; letter-spacing: -2px; order: 1; }
+          .pg-logo span { font-size: 20px; }
+          .pg-nav-cta { order: 2; padding: 9px 14px; font-size: 12px; }
+          .pg-nav-cta span { margin-left: 8px; }
+          .pg-nav { order: 3; width: 100%; gap: 20px; font-size: 13px; border-top: 1px solid rgba(34,34,34,0.12); }
+          .pg-nav a { min-height: 40px; }
+          .pg-h1 { font-size: clamp(56px, 16vw, 88px); letter-spacing: -2px; }
+          .pg-hero { padding-top: 22px; }
+          .pg-hero-bottom { flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+          .pg-wheel-center h3 { font-size: clamp(26px, 8vw, 40px); white-space: normal; line-height: 1; }
+          .pg-footer { display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
           .pg-visual { height: 330px; }
           .pg-poster-one { width: 44%; left: 2%; height: 255px; }
           .pg-poster-two { left: 30%; top: 28px; width: 40%; }
@@ -436,9 +450,9 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
           <a className="pg-logo" href="#">tikiti<span>{'✱'}</span></a>
           <nav className="pg-nav">
             <a href="/events">Discover events</a>
-            <a href="https://www.gettikiti.com/register" target="_blank" rel="noopener">For organizers →</a>
+            <a href="https://www.gettikiti.com/register" target="_blank" rel="noopener">For organizers <Arrow dir="right" size={13} /></a>
           </nav>
-          <a className="pg-nav-cta" href="/events">Find your next event <span>→</span></a>
+          <a className="pg-nav-cta" href="/events">Find your next event <span><Arrow dir="right" size={16} /></span></a>
         </header>
 
         {/* Hero */}
@@ -455,7 +469,7 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
             Learn something new. Share what you know. Meet the people behind the next big thing.
           </p>
           <a className="pg-primary" href="#discover">
-            Find your next moment <span>→</span>
+            Find your next moment <span><Arrow dir="right" size={20} /></span>
           </a>
 
           {/* Floating posters */}
@@ -485,13 +499,13 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
               </div>
             </div>
             <div className="pg-stamp">
-              YOU HAD<br />TO BE<br /><b>THERE →</b>
+              YOU HAD<br />TO BE<br /><b>THERE <Arrow dir="right" size={18} strokeWidth={2.5} /></b>
             </div>
           </div>
 
           <div className="pg-hero-bottom">
             <span>YOUR NEXT BIG IDEA STARTS IN THE ROOM.</span>
-            <a href="#discover">EXPLORE WHAT'S ON ↓</a>
+            <a href="#discover">EXPLORE WHAT'S ON <Arrow dir="down" size={11} /></a>
             <span>ACCRA & BEYOND</span>
           </div>
         </section>
@@ -560,18 +574,18 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
             <div className="pg-wheel-center">
               <span className="pg-wheel-caption">UP NEXT</span>
               <h3>{ev.name}</h3>
-              <a className="pg-wheel-link" href={`/events/${ev.id}`}>View event →</a>
+              <a className="pg-wheel-link" href={`/events/${ev.id}`}>View event <Arrow dir="right" size={13} /></a>
             </div>
           </div>
 
           <div className="pg-wheel-controls">
-            <button onClick={() => select(activeIdx - 1, true)} aria-label="Previous">←</button>
+            <button onClick={() => select(activeIdx - 1, true)} aria-label="Previous"><Arrow dir="left" size={20} /></button>
             <span className="pg-wheel-count">0{activeIdx + 1} / 05</span>
-            <button onClick={() => select(activeIdx + 1, true)} aria-label="Next">→</button>
+            <button onClick={() => select(activeIdx + 1, true)} aria-label="Next"><Arrow dir="right" size={20} /></button>
           </div>
 
           <div className="pg-view-all">
-            <a className="pg-primary" href="/events">View all events <span>→</span></a>
+            <a className="pg-primary" href="/events">View all events <span><Arrow dir="right" size={20} /></span></a>
           </div>
           <p className="pg-sample-note">Sample events for this design preview · Dates, prices, and programmes are illustrative.</p>
         </section>
@@ -585,7 +599,7 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
           <div>
             <p>Create your event. Sell tickets.<br />Welcome your people.</p>
             <a className="pg-org-cta" href="https://www.gettikiti.com/register" target="_blank" rel="noopener">
-              Create an event <span>→</span>
+              Create an event <span><Arrow dir="right" size={18} /></span>
             </a>
           </div>
         </section>
@@ -594,7 +608,7 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
         <footer className="pg-footer">
           <a className="pg-logo" href="#">tikiti<span style={{ color: 'var(--pg-accent)', fontSize: 26 }}>{'✱'}</span></a>
           <span>Good ideas start with people.</span>
-          <a href="https://gettikiti.com" target="_blank" rel="noopener">Visit Tikiti →</a>
+          <a href="https://gettikiti.com" target="_blank" rel="noopener">Visit Tikiti <Arrow dir="right" size={12} /></a>
           <span>© 2026 Tikiti</span>
         </footer>
       </div>

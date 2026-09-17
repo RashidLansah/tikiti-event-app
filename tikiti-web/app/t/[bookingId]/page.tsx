@@ -19,7 +19,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <main style={page}>
       <div style={wrap}>
         <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -1, marginBottom: 18 }}>
-          tikiti<span style={{ color: C.red }}>✳</span>
+          tikiti<span style={{ color: C.red }}>{'✳︎'}</span>
         </div>
         {children}
       </div>
@@ -84,14 +84,14 @@ export default async function PublicTicketPage({
           <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }}>{t.eventName}</div>
           <div style={{ fontSize: 13, marginTop: 8, opacity: 0.9 }}>{t.eventLocation}</div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '18px 20px', borderBottom: '1px dashed #b6b6ad' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12, padding: '18px 20px', borderBottom: '1px dashed #b6b6ad' }}>
           <div><div style={label}>Date</div><div style={value}>{t.eventDate}{t.eventTime ? ` · ${t.eventTime}` : ''}</div></div>
           <div><div style={label}>Attendee</div><div style={value}>{t.attendee}</div></div>
           <div style={{ textAlign: 'right' }}><div style={label}>Admission</div><div style={value}>{t.quantity} {t.quantity === 1 ? 'person' : 'people'}</div></div>
         </div>
         <div style={{ padding: 22, textAlign: 'center' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrSrc} width={220} height={220} alt="Your ticket QR code" style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: 8, background: '#fff' }} />
+          <img src={qrSrc} width={220} height={220} alt="Your ticket QR code" style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: 8, background: '#fff', maxWidth: '100%', height: 'auto' }} />
           <div style={{ fontSize: 12, color: C.muted, marginTop: 12 }}>{t.refId}<br />Scan at the door · {t.amount}</div>
         </div>
       </div>

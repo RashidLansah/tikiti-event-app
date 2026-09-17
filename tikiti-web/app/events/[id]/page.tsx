@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import ShareButton from '@/components/events/ShareButton';
 import TrackView from '@/components/events/TrackView';
+import Arrow from '@/components/ui/Arrow';
 import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
 
 const PG = `
@@ -32,6 +33,7 @@ const PG = `
   .pg-logo { font-size: 38px; font-weight: 700; letter-spacing: -3px; display: inline-flex; align-items: center; gap: 4px; }
   .pg-logo span { font-size: 26px; color: var(--accent); letter-spacing: 0; }
   .pg-nav { display: flex; gap: 28px; font-size: 14px; align-items: center; }
+  .pg-nav a { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 40px; }
   .pg-nav-cta { border: 1px solid var(--line); padding: 11px 18px; border-radius: 30px; font-size: 13px; }
 
   /* Main */
@@ -43,11 +45,11 @@ const PG = `
   @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
   /* Hero grid */
-  .event-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 6%; align-items: center; overflow: visible; }
+  .event-hero { display: grid; grid-template-columns: 1fr 1fr; column-gap: 6%; row-gap: 40px; align-items: center; overflow: visible; }
   .event-art { height: 510px; position: relative; overflow: hidden; border-radius: 0; background: #333; transform: rotate(-2deg); box-shadow: 10px 10px 0 #f5ee3d; }
   .event-art img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6); animation: cinema 20s alternate infinite ease-in-out; }
   @keyframes cinema { from { transform: scale(1); } to { transform: scale(1.06); } }
-  .event-art-copy { position: absolute; inset: 30px; display: flex; flex-direction: column; justify-content: space-between; color: #fff; }
+  .event-art-copy { position: absolute; inset: 30px; display: flex; flex-direction: column; justify-content: space-between; color: #fff; overflow: hidden; }
   .event-art-copy > span:first-child { font-size: 12px; letter-spacing: 2px; }
   .event-art-copy > strong { font-family: var(--display); font-size: clamp(60px, 6vw, 105px); font-weight: 800; line-height: 0.88; letter-spacing: -1px; color: #f5ee3d; white-space: pre-line; }
   .art-bottom { display: flex; align-items: center; justify-content: space-between; font-size: 12px; letter-spacing: 2px; line-height: 1.3; }
@@ -55,7 +57,7 @@ const PG = `
 
   /* Overview */
   .eyebrow { font-size: 12px; letter-spacing: 1.7px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-  .event-overview h1 { font-family: var(--display); font-size: 60px; font-weight: 700; line-height: 0.98; margin: 20px 0; letter-spacing: -1px; text-transform: uppercase; }
+  .event-overview h1 { font-family: var(--display); font-size: clamp(40px, 5vw, 60px); overflow-wrap: anywhere; font-weight: 700; line-height: 0.98; margin: 20px 0; letter-spacing: -1px; text-transform: uppercase; }
   .event-intro { font-size: 19px; line-height: 1.5; color: var(--muted); }
   .event-facts { border-top: 1px solid var(--line); display: grid; gap: 22px; padding: 22px 0; margin-top: 28px; }
   .event-facts span { font-size: 11px; letter-spacing: 1.5px; display: block; color: var(--muted); margin-bottom: 8px; }
@@ -65,13 +67,14 @@ const PG = `
   .host-avatar { background: var(--accent); color: #151515; border-radius: 50%; width: 44px; height: 44px; display: grid; place-items: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
 
   /* Body */
-  .event-body { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 7%; margin-top: 58px; align-items: start; }
+  .event-body { display: grid; grid-template-columns: minmax(0, 1fr) 350px; column-gap: 7%; row-gap: 40px; margin-top: 58px; align-items: start; }
   .detail-nav { display: flex; gap: 24px; border-bottom: 1px solid var(--line); padding-bottom: 20px; font-size: 14px; overflow-x: auto; margin-bottom: 4px; }
   .detail-nav a { color: var(--muted); padding-bottom: 20px; border-bottom: 2px solid transparent; margin-bottom: -21px; white-space: nowrap; transition: color 0.15s; }
   .detail-nav a:hover { color: var(--fg); }
   .event-editorial section { padding: 40px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 20px; }
   .event-editorial h2 { font-family: var(--display); font-size: 42px; font-weight: 600; letter-spacing: -0.5px; margin: 16px 0 20px; line-height: 1.08; color: #6256e8; }
-  .event-editorial p { font-size: 16px; color: var(--muted); line-height: 1.75; }
+  .event-editorial p { font-size: 16px; color: var(--muted); line-height: 1.75; overflow-wrap: anywhere; }
+  .event-editorial { min-width: 0; }
   .event-editorial p + p { margin-top: 14px; }
 
   /* Agenda */
@@ -96,7 +99,6 @@ const PG = `
   details p { font-size: 14px; color: var(--muted); line-height: 1.7; margin-top: 12px; }
 
   /* Ticket panel */
-  .ticket-panel { position: sticky; top: 100px; border: 1px solid var(--line); padding: 28px; border-radius: 12px; background: #202220; color: #fff; }
   .ticket-heading .eyebrow { font-size: 10px; color: rgba(255,255,255,0.45); letter-spacing: 2px; margin-bottom: 10px; }
   .ticket-panel h2 { font-family: var(--display); font-size: 35px; font-weight: 700; line-height: 1; }
   .ticket-panel fieldset { border: 0; padding: 0; margin: 28px 0 20px; }
@@ -108,20 +110,42 @@ const PG = `
   .total-row strong { font-size: 22px; }
 
   /* Bottom CTA */
-  .all-bottom { display: flex; justify-content: space-between; font-family: var(--display); font-size: 45px; font-weight: 600; border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); padding: 28px 0; margin-top: 60px; }
+  .all-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; font-family: var(--display); font-size: clamp(30px, 6vw, 45px); font-weight: 600; border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); padding: 28px 0; margin-top: 60px; }
   .all-bottom:hover { color: var(--accent); }
 
   /* Mobile ticket bar */
   .mobile-ticket { display: none; }
 
+  .mobile-ticket a { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .ticket-cta { width: 100%; height: 52px; background: var(--accent); color: #fff; border: 0; border-radius: 40px; font: 700 15px 'DM Sans', sans-serif; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; cursor: pointer; transition: transform 0.2s; }
+  .ticket-panel { position: sticky; top: 100px; padding: 28px; background: #f5ee3d; color: #202220; border: 2px solid #202220; box-shadow: 7px 7px 0 #202220; }
+
   @media (max-width: 900px) {
-    .event-hero { grid-template-columns: 1fr; }
-    .event-art { height: 340px; }
-    .event-body { grid-template-columns: 1fr; }
-    .ticket-panel { position: static; }
-    .mobile-ticket { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: #202220; color: #fff; padding: 16px 24px; align-items: center; justify-content: space-between; z-index: 200; border-top: 1px solid rgba(255,255,255,0.1); }
+    .event-hero { grid-template-columns: 1fr; row-gap: 32px; }
+    .event-art { height: 340px; margin: 0 8px 0 4px; }
+    .event-art-copy { inset: 20px; }
+    .event-art-copy > strong { font-size: clamp(34px, 9vw, 60px); }
+    .art-bottom b { font-size: 40px; }
+    .event-overview h1 { font-size: clamp(36px, 9vw, 52px); }
+    .event-intro { font-size: 17px; }
+    .event-body { grid-template-columns: minmax(0, 1fr); margin-top: 40px; }
+    .event-editorial, .event-overview { min-width: 0; }
+    .event-editorial p, .agenda-row h3, .agenda-row p, .event-facts strong { overflow-wrap: anywhere; }
+    .event-editorial h2 { font-size: clamp(30px, 8vw, 42px); }
+    .ticket-panel { position: static; top: auto; box-shadow: 5px 5px 0 #202220; }
+    .detail-main { padding-bottom: 120px; }
+    .mobile-ticket { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: #202220; color: #fff; padding: 14px 20px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); align-items: center; justify-content: space-between; gap: 12px; z-index: 200; border-top: 1px solid rgba(255,255,255,0.1); }
     .mobile-ticket span { font-size: 20px; font-weight: 700; }
-    .mobile-ticket a { background: var(--accent); color: #fff; border-radius: 30px; padding: 12px 22px; font-size: 14px; font-weight: 700; }
+    .mobile-ticket a { background: var(--accent); color: #fff; border-radius: 30px; padding: 12px 22px; font-size: 14px; font-weight: 700; min-height: 44px; }
+  }
+  @media (max-width: 768px) {
+    .pg-header { height: auto; padding: 10px 4% 0; flex-wrap: wrap; row-gap: 4px; }
+    .pg-logo { font-size: 28px; letter-spacing: -2px; order: 1; }
+    .pg-logo span { font-size: 20px; }
+    .pg-nav { order: 3; width: 100%; gap: 20px; font-size: 13px; border-top: 1px solid rgba(34,34,34,0.12); }
+    .pg-nav-cta { order: 2; padding: 9px 14px; font-size: 12px; margin-left: auto; }
+    .detail-main { padding-top: 20px; }
+    .back-link { margin-bottom: 20px; min-height: 40px; display: inline-flex; align-items: center; }
   }
 `;
 
@@ -225,16 +249,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       <style>{PG}</style>
 
       <header className="pg-header">
-        <Link href="/" className="pg-logo">tikiti<span>✳</span></Link>
+        <Link href="/" className="pg-logo">tikiti<span>{'✳︎'}</span></Link>
         <nav className="pg-nav">
           <Link href="/events">Discover events</Link>
-          <Link href="/organisers">For organisers ↗</Link>
-          <Link href="/events" className="pg-nav-cta">All events ↗</Link>
+          <Link href="/organisers">For organisers <Arrow dir="ne" size={13} /></Link>
         </nav>
+        <Link href="/events" className="pg-nav-cta">All events <Arrow dir="ne" size={13} /></Link>
       </header>
 
       <main className="detail-main">
-        <Link href="/events" className="back-link">← Back to events</Link>
+        <Link href="/events" className="back-link"><Arrow dir="left" size={13} /> Back to events</Link>
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -259,7 +283,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <strong style={{ whiteSpace: 'pre-line' }}>{shortName}</strong>
                   <div className="art-bottom">
                     <span>IDEAS ARE BETTER<br />WHEN WE&apos;RE TOGETHER.</span>
-                    <b>↗</b>
+                    <b><Arrow dir="ne" size={56} strokeWidth={1.5} /></b>
                   </div>
                 </div>
                 )}
@@ -354,7 +378,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <>
                       <p>The speaker lineup will be announced here.</p>
                       <div className="speaker-placeholder">
-                        <span>↗</span>
+                        <span><Arrow dir="ne" size={40} strokeWidth={1.75} /></span>
                         <div>
                           <strong>Fresh perspectives. Practical experience.</strong>
                           <p>Hear from the people doing the work.</p>
@@ -383,7 +407,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               </div>
 
               {/* Ticket panel */}
-              <aside id="tickets" style={{ position: 'sticky', top: 100, padding: 28, borderRadius: 0, background: '#f5ee3d', color: '#202220', border: '2px solid #202220', boxShadow: '7px 7px 0 #202220' }}>
+              <aside id="tickets" className="ticket-panel">
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: 10, letterSpacing: 2, color: 'rgba(32,34,32,0.5)', marginBottom: 10 }}>YOUR SEAT IN THE ROOM</div>
                   <h2 style={{ fontFamily: "'Barlow Condensed', Impact, sans-serif", fontSize: 35, fontWeight: 700, lineHeight: 1, color: '#202220' }}>Make it a plan.</h2>
@@ -417,18 +441,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
                 {ev.registrationUrl ? (
                   <a href={ev.registrationUrl} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent(id, 'register_click')}>
-                    <button style={{ width: '100%', height: 52, background: '#f44929', color: '#fff', border: 0, borderRadius: 40, font: "700 15px 'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', cursor: 'pointer' }}>
+                    <button className="ticket-cta">
                       <span>Register on their site</span>
-                      <span>↗</span>
+                      <Arrow dir="ne" size={16} />
                     </button>
                   </a>
                 ) : ev.ticketingDisabled ? (
                   <p style={{ fontSize: 14, textAlign: 'center', color: '#202220', padding: '14px 0' }}>Tickets are sold by the organiser directly — check the flyer for details.</p>
                 ) : (
                   <Link href="/register">
-                    <button style={{ width: '100%', height: 52, background: '#f44929', color: '#fff', border: 0, borderRadius: 40, font: "700 15px 'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', cursor: 'pointer', transition: 'transform 0.2s' }}>
+                    <button className="ticket-cta">
                       <span>{price === 0 ? 'Register free' : 'Get tickets'}</span>
-                      <span>↗</span>
+                      <Arrow dir="ne" size={16} />
                     </button>
                   </Link>
                 )}
@@ -445,14 +469,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
             <Link href="/events" className="all-bottom">
               <span>Find your next event</span>
-              <span>↗</span>
+              <Arrow dir="ne" size={32} strokeWidth={1.75} />
             </Link>
           </>
         ) : null}
       </main>
 
       <footer style={{ margin: '0 5%', padding: '25px 0 36px', borderTop: '1px solid rgba(32,34,32,0.13)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: '#65675d', flexWrap: 'wrap', gap: 12 }}>
-        <Link href="/" className="pg-logo" style={{ fontSize: 28, letterSpacing: -2 }}>tikiti<span style={{ fontSize: 20 }}>✳</span></Link>
+        <Link href="/" className="pg-logo" style={{ fontSize: 28, letterSpacing: -2 }}>tikiti<span style={{ fontSize: 20 }}>{'✳︎'}</span></Link>
         <span>Good ideas start with people.</span>
         <span>© 2026 Tikiti</span>
       </footer>
@@ -461,7 +485,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       {ev && (
         <div className="mobile-ticket">
           <span>{price === 0 ? 'Free' : `₵${price}`}</span>
-          <a href="#tickets">Choose ticket ↗</a>
+          <a href="#tickets">Choose ticket <Arrow dir="ne" size={14} /></a>
         </div>
       )}
     </>

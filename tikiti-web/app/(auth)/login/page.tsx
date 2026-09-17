@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
 import LoadingScreen from '@/components/ui/LoadingScreen';
+import Arrow from '@/components/ui/Arrow';
 
 const PG_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -107,7 +108,7 @@ function LoginForm() {
         <style>{PG_STYLES}</style>
         <div style={{ maxWidth: 440, width: '100%', textAlign: 'center' }}>
           <a href="/" style={{ fontSize: 36, fontWeight: 700, letterSpacing: -2, color: '#202220', textDecoration: 'none', fontFamily: 'DM Sans, sans-serif' }}>
-            tikiti<span style={{ color: '#f44929' }}>✳</span>
+            tikiti<span style={{ color: '#f44929' }}>{'✳︎'}</span>
           </a>
           <h1 className="pg-display" style={{ fontSize: 56, fontWeight: 800, textTransform: 'uppercase', margin: '24px 0 12px', lineHeight: 0.9 }}>No org found.</h1>
           <p style={{ color: '#65675d', marginBottom: 8 }}>Your account ({user.email}) is not linked to any organisation.</p>
@@ -128,7 +129,7 @@ function LoginForm() {
       {/* Left — yellow editorial panel */}
       <div style={{ width: '45%', background: '#f5ee3d', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px 48px', position: 'relative', overflow: 'hidden' }} className="lg-only">
         <a href="/" style={{ fontSize: 38, fontWeight: 700, letterSpacing: -2.5, color: '#202220', textDecoration: 'none' }}>
-          tikiti<span style={{ color: '#f44929' }}>✳</span>
+          tikiti<span style={{ color: '#f44929' }}>{'✳︎'}</span>
         </a>
         <div>
           <div style={{ fontSize: 12, letterSpacing: 2, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -145,14 +146,14 @@ function LoginForm() {
       </div>
 
       {/* Right — form */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 32px' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: 'clamp(32px, 6vw, 48px) clamp(20px, 5vw, 32px)' }}>
         {/* Mobile logo */}
         <div style={{ display: 'none', marginBottom: 32 }} className="mobile-logo">
-          <a href="/" style={{ fontSize: 36, fontWeight: 700, letterSpacing: -2, color: '#202220', textDecoration: 'none' }}>tikiti<span style={{ color: '#f44929' }}>✳</span></a>
+          <a href="/" style={{ fontSize: 36, fontWeight: 700, letterSpacing: -2, color: '#202220', textDecoration: 'none' }}>tikiti<span style={{ color: '#f44929' }}>{'✳︎'}</span></a>
         </div>
 
         <div style={{ maxWidth: 420, width: '100%' }}>
-          <h1 className="pg-display" style={{ fontSize: 52, fontWeight: 800, textTransform: 'uppercase', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 8px', color: '#202220' }}>
+          <h1 className="pg-display" style={{ fontSize: 'clamp(44px, 12vw, 52px)', fontWeight: 800, textTransform: 'uppercase', lineHeight: 0.9, letterSpacing: -1.5, margin: '0 0 8px', color: '#202220' }}>
             WELCOME<br />BACK.
           </h1>
           <p style={{ color: '#65675d', fontSize: 15, marginBottom: 32 }}>Enter your details to access your dashboard.</p>
@@ -179,7 +180,7 @@ function LoginForm() {
             </div>
 
             <button className="pg-btn" type="submit" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in →'}
+              {loading ? 'Signing in...' : <>Sign in <Arrow dir="right" size={16} /></>}
             </button>
           </form>
 

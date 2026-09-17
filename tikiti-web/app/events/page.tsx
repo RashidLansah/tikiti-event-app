@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import ShareButton from '@/components/events/ShareButton';
+import Arrow from '@/components/ui/Arrow';
 import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
 
 const CATEGORIES = ['All', 'Conferences', 'Workshops', 'Meetups', 'Startups', 'Community'];
@@ -20,7 +21,12 @@ const PG = `
     display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 100; transition: background 0.25s, box-shadow 0.25s;
   }
+  .pg-logo { font-size: 36px; font-weight: 700; letter-spacing: -2.5px; color: #202220; white-space: nowrap; }
+  .pg-nav { display: flex; gap: 28px; align-items: center; font-size: 14px; }
+  .pg-nav a { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 40px; }
+  .pg-nav-cta { border: 1px solid rgba(0,0,0,0.15); padding: 10px 18px; min-height: 40px; border-radius: 30px; font-size: 13px; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; }
   .pg-main { max-width: 1280px; margin: 0 auto; padding: 40px 5% 80px; }
+  .pg-h1 { font-size: clamp(52px, 11vw, 100px); font-weight: 900; text-transform: uppercase; line-height: 0.88; letter-spacing: -2px; overflow-wrap: anywhere; }
   .pg-title { display: flex; justify-content: space-between; align-items: flex-end; padding: 32px 0 24px; flex-wrap: wrap; gap: 16px; }
   .pg-controls { display: flex; gap: 16px; padding: 16px 0; flex-wrap: wrap; align-items: center; }
   .pg-search {
@@ -64,8 +70,24 @@ const PG = `
   .pg-skeleton-body { padding: 20px; background: #fff; display: flex; flex-direction: column; gap: 10px; }
   .pg-skeleton-line { height: 14px; border-radius: 4px; background: linear-gradient(90deg, #e8e8e0 25%, #f0f0e8 50%, #e8e8e0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
   @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  .pg-card-body h3 { overflow-wrap: anywhere; }
   @media (max-width: 900px) { .pg-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 600px) { .pg-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) {
+    .pg-header { height: auto; padding: 10px 4% 0; flex-wrap: wrap; row-gap: 4px; }
+    .pg-logo { font-size: 28px; letter-spacing: -2px; order: 1; }
+    .pg-nav-cta { order: 2; padding: 9px 14px; font-size: 12px; }
+    .pg-nav { order: 3; width: 100%; gap: 20px; font-size: 13px; border-top: 1px solid rgba(34,34,34,0.12); }
+    .pg-main { padding: 20px 5% 60px; }
+    .pg-title { padding: 16px 0 12px; }
+    .pg-title p { padding-bottom: 0; }
+    .pg-search input { padding: 14px 0; }
+    .pg-date select { padding: 14px 16px; width: 100%; }
+    .pg-date { width: 100%; }
+    .pg-tab { padding: 12px 18px; }
+    .pg-card-img { height: 220px; }
+    .pg-card-name { font-size: 38px; right: 20px; }
+  }
+  @media (max-width: 600px) { .pg-grid { grid-template-columns: 1fr; gap: 20px; } }
 `;
 
 interface FirestoreEvent {
@@ -204,21 +226,21 @@ export default function EventsPage() {
       <style>{PG}</style>
 
       <header className="pg-header">
-        <Link href="/" style={{ fontSize: 36, fontWeight: 700, letterSpacing: -2.5, color: '#202220' }}>
-          tikiti<span style={{ color: '#f44929' }}>✳</span>
+        <Link href="/" className="pg-logo">
+          tikiti<span style={{ color: '#f44929' }}>{'✳︎'}</span>
         </Link>
-        <nav style={{ display: 'flex', gap: 28, alignItems: 'center', fontSize: 14 }}>
+        <nav className="pg-nav">
           <Link href="/events" style={{ fontWeight: 600 }}>Discover events</Link>
-          <Link href="/organisers" style={{ color: '#65675d' }}>For organisers ↗</Link>
-          <Link href="/login" style={{ border: '1px solid rgba(0,0,0,0.15)', padding: '10px 18px', borderRadius: 30, fontSize: 13, fontWeight: 600 }}>Sign in</Link>
+          <Link href="/organisers" style={{ color: '#65675d' }}>For organisers <Arrow dir="ne" size={13} /></Link>
         </nav>
+        <Link href="/login" className="pg-nav-cta">Sign in</Link>
       </header>
 
       <main className="pg-main">
         <div className="pg-title">
           <div>
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 700, color: '#65675d', marginBottom: 10 }}>YOUR PEOPLE ARE OUT THERE</div>
-            <h1 className="pg-display" style={{ fontSize: 'clamp(60px, 8vw, 100px)', fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.88, letterSpacing: -2 }}>
+            <h1 className="pg-display pg-h1">
               Find your<br /><em style={{ fontStyle: 'normal', color: '#f44929' }}>next spark.</em>
             </h1>
           </div>
@@ -295,7 +317,7 @@ export default function EventsPage() {
                 : 'Try another topic or category.'}
             </p>
             {tabEvents.length > 0 && (
-              <button className="pg-cat" onClick={() => { setQuery(''); setCategory('All'); setDateFilter(''); }}>Clear filters ↗</button>
+              <button className="pg-cat" onClick={() => { setQuery(''); setCategory('All'); setDateFilter(''); }}>Clear filters <Arrow dir="ne" size={13} /></button>
             )}
           </div>
         ) : (
@@ -323,7 +345,7 @@ export default function EventsPage() {
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
                       {ev.isScraped && (
                         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: '#f0efe8', color: '#65675d', border: '1px solid #deded4', borderRadius: 4, padding: '2px 7px' }}>
-                          EXTERNAL ↗
+                          EXTERNAL <Arrow dir="ne" size={10} strokeWidth={2.5} />
                         </span>
                       )}
                       {ev.isOnline && (
@@ -359,7 +381,7 @@ export default function EventsPage() {
       </main>
 
       <footer style={{ background: '#faf9f2', padding: '40px 5%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(0,0,0,0.08)', flexWrap: 'wrap', gap: 12 }}>
-        <Link href="/" style={{ fontSize: 26, fontWeight: 700, letterSpacing: -1.5, color: '#202220' }}>tikiti<span style={{ color: '#f44929' }}>✳</span></Link>
+        <Link href="/" style={{ fontSize: 26, fontWeight: 700, letterSpacing: -1.5, color: '#202220' }}>tikiti<span style={{ color: '#f44929' }}>{'✳︎'}</span></Link>
         <span style={{ fontSize: 13, color: '#65675d' }}>Good ideas start with people.</span>
         <span style={{ fontSize: 12, color: '#999' }}>© 2026 Tikiti</span>
       </footer>

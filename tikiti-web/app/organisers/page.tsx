@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import Arrow from '@/components/ui/Arrow';
 
 const PG_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -35,6 +36,22 @@ const PG_STYLES = `
   .pg-float { animation: pgFloat 4s ease-in-out infinite; }
   @keyframes pgMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
   .pg-ticker-inner { animation: pgMarquee 22s linear infinite; white-space: nowrap; display: flex; }
+  .pg-nav-links { display: flex; align-items: center; gap: 24px; }
+  .pg-nav-links a { white-space: nowrap; }
+  .pg-section { padding: clamp(64px, 10vw, 100px) 5%; }
+  .pg-hero-cta { height: 60px; padding: 0 44px; background: #f5ee3d; color: #202220; border: none; border-radius: 40px; font-size: 16px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-family: 'DM Sans', sans-serif; transition: transform 0.15s; white-space: nowrap; }
+  .pg-step { display: flex; gap: 32px; padding: 32px 0; border-bottom: 1px solid rgba(0,0,0,0.12); align-items: flex-start; }
+  .pg-step-n { font-size: 56px; font-weight: 900; color: #f44929; line-height: 1; flex-shrink: 0; width: 72px; }
+  @media (max-width: 768px) {
+    .pg-nav { padding: 0 16px; height: 60px; }
+    .pg-nav .pg-logo { font-size: 26px; letter-spacing: -1.5px; }
+    .pg-nav-links { gap: 14px; }
+    .pg-btn-cta { padding: 0 18px; height: 40px; font-size: 13px; white-space: nowrap; }
+    .pg-hero-cta { height: 54px; padding: 0 32px; font-size: 15px; }
+    .pg-btn-outline { height: 54px; padding: 0 28px; }
+    .pg-step { gap: 18px; padding: 24px 0; }
+    .pg-step-n { font-size: 40px; width: 48px; }
+  }
 `;
 
 const FEATURES = [
@@ -104,10 +121,10 @@ export default function OrganisersPage() {
 
       {/* Nav */}
       <nav className={`pg-nav${scrolled ? ' scrolled' : ''}`} style={{ background: scrolled ? '#fff' : 'transparent' }}>
-        <a href="/" style={{ fontSize: 32, fontWeight: 700, letterSpacing: -2, color: scrolled ? '#202220' : '#fff', textDecoration: 'none', transition: 'color 0.25s' }}>
-          tikiti<span style={{ color: '#f44929' }}>✳</span>
+        <a href="/" className="pg-logo" style={{ fontSize: 32, fontWeight: 700, letterSpacing: -2, color: scrolled ? '#202220' : '#fff', textDecoration: 'none', transition: 'color 0.25s', whiteSpace: 'nowrap' }}>
+          tikiti<span style={{ color: '#f44929' }}>{'✳︎'}</span>
         </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+        <div className="pg-nav-links">
           <a href="/" style={{ fontSize: 14, fontWeight: 600, color: scrolled ? '#202220' : 'rgba(255,255,255,0.8)', textDecoration: 'none', transition: 'color 0.25s' }}>Browse events</a>
           <Link href="/register" className="pg-btn-cta">Start for free</Link>
         </div>
@@ -122,15 +139,15 @@ export default function OrganisersPage() {
         <div style={{ fontSize: 12, letterSpacing: 3, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="pg-pulse" /> FOR ORGANISERS
         </div>
-        <h1 className="pg-display" style={{ fontSize: 'clamp(72px, 10vw, 140px)', fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.85, letterSpacing: -3, color: '#fff', marginBottom: 32, maxWidth: 900 }}>
+        <h1 className="pg-display" style={{ fontSize: 'clamp(56px, 15vw, 140px)', fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.85, letterSpacing: -3, color: '#fff', marginBottom: 32, maxWidth: 900 }}>
           YOU BRING<br />THE EVENT.<br /><span style={{ color: '#f5ee3d' }}>WE HANDLE</span><br />THE TICKETS.
         </h1>
         <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.75)', maxWidth: 520, lineHeight: 1.65, marginBottom: 44 }}>
           The simplest way to sell tickets, manage your guest list, and get paid — built for event organisers in Ghana and West Africa.
         </p>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Link href="/register" style={{ height: 60, padding: '0 44px', background: '#f5ee3d', color: '#202220', border: 'none', borderRadius: 40, fontSize: 16, fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', textDecoration: 'none', fontFamily: 'DM Sans, sans-serif', transition: 'transform 0.15s' }}>
-            Start for free →
+          <Link href="/register" className="pg-hero-cta">
+            Start for free <Arrow dir="right" size={16} />
           </Link>
           <a href="#how-it-works" className="pg-btn-outline">See how it works</a>
         </div>
@@ -156,21 +173,21 @@ export default function OrganisersPage() {
         <div className="pg-ticker-inner">
           {Array.from({ length: 4 }).map((_, i) => (
             <span key={i} style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, color: '#fff', paddingRight: 60 }}>
-              SELL TICKETS ✳ QR CHECK-IN ✳ LIVE ANALYTICS ✳ GHANA PAYOUTS ✳ FREE TO START ✳ NO CONTRACTS ✳
+              SELL TICKETS ✳︎ QR CHECK-IN ✳︎ LIVE ANALYTICS ✳︎ GHANA PAYOUTS ✳︎ FREE TO START ✳︎ NO CONTRACTS ✳︎
             </span>
           ))}
         </div>
       </div>
 
       {/* Features */}
-      <section style={{ padding: '100px 40px', maxWidth: 1100, margin: '0 auto' }}>
+      <section className="pg-section" style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 64 }}>
           <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 700, color: '#f44929', marginBottom: 16 }}>EVERYTHING YOU NEED</div>
           <h2 className="pg-display" style={{ fontSize: 'clamp(52px, 6vw, 80px)', fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.88, letterSpacing: -2 }}>
             BUILT FOR<br />ORGANISERS.
           </h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 24 }}>
           {FEATURES.map(f => (
             <div key={f.title} style={{ background: '#fff', borderRadius: 20, padding: '32px 28px', border: '1px solid rgba(0,0,0,0.06)' }}>
               <div style={{ fontSize: 28, marginBottom: 16, color: '#6256e8' }}>{f.icon}</div>
@@ -182,7 +199,7 @@ export default function OrganisersPage() {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" style={{ background: '#f5ee3d', padding: '100px 40px' }}>
+      <section id="how-it-works" className="pg-section" style={{ background: '#f5ee3d' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
             <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 700, color: '#303327', opacity: 0.6, marginBottom: 16 }}>HOW IT WORKS</div>
@@ -192,8 +209,8 @@ export default function OrganisersPage() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {STEPS.map((s, i) => (
-              <div key={s.n} style={{ display: 'flex', gap: 32, padding: '32px 0', borderTop: i === 0 ? '1px solid rgba(0,0,0,0.12)' : 'none', borderBottom: '1px solid rgba(0,0,0,0.12)', alignItems: 'flex-start' }}>
-                <div className="pg-display" style={{ fontSize: 56, fontWeight: 900, color: '#f44929', lineHeight: 1, flexShrink: 0, width: 72 }}>{s.n}</div>
+              <div key={s.n} className="pg-step" style={{ borderTop: i === 0 ? '1px solid rgba(0,0,0,0.12)' : 'none' }}>
+                <div className="pg-display pg-step-n">{s.n}</div>
                 <div>
                   <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{s.title}</div>
                   <div style={{ fontSize: 15, color: '#303327', opacity: 0.7, lineHeight: 1.6 }}>{s.body}</div>
@@ -205,13 +222,13 @@ export default function OrganisersPage() {
       </section>
 
       {/* Testimonials */}
-      <section style={{ padding: '100px 40px', maxWidth: 1100, margin: '0 auto' }}>
+      <section className="pg-section" style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
           <h2 className="pg-display" style={{ fontSize: 'clamp(44px, 5vw, 64px)', fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.9, letterSpacing: -1.5 }}>
             ORGANISERS<br />LOVE IT.
           </h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 24 }}>
           {TESTIMONIALS.map(t => (
             <div key={t.name} style={{ background: '#fff', borderRadius: 20, padding: '32px 28px', border: '1px solid rgba(0,0,0,0.06)' }}>
               <div style={{ fontSize: 32, color: '#6256e8', marginBottom: 16, lineHeight: 1 }}>"</div>
@@ -224,7 +241,7 @@ export default function OrganisersPage() {
       </section>
 
       {/* Pricing teaser */}
-      <section style={{ background: '#202220', padding: '80px 40px', textAlign: 'center' }}>
+      <section className="pg-section" style={{ background: '#202220', textAlign: 'center' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <div style={{ fontSize: 11, letterSpacing: 3, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: 20 }}>PRICING</div>
           <h2 className="pg-display" style={{ fontSize: 'clamp(52px, 6vw, 80px)', fontWeight: 900, textTransform: 'uppercase', lineHeight: 0.88, letterSpacing: -2, color: '#fff', marginBottom: 16 }}>
@@ -234,16 +251,16 @@ export default function OrganisersPage() {
             Create unlimited free events at no cost. For paid events, a small service fee applies per ticket sold.
           </p>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)', marginBottom: 40 }}>No monthly fees. No contracts. No surprises.</p>
-          <Link href="/register" style={{ height: 60, padding: '0 48px', background: '#f5ee3d', color: '#202220', border: 'none', borderRadius: 40, fontSize: 16, fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', textDecoration: 'none', fontFamily: 'DM Sans, sans-serif' }}>
-            Create your first event →
+          <Link href="/register" className="pg-hero-cta">
+            Create your first event <Arrow dir="right" size={16} />
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer style={{ background: '#faf9f2', padding: '48px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(0,0,0,0.08)', flexWrap: 'wrap', gap: 16 }}>
+      <footer style={{ background: '#faf9f2', padding: '48px 5%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(0,0,0,0.08)', flexWrap: 'wrap', gap: 16 }}>
         <a href="/" style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1.5, color: '#202220', textDecoration: 'none' }}>
-          tikiti<span style={{ color: '#f44929' }}>✳</span>
+          tikiti<span style={{ color: '#f44929' }}>{'✳︎'}</span>
         </a>
         <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
           <a href="/" style={{ fontSize: 13, color: '#65675d', textDecoration: 'none' }}>Browse events</a>

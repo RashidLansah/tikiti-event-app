@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Arrow from '@/components/ui/Arrow';
 
 interface ShareButtonProps {
   eventId: string;
   title: string;
   text?: string;
-  /** "pill" (default) shows "Share ↗"; "icon" is a compact circular button for grid cards. */
+  /** "pill" (default) shows "Share" with an arrow; "icon" is a compact circular button for grid cards. */
   variant?: 'pill' | 'icon';
   /** Light pill on paper, or dark pill for use on the yellow ticket card. */
   tone?: 'light' | 'dark';
@@ -60,9 +61,9 @@ export default function ShareButton({ eventId, title, text, variant = 'pill', to
         title={copied ? 'Link copied' : 'Share'}
         style={{
           ...base,
-          width: 32,
-          height: 32,
-          borderRadius: 16,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
           border: '1px solid rgba(0,0,0,0.12)',
           background: copied ? '#6256e8' : '#fff',
           color: copied ? '#fff' : '#202220',
@@ -72,7 +73,7 @@ export default function ShareButton({ eventId, title, text, variant = 'pill', to
           lineHeight: 1,
         }}
       >
-        {copied ? '✓' : '↗'}
+        {copied ? '✓' : <Arrow dir="ne" size={15} />}
       </button>
     );
   }
@@ -85,6 +86,7 @@ export default function ShareButton({ eventId, title, text, variant = 'pill', to
       style={{
         ...base,
         padding: '10px 18px',
+        minHeight: 40,
         borderRadius: 30,
         border: `1px solid ${dark ? '#202220' : 'rgba(32,34,32,0.2)'}`,
         background: copied ? '#6256e8' : dark ? '#202220' : 'transparent',
@@ -94,7 +96,7 @@ export default function ShareButton({ eventId, title, text, variant = 'pill', to
         gap: 8,
       }}
     >
-      {copied ? 'Link copied' : <>Share <span aria-hidden>↗</span></>}
+      {copied ? 'Link copied' : <>Share <Arrow dir="ne" size={13} /></>}
     </button>
   );
 }
