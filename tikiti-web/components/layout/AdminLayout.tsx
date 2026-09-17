@@ -9,6 +9,7 @@ import {
   Users,
   Calendar,
   Building2,
+  Inbox,
   LogOut,
   Shield,
   ChevronDown,
@@ -83,6 +84,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: '/admin/users', label: 'Users', icon: Users },
     { href: '/admin/events', label: 'Events', icon: Calendar },
     { href: '/admin/organizations', label: 'Organizations', icon: Building2 },
+    { href: '/admin/inbox', label: 'Community inbox', icon: Inbox },
   ];
 
   const isActive = (href: string) => {
