@@ -1,20 +1,20 @@
 // Flyer -> event JSON extraction via the Anthropic Messages API (plain fetch; SDK not installed)
 import { eventCategories } from '@/lib/data/categories';
-import type { ExtractedEvent } from './admin';
+import type { ExtractedEvent, ExtractedSpeaker } from './admin';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-5';
 
 export const EXTRACTION_FIELDS = [
   'name', 'description', 'category', 'date', 'endDate', 'startTime', 'endTime', 'location', 'address', 'city',
-  'price', 'isFree', 'registrationUrl', 'contactPhone', 'organiserName', 'confidence', 'missingFields',
+  'price', 'isFree', 'registrationUrl', 'contactPhone', 'organiserName', 'speakers', 'confidence', 'missingFields',
 ] as const;
 
 export function emptyExtraction(): ExtractedEvent {
   return {
     name: '', description: '', category: 'other', date: '', endDate: '', startTime: '', endTime: '',
     location: '', address: '', city: '', price: 0, isFree: true, registrationUrl: '', contactPhone: '',
-    organiserName: '', confidence: 0, missingFields: [],
+    organiserName: '', speakers: [], confidence: 0, missingFields: [],
   };
 }
 
@@ -41,6 +41,10 @@ Return ONLY a JSON object (no markdown, no prose) with exactly these fields:
 - registrationUrl: URL or "" — a website, ticket link or registration link printed on the flyer
 - contactPhone: phone number in international or local format, "" if none
 - organiserName: organiser / host name, "" if unknown
+- speakers: array of people printed on the flyer, each { "name": string, "title": string, "organisation": string, "role": string }.
+  Read every named person: speakers, panellists, moderators, discussants, hosts, keynote speakers, research fellows, etc.
+  "title" is their job title (e.g. "Senior Lecturer", "CEO"), "organisation" their institution/company, "role" their role at the
+  event (e.g. "Speaker", "Moderator", "Discussant", "Research Fellow", "Keynote"). Use "" for unknown parts. Empty array if none
 - confidence: number 0-1, your overall confidence in the extraction
 - missingFields: array of field names (from the list above) you could not determine from the flyer
 Never invent details that are not on the flyer or in the caption. Use "" or 0 for unknown values and list them in missingFields.`;
@@ -53,6 +57,36 @@ function parseJson(text: string): any {
   const end = trimmed.lastIndexOf('}');
   if (start >= 0 && end > start) return JSON.parse(trimmed.slice(start, end + 1));
   throw new Error('Model did not return JSON');
+}
+
+export function normaliseSpeakers(raw: any): ExtractedSpeaker[] {
+  if (!Array.isArray(raw)) return [];
+  const str = (v: any) => (v == null ? '' : String(v).trim());
+  const out: ExtractedSpeaker[] = [];
+  for (const s of raw) {
+    const name = typeof s === 'string' ? str(s) : str(s?.name);
+    if (!name) continue;
+    const sp: ExtractedSpeaker = { name };
+    const title = str(s?.title || s?.jobTitle);
+    const organisation = str(s?.organisation || s?.organization || s?.company);
+    const role = str(s?.role);
+    if (title) sp.title = title;
+    if (organisation) sp.organisation = organisation;
+    if (role) sp.role = role;
+    out.push(sp);
+  }
+  return out;
+}
+
+/** Shape written to events/{id}.speakers (organisation → company, matching the speaker profile shape). */
+export function toEventSpeakers(speakers: ExtractedSpeaker[]) {
+  return speakers.map((s) => ({
+    name: s.name,
+    title: s.title || '',
+    company: s.organisation || '',
+    bio: '',
+    role: s.role || 'Speaker',
+  }));
 }
 
 function normalise(raw: any): ExtractedEvent {
@@ -77,6 +111,7 @@ function normalise(raw: any): ExtractedEvent {
     registrationUrl: str(raw?.registrationUrl),
     contactPhone: str(raw?.contactPhone),
     organiserName: str(raw?.organiserName),
+    speakers: normaliseSpeakers(raw?.speakers),
     confidence: Math.max(0, Math.min(1, Number(raw?.confidence) || 0)),
     missingFields: Array.isArray(raw?.missingFields) ? raw.missingFields.map(String) : [],
   };

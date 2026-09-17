@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Inbox, Upload, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, RefreshCw, X } from 'lucide-react';
-import type { ExtractedEvent, InboxItem, InboxStatus } from '@/lib/inbox/admin';
+import { Inbox, Upload, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, RefreshCw, X, Plus } from 'lucide-react';
+import type { ExtractedEvent, ExtractedSpeaker, InboxItem, InboxStatus } from '@/lib/inbox/admin';
 
 const DEFAULT_ORG = { id: '1Mvh7AnKIphfnDeOgWUd', name: 'Tikiti Community' };
 
@@ -183,8 +183,43 @@ export default function CommunityInboxPage() {
   );
 }
 
+const SPEAKER_COLS: { key: keyof ExtractedSpeaker; label: string }[] = [
+  { key: 'name', label: 'Name' }, { key: 'role', label: 'Role' }, { key: 'title', label: 'Title' }, { key: 'organisation', label: 'Organisation' },
+];
+
+function SpeakersEditor({ speakers, readOnly, onChange }: { speakers: ExtractedSpeaker[]; readOnly: boolean; onChange: (s: ExtractedSpeaker[]) => void }) {
+  const update = (i: number, key: keyof ExtractedSpeaker, value: string) =>
+    onChange(speakers.map((s, idx) => (idx === i ? { ...s, [key]: value } : s)));
+  const remove = (i: number) => onChange(speakers.filter((_, idx) => idx !== i));
+  const add = () => onChange([...speakers, { name: '', role: 'Speaker', title: '', organisation: '' }]);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-[#86868b]">Speakers{speakers.length ? ` (${speakers.length})` : ''}</Label>
+        {!readOnly && <button type="button" onClick={add} className="text-xs text-[#333] underline flex items-center gap-1"><Plus className="w-3 h-3" /> Add speaker</button>}
+      </div>
+      {speakers.length === 0 ? (
+        <p className="text-xs text-[#86868b]">No speakers found on the flyer.</p>
+      ) : (
+        <div className="space-y-2">
+          {speakers.map((s, i) => (
+            <div key={i} className="grid grid-cols-1 sm:grid-cols-[1.3fr_1fr_1fr_1fr_auto] gap-2 items-center">
+              {SPEAKER_COLS.map((c) => (
+                <Input key={c.key} className={`${inputCls} h-8 text-sm`} placeholder={c.label} value={s[c.key] || ''} disabled={readOnly} onChange={(e) => update(i, c.key, e.target.value)} />
+              ))}
+              {!readOnly ? (
+                <button type="button" className="text-[#86868b] hover:text-red-600 justify-self-end" onClick={() => remove(i)} aria-label="Remove speaker"><X className="w-4 h-4" /></button>
+              ) : <span />}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions: { id: string; name: string }[]; onChange: (i: InboxItem) => void }) {
-  const [form, setForm] = useState<ExtractedEvent>({ ...item.extracted });
+  const [form, setForm] = useState<ExtractedEvent>({ ...item.extracted, speakers: item.extracted?.speakers || [] });
   const [orgId, setOrgId] = useState(DEFAULT_ORG.id);
   const [customOrg, setCustomOrg] = useState('');
   const [working, setWorking] = useState<'publish' | 'reject' | null>(null);
@@ -270,6 +305,9 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
             {field('address')}
             {field('city')}
             {field('contactPhone')}
+            <div className="sm:col-span-2">
+              <SpeakersEditor speakers={form.speakers || []} readOnly={readOnly} onChange={(s) => set('speakers', s)} />
+            </div>
             <div className="sm:col-span-2">{field('registrationUrl', 'url')}</div>
             <div className="flex items-center gap-2 pt-5">
               <input id={`free-${item.id}`} type="checkbox" checked={form.isFree} disabled={readOnly} onChange={(e) => { set('isFree', e.target.checked); if (e.target.checked) set('price', 0); }} />

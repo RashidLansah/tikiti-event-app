@@ -12,6 +12,14 @@ export const INBOX_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '
 export type InboxStatus = 'pending' | 'published' | 'rejected';
 export type InboxSource = 'upload' | 'whatsapp' | 'email';
 
+export interface ExtractedSpeaker {
+  name: string;
+  title?: string;
+  organisation?: string;
+  /** e.g. "Speaker", "Moderator", "Discussant", "Research Fellow" */
+  role?: string;
+}
+
 export interface ExtractedEvent {
   name: string;
   description: string;
@@ -28,6 +36,7 @@ export interface ExtractedEvent {
   registrationUrl: string;
   contactPhone: string;
   organiserName: string;
+  speakers: ExtractedSpeaker[];
   confidence: number;
   missingFields: string[];
 }
@@ -44,6 +53,8 @@ export interface InboxItem {
   senderName?: string | null;
   /** True for text-only WhatsApp submissions that still need a flyer image */
   needsImage?: boolean;
+  /** Follow-up WhatsApp text messages merged into this item */
+  extraTexts?: string[];
   extracted: ExtractedEvent;
   confidence: number;
   missingFields: string[];
@@ -109,7 +120,8 @@ export function serializeInbox(id: string, data: FirebaseFirestore.DocumentData)
     submittedBy: data.submittedBy || '',
     senderName: data.senderName || null,
     needsImage: !!data.needsImage,
-    extracted: data.extracted,
+    extraTexts: Array.isArray(data.extraTexts) ? data.extraTexts : [],
+    extracted: { speakers: [], ...(data.extracted || {}) },
     confidence: data.confidence ?? 0,
     missingFields: data.missingFields || [],
     publishedEventId: data.publishedEventId || null,

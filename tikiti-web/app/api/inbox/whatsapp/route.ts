@@ -6,8 +6,11 @@
 // Flow per message:
 //   image → download media from Graph → store flyer in Storage → create event_inbox doc (source 'whatsapp')
 //           → run Claude extraction inline (bounded by EXTRACTION_TIMEOUT_MS) → auto-reply
-//   text  → create event_inbox doc with no image (needsImage: true) when it contains a URL or looks like event
+//   text  → if the same sender has a pending flyer from the last 30 min, append the text to its caption
+//           (+ extraTexts) and re-run extraction → reply "Added to your event"; otherwise create an
+//           event_inbox doc with no image (needsImage: true) when it contains a URL or looks like event
 //           details → auto-reply asking for the flyer
+//   image → if the same sender has a text-only (needsImage) item from the last 30 min, attach the image to it
 //   statuses / other types → ignored
 // Every message id is recorded in whatsapp_messages/{id} so Meta retries are de-duplicated.
 // The route always answers 200 once the signature is valid; Meta retries on non-200.
@@ -35,6 +38,9 @@ const EXTRACTION_TIMEOUT_MS = 20_000;
 
 const REPLY_IMAGE = "Got it! We'll review this event and list it on Tikiti soon. 🎟";
 const REPLY_TEXT = 'Thanks! Please forward the event flyer image too so we can list it.';
+const REPLY_MERGED = 'Added to your event — thanks!';
+const MERGE_WINDOW_MS = 30 * 60 * 1000;
+const REQUIRED_FIELDS = ['name', 'date', 'startTime', 'location'];
 
 type WaMessage = {
   id: string;
@@ -155,12 +161,47 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
 
   if (message.type === 'text') {
     const text = (message.text?.body || '').trim();
-    if (!text || !looksLikeEventText(text)) {
+    if (!text) {
+      await sendReply(message.from, REPLY_TEXT);
+      return;
+    }
+
+    // Follow-up text for a flyer this sender just sent → merge into that item
+    const recent = await findRecentPending(message.from, (d) => !d.needsImage && !!d.imageUrl);
+    if (recent) {
+      const data = recent.data()!;
+      const caption = [data.caption, text].filter(Boolean).join('\n');
+      const update: Record<string, any> = {
+        caption,
+        extraTexts: FieldValue.arrayUnion(text),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      try {
+        const { buffer, mimeType } = await downloadStoredFlyer(data.imageUrl);
+        const extracted = await withTimeout(
+          extractEventFromFlyer(buffer.toString('base64'), mimeType, caption),
+          EXTRACTION_TIMEOUT_MS,
+          'Extraction timed out',
+        );
+        update.extracted = extracted;
+        update.confidence = extracted.confidence;
+        update.missingFields = extracted.missingFields;
+        update.extractionError = null;
+      } catch (e: any) {
+        console.error('whatsapp webhook: re-extraction after text merge failed', e);
+        update.extractionError = e?.message || 'Extraction failed';
+      }
+      await recent.ref.update(update);
+      await sendReply(message.from, REPLY_MERGED);
+      return;
+    }
+
+    if (!looksLikeEventText(text)) {
       await sendReply(message.from, REPLY_TEXT);
       return;
     }
     const extracted = emptyExtraction();
-    extracted.missingFields = ['name', 'date', 'startTime', 'location'];
+    extracted.missingFields = [...REQUIRED_FIELDS];
     await inboxCollection().doc().set({
       ...base,
       imagePath: '',
@@ -177,13 +218,18 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
   }
 
   // image
-  const caption = (message.image?.caption || '').trim();
+  const imageCaption = (message.image?.caption || '').trim();
   const { buffer, mimeType } = await fetchImage(message, testImage);
   if (!buffer.length) throw new Error('Downloaded image is empty');
   if (buffer.length > MAX_BYTES) throw new Error('Image exceeds 8MB');
   if (!SUPPORTED.includes(mimeType)) throw new Error(`Unsupported image type ${mimeType}`);
 
-  const ref = inboxCollection().doc();
+  // Reverse order: the sender texted the details first, now the flyer arrives → attach to that item
+  const textOnly = await findRecentPending(message.from, (d) => !!d.needsImage);
+  const ref = textOnly ? textOnly.ref : inboxCollection().doc();
+  const caption = textOnly
+    ? [textOnly.data()?.caption, imageCaption].filter(Boolean).join('\n')
+    : imageCaption;
   const { imagePath, imageUrl } = await storeFlyer(ref.id, buffer, mimeType);
 
   let extracted = emptyExtraction();
@@ -197,7 +243,24 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
   } catch (e: any) {
     console.error('whatsapp webhook: flyer extraction failed', e);
     extractionError = e?.message || 'Extraction failed';
-    extracted.missingFields = ['name', 'date', 'startTime', 'location'];
+    extracted.missingFields = [...REQUIRED_FIELDS];
+  }
+
+  if (textOnly) {
+    await ref.update({
+      imagePath,
+      imageUrl,
+      caption,
+      needsImage: false,
+      whatsappImageMessageId: message.id,
+      extracted,
+      confidence: extracted.confidence,
+      missingFields: extracted.missingFields,
+      extractionError,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    await sendReply(message.from, REPLY_IMAGE);
+    return;
   }
 
   await ref.set({
@@ -211,6 +274,40 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
     extractionError,
   });
   await sendReply(message.from, REPLY_IMAGE);
+}
+
+/**
+ * Most recent pending event_inbox item from this sender created within MERGE_WINDOW_MS that passes `accept`.
+ * Queries only submittedBy + createdAt (index {submittedBy ASC, createdAt DESC}) and filters status/time in code.
+ */
+async function findRecentPending(
+  waId: string,
+  accept: (data: FirebaseFirestore.DocumentData) => boolean,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot | null> {
+  try {
+    const snap = await inboxCollection().where('submittedBy', '==', waId).orderBy('createdAt', 'desc').limit(5).get();
+    const cutoff = Date.now() - MERGE_WINDOW_MS;
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      if (d.status !== 'pending') continue;
+      const created = typeof d.createdAt?.toMillis === 'function' ? d.createdAt.toMillis() : 0;
+      if (created < cutoff) continue;
+      if (accept(d)) return doc;
+    }
+  } catch (e) {
+    console.error('whatsapp webhook: recent-item lookup failed', e);
+  }
+  return null;
+}
+
+/** Re-downloads a stored flyer (public Storage URL) so it can be re-extracted with a richer caption. */
+async function downloadStoredFlyer(imageUrl: string): Promise<{ buffer: Buffer; mimeType: SupportedMime }> {
+  const res = await fetch(imageUrl);
+  if (!res.ok) throw new Error(`Could not fetch stored flyer (${res.status})`);
+  const ct = (res.headers.get('content-type') || '').split(';')[0].trim();
+  const byExt = imageUrl.endsWith('.png') ? 'image/png' : imageUrl.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+  const mimeType = (SUPPORTED.includes(ct as SupportedMime) ? ct : byExt) as SupportedMime;
+  return { buffer: Buffer.from(await res.arrayBuffer()), mimeType };
 }
 
 async function fetchImage(message: WaMessage, testImage: string | null): Promise<{ buffer: Buffer; mimeType: SupportedMime }> {

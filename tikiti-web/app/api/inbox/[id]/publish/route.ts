@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { inboxCollection, isAdminResponse, requireAdmin, serializeInbox } from '@/lib/inbox/admin';
 import { eventCategories } from '@/lib/data/categories';
+import { normaliseSpeakers, toEventSpeakers } from '@/lib/inbox/extract';
 
 export const DEFAULT_COMMUNITY_ORG_ID = 'mebjt1Jt38b0c5ePVsl7';
 
@@ -89,6 +90,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (registrationUrl) event.registrationUrl = registrationUrl;
     if (str(f.contactPhone)) event.organizerPhone = str(f.contactPhone);
     if (ticketingDisabled) event.ticketingDisabled = true;
+    const speakers = normaliseSpeakers(f.speakers);
+    if (speakers.length) event.speakers = toEventSpeakers(speakers);
 
     const db = getAdminFirestore();
     const eventRef = db.collection('events').doc();
@@ -102,7 +105,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ...(inbox.extracted || {}),
         name, description: str(f.description), category, date, endDate, startTime, endTime: str(f.endTime),
         location, address: str(f.address), city: str(f.city), price: isFree ? 0 : price, isFree,
-        registrationUrl, contactPhone: str(f.contactPhone), organiserName: str(f.organiserName),
+        registrationUrl, contactPhone: str(f.contactPhone), organiserName: str(f.organiserName), speakers,
       },
       organizationId,
       updatedAt: FieldValue.serverTimestamp(),

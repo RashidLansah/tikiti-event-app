@@ -312,7 +312,7 @@ export default function EventsPage() {
                     )}
                     {dateShort && <div className="pg-card-date">{dateShort}</div>}
                     {ev.category && <div className="pg-card-cat">{ev.category}</div>}
-                    <div className="pg-card-name" style={{ whiteSpace: 'pre-line' }}>{shortName}</div>
+                    {!imgSrc && <div className="pg-card-name" style={{ whiteSpace: 'pre-line' }}>{shortName}</div>}
                   </div>
                   <div className="pg-card-body">
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
