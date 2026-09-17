@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase/config';
 import ShareButton from '@/components/events/ShareButton';
 import TrackView from '@/components/events/TrackView';
 import Arrow from '@/components/ui/Arrow';
+import PublicHeader from '@/components/layout/PublicHeader';
 import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
 
 const PG = `
@@ -24,17 +25,9 @@ const PG = `
   button { font: inherit; cursor: pointer; }
   button:focus-visible, a:focus-visible { outline: 3px solid #ff7e47; outline-offset: 5px; }
 
-  /* Header */
-  .pg-header {
-    background: #f5ee3d; height: 80px; padding: 0 5%;
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 100;
-  }
+  /* Wordmark (footer) */
   .pg-logo { font-size: 38px; font-weight: 700; letter-spacing: -3px; display: inline-flex; align-items: center; gap: 4px; }
   .pg-logo span { font-size: 26px; color: var(--accent); letter-spacing: 0; }
-  .pg-nav { display: flex; gap: 28px; font-size: 14px; align-items: center; }
-  .pg-nav a { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 40px; }
-  .pg-nav-cta { border: 1px solid var(--line); padding: 11px 18px; border-radius: 30px; font-size: 13px; }
 
   /* Main */
   .detail-main { max-width: 1440px; margin: 0 auto; padding: 30px 5% 75px; }
@@ -139,11 +132,8 @@ const PG = `
     .mobile-ticket a { background: var(--accent); color: #fff; border-radius: 30px; padding: 12px 22px; font-size: 14px; font-weight: 700; min-height: 44px; }
   }
   @media (max-width: 768px) {
-    .pg-header { height: auto; padding: 10px 4% 0; flex-wrap: wrap; row-gap: 4px; }
-    .pg-logo { font-size: 28px; letter-spacing: -2px; order: 1; }
+    .pg-logo { font-size: 28px; letter-spacing: -2px; }
     .pg-logo span { font-size: 20px; }
-    .pg-nav { order: 3; width: 100%; gap: 20px; font-size: 13px; border-top: 1px solid rgba(34,34,34,0.12); }
-    .pg-nav-cta { order: 2; padding: 9px 14px; font-size: 12px; margin-left: auto; }
     .detail-main { padding-top: 20px; }
     .back-link { margin-bottom: 20px; min-height: 40px; display: inline-flex; align-items: center; }
   }
@@ -248,14 +238,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     <>
       <style>{PG}</style>
 
-      <header className="pg-header">
-        <Link href="/" className="pg-logo">tikiti<span>{'✳︎'}</span></Link>
-        <nav className="pg-nav">
-          <Link href="/events">Discover events</Link>
-          <Link href="/organisers">For organisers <Arrow dir="ne" size={13} /></Link>
-        </nav>
-        <Link href="/events" className="pg-nav-cta">All events <Arrow dir="ne" size={13} /></Link>
-      </header>
+      <PublicHeader cta={{ label: 'All events', href: '/events' }} />
 
       <main className="detail-main">
         <Link href="/events" className="back-link"><Arrow dir="left" size={13} /> Back to events</Link>
@@ -485,7 +468,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       {ev && (
         <div className="mobile-ticket">
           <span>{price === 0 ? 'Free' : `₵${price}`}</span>
-          <a href="#tickets">Choose ticket <Arrow dir="ne" size={14} /></a>
+          {ev.registrationUrl ? (
+            <a href={ev.registrationUrl} target="_blank" rel="noopener noreferrer">Register on their site <Arrow dir="ne" size={14} /></a>
+          ) : ev.ticketingDisabled ? (
+            <a href="#tickets">Ticket details <Arrow dir="ne" size={14} /></a>
+          ) : (
+            <a href="#tickets">{price === 0 ? 'Register free' : 'Choose ticket'} <Arrow dir="ne" size={14} /></a>
+          )}
         </div>
       )}
     </>

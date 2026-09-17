@@ -3,20 +3,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { techEvents } from '@/data/techEvents';
 import Arrow from '@/components/ui/Arrow';
+import PublicHeader from '@/components/layout/PublicHeader';
 
 const WHEEL_EVENTS = techEvents.slice(0, 5);
 
 export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
   const [activeIdx, setActiveIdx] = useState(0);
-  const [scrolled, setScrolled] = useState(false);
   const lastInteraction = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   const select = (i: number, manual = false) => {
     const next = ((i % WHEEL_EVENTS.length) + WHEEL_EVENTS.length) % WHEEL_EVENTS.length;
@@ -57,23 +51,7 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
         .pg button { font: inherit; cursor: pointer; }
         .pg button:focus-visible, .pg a:focus-visible { outline: 3px solid #ff7e47; outline-offset: 5px; }
 
-        /* Header */
-        .pg-header {
-          background: var(--pg-yellow);
-          height: 80px;
-          padding: 0 5%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-          transition: background 0.25s, box-shadow 0.25s;
-        }
-        .pg-header.scrolled {
-          background: #fff;
-          box-shadow: 0 1px 0 rgba(0,0,0,0.08);
-        }
+        /* Wordmark (footer) */
         .pg-logo {
           font-size: 38px;
           font-weight: 700;
@@ -83,19 +61,6 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
           gap: 4px;
         }
         .pg-logo span { font-size: 26px; color: var(--pg-accent); letter-spacing: 0; font-variant-emoji: text; }
-        .pg-nav { display: flex; gap: 28px; font-size: 14px; }
-        .pg-nav a:hover { opacity: 0.6; }
-        .pg-nav-cta {
-          border: 1.5px solid rgba(34,34,34,0.35);
-          padding: 11px 18px;
-          border-radius: 30px;
-          font-size: 13px;
-          color: #222;
-          font-weight: 600;
-        }
-        .pg-nav-cta { display: inline-flex; align-items: center; white-space: nowrap; }
-        .pg-nav-cta span { margin-left: 20px; display: inline-flex; }
-        .pg-nav a { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 40px; }
 
         /* Hero */
         .pg-hero {
@@ -416,14 +381,8 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
         .pg-wheel-center h3 { max-width: 90vw; }
 
         @media (max-width: 768px) {
-          /* Two-row header: logo + pill, then a compact link row */
-          .pg-header { height: auto; padding: 10px 4% 0; flex-wrap: wrap; row-gap: 4px; }
-          .pg-logo { font-size: 28px; letter-spacing: -2px; order: 1; }
+          .pg-logo { font-size: 28px; letter-spacing: -2px; }
           .pg-logo span { font-size: 20px; }
-          .pg-nav-cta { order: 2; padding: 9px 14px; font-size: 12px; }
-          .pg-nav-cta span { margin-left: 8px; }
-          .pg-nav { order: 3; width: 100%; gap: 20px; font-size: 13px; border-top: 1px solid rgba(34,34,34,0.12); }
-          .pg-nav a { min-height: 40px; }
           .pg-h1 { font-size: clamp(56px, 16vw, 88px); letter-spacing: -2px; }
           .pg-hero { padding-top: 22px; }
           .pg-hero-bottom { flex-direction: column; align-items: center; gap: 8px; text-align: center; }
@@ -446,14 +405,7 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
 
       <div className="pg">
         {/* Header */}
-        <header className={`pg-header${scrolled ? ' scrolled' : ''}`}>
-          <a className="pg-logo" href="#">tikiti<span>{'✱'}</span></a>
-          <nav className="pg-nav">
-            <a href="/events">Discover events</a>
-            <a href="https://www.gettikiti.com/register" target="_blank" rel="noopener">For organizers <Arrow dir="right" size={13} /></a>
-          </nav>
-          <a className="pg-nav-cta" href="/events">Find your next event <span><Arrow dir="right" size={16} /></span></a>
-        </header>
+        <PublicHeader sticky cta={{ label: 'Find your next event', href: '/events' }} />
 
         {/* Hero */}
         <section className="pg-hero">

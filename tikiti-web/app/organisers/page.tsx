@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
 import Arrow from '@/components/ui/Arrow';
+import PublicHeader from '@/components/layout/PublicHeader';
 
 const PG_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -10,12 +10,6 @@ const PG_STYLES = `
   body { background: #faf9f2; }
   .pg { font-family: 'DM Sans', Arial, sans-serif; background: #faf9f2; color: #202220; }
   .pg-display { font-family: 'Barlow Condensed', Impact, sans-serif; }
-  .pg-nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    padding: 0 40px; height: 64px; display: flex; align-items: center; justify-content: space-between;
-    transition: background 0.25s, box-shadow 0.25s;
-  }
-  .pg-nav.scrolled { background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,0.08); }
   .pg-btn-cta {
     height: 44px; padding: 0 24px; background: #f44929; color: #fff;
     border: none; border-radius: 40px; font-size: 14px; font-weight: 700;
@@ -36,16 +30,11 @@ const PG_STYLES = `
   .pg-float { animation: pgFloat 4s ease-in-out infinite; }
   @keyframes pgMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
   .pg-ticker-inner { animation: pgMarquee 22s linear infinite; white-space: nowrap; display: flex; }
-  .pg-nav-links { display: flex; align-items: center; gap: 24px; }
-  .pg-nav-links a { white-space: nowrap; }
   .pg-section { padding: clamp(64px, 10vw, 100px) 5%; }
   .pg-hero-cta { height: 60px; padding: 0 44px; background: #f5ee3d; color: #202220; border: none; border-radius: 40px; font-size: 16px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-family: 'DM Sans', sans-serif; transition: transform 0.15s; white-space: nowrap; }
   .pg-step { display: flex; gap: 32px; padding: 32px 0; border-bottom: 1px solid rgba(0,0,0,0.12); align-items: flex-start; }
   .pg-step-n { font-size: 56px; font-weight: 900; color: #f44929; line-height: 1; flex-shrink: 0; width: 72px; }
   @media (max-width: 768px) {
-    .pg-nav { padding: 0 16px; height: 60px; }
-    .pg-nav .pg-logo { font-size: 26px; letter-spacing: -1.5px; }
-    .pg-nav-links { gap: 14px; }
     .pg-btn-cta { padding: 0 18px; height: 40px; font-size: 13px; white-space: nowrap; }
     .pg-hero-cta { height: 54px; padding: 0 32px; font-size: 15px; }
     .pg-btn-outline { height: 54px; padding: 0 28px; }
@@ -107,28 +96,11 @@ const TESTIMONIALS = [
 ];
 
 export default function OrganisersPage() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
   return (
     <div className="pg">
       <style>{PG_STYLES}</style>
 
-      {/* Nav */}
-      <nav className={`pg-nav${scrolled ? ' scrolled' : ''}`} style={{ background: scrolled ? '#fff' : 'transparent' }}>
-        <a href="/" className="pg-logo" style={{ fontSize: 32, fontWeight: 700, letterSpacing: -2, color: scrolled ? '#202220' : '#fff', textDecoration: 'none', transition: 'color 0.25s', whiteSpace: 'nowrap' }}>
-          tikiti<span style={{ color: '#f44929' }}>{'✳︎'}</span>
-        </a>
-        <div className="pg-nav-links">
-          <a href="/" style={{ fontSize: 14, fontWeight: 600, color: scrolled ? '#202220' : 'rgba(255,255,255,0.8)', textDecoration: 'none', transition: 'color 0.25s' }}>Browse events</a>
-          <Link href="/register" className="pg-btn-cta">Start for free</Link>
-        </div>
-      </nav>
+      <PublicHeader sticky cta={{ label: 'Start for free', href: '/register' }} />
 
       {/* Hero — purple */}
       <section style={{ background: '#6256e8', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '120px 24px 80px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
