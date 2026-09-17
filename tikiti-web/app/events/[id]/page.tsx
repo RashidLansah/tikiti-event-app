@@ -146,6 +146,7 @@ interface FirestoreEventDetail {
   coverImage?: string;
   imageUrl?: string;
   source?: string;
+  speakers?: Array<{ name: string; title?: string; company?: string; role?: string; photo?: string }>;
   registrationUrl?: string;
   ticketingDisabled?: boolean;
   status: string;
@@ -321,14 +322,35 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 <section id="speakers">
                   <span className="eyebrow">PEOPLE BEHIND THE IDEAS</span>
                   <h2>Speakers &amp; facilitators.</h2>
-                  <p>The speaker lineup will be announced here.</p>
-                  <div className="speaker-placeholder">
-                    <span>↗</span>
-                    <div>
-                      <strong>Fresh perspectives. Practical experience.</strong>
-                      <p>Hear from the people doing the work.</p>
+                  {ev.speakers && ev.speakers.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14, marginTop: 18 }}>
+                      {ev.speakers.map((sp, i) => (
+                        <div key={i} style={{ border: '1px solid rgba(32,34,32,0.15)', borderRadius: 16, padding: 16, background: '#fffef9', display: 'flex', gap: 12, alignItems: 'center' }}>
+                          {sp.photo ? (
+                            <img src={sp.photo} alt={sp.name} style={{ width: 48, height: 48, borderRadius: 24, objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: 48, height: 48, borderRadius: 24, background: '#6256e8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>{sp.name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase()}</div>
+                          )}
+                          <div style={{ minWidth: 0 }}>
+                            {sp.role && <span style={{ fontSize: 10, letterSpacing: 1, color: '#65675d', textTransform: 'uppercase' }}>{sp.role}</span>}
+                            <strong style={{ display: 'block', fontSize: 15, color: '#202220' }}>{sp.name}</strong>
+                            {(sp.title || sp.company) && <p style={{ margin: 0, fontSize: 13, color: '#65675d' }}>{[sp.title, sp.company].filter(Boolean).join(' · ')}</p>}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <p>The speaker lineup will be announced here.</p>
+                      <div className="speaker-placeholder">
+                        <span>↗</span>
+                        <div>
+                          <strong>Fresh perspectives. Practical experience.</strong>
+                          <p>Hear from the people doing the work.</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </section>
 
                 <section id="know">
