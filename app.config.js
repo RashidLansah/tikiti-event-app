@@ -81,6 +81,11 @@ export default {
         category: ["BROWSABLE", "DEFAULT"]
       }
     ],
+    updates: {
+      url: "https://u.expo.dev/4a3d499a-fee7-465b-b0c6-3c9ba76073bc",
+      fallbackToCacheTimeout: 0
+    },
+    runtimeVersion: { policy: "appVersion" },
     extra: {
       eas: {
         projectId: "4a3d499a-fee7-465b-b0c6-3c9ba76073bc"
