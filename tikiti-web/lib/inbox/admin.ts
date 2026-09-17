@@ -40,6 +40,10 @@ export interface InboxItem {
   caption: string;
   source: InboxSource;
   submittedBy: string;
+  /** WhatsApp profile name of the sender (source = 'whatsapp') */
+  senderName?: string | null;
+  /** True for text-only WhatsApp submissions that still need a flyer image */
+  needsImage?: boolean;
   extracted: ExtractedEvent;
   confidence: number;
   missingFields: string[];
@@ -103,6 +107,8 @@ export function serializeInbox(id: string, data: FirebaseFirestore.DocumentData)
     caption: data.caption || '',
     source: data.source || 'upload',
     submittedBy: data.submittedBy || '',
+    senderName: data.senderName || null,
+    needsImage: !!data.needsImage,
     extracted: data.extracted,
     confidence: data.confidence ?? 0,
     missingFields: data.missingFields || [],

@@ -225,15 +225,21 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
     <Card className="rounded-[24px] border-black/10 bg-white shadow-none">
       <CardContent className="p-6 grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6">
         <div className="space-y-3">
-          <a href={item.imageUrl} target="_blank" rel="noreferrer">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.imageUrl} alt={form.name || 'Flyer'} className="w-full rounded-2xl object-cover border border-black/10" />
-          </a>
+          {item.imageUrl ? (
+            <a href={item.imageUrl} target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={item.imageUrl} alt={form.name || 'Flyer'} className="w-full rounded-2xl object-cover border border-black/10" />
+            </a>
+          ) : (
+            <div className="w-full aspect-[4/5] rounded-2xl border border-dashed border-black/20 flex items-center justify-center text-xs text-[#86868b] text-center px-4">No flyer image yet</div>
+          )}
           <div className="flex flex-wrap gap-2">
             <ConfidenceBadge value={item.confidence} />
-            <Badge className="bg-[#f5f5f7] text-[#333] border-0 rounded-full capitalize">{item.source}</Badge>
+            <Badge className={`border-0 rounded-full ${item.source === 'whatsapp' ? 'bg-green-100 text-green-700' : 'bg-[#f5f5f7] text-[#333] capitalize'}`}>{item.source === 'whatsapp' ? 'WhatsApp' : item.source}</Badge>
+            {item.needsImage && <Badge className="bg-amber-100 text-amber-700 border-0 rounded-full">Needs image</Badge>}
             {item.status !== 'pending' && <Badge className={`border-0 rounded-full capitalize ${item.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{item.status}</Badge>}
           </div>
+          {item.source === 'whatsapp' && <p className="text-xs text-[#86868b]">From: {item.senderName ? `${item.senderName} · ` : ''}+{item.submittedBy}</p>}
           {item.caption && <p className="text-xs text-[#86868b] whitespace-pre-wrap">Caption: {item.caption}</p>}
           {item.extractionError && <p className="text-xs text-red-600 flex items-start gap-1"><AlertTriangle className="w-3 h-3 mt-0.5" /> Extraction failed: {item.extractionError}. Fill in the details manually.</p>}
           {item.missingFields.length > 0 && <p className="text-xs text-red-600">Missing: {item.missingFields.map((m) => FIELD_LABELS[m] || m).join(', ')}</p>}
