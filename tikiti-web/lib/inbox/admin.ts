@@ -41,6 +41,18 @@ export interface ExtractedEvent {
   missingFields: string[];
 }
 
+export type InboxRejectedReason = 'not_event' | 'past' | 'duplicate';
+
+export interface InboxTriageMeta {
+  kind: 'event' | 'not_event' | 'unclear';
+  eventName: string | null;
+  date: string | null;
+  reason: string;
+  isPast: boolean;
+  duplicate: { type: 'event' | 'inbox'; id: string; name: string; publishedEventId?: string } | null;
+  model?: string;
+}
+
 export interface InboxItem {
   id: string;
   status: InboxStatus;
@@ -60,6 +72,10 @@ export interface InboxItem {
   missingFields: string[];
   publishedEventId: string | null;
   extractionError?: string | null;
+  /** Pre-extraction triage result (see lib/inbox/triage.ts); null for older items */
+  triage?: InboxTriageMeta | null;
+  /** Set when the item was auto-rejected by triage */
+  rejectedReason?: InboxRejectedReason | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -126,6 +142,8 @@ export function serializeInbox(id: string, data: FirebaseFirestore.DocumentData)
     missingFields: data.missingFields || [],
     publishedEventId: data.publishedEventId || null,
     extractionError: data.extractionError || null,
+    triage: data.triage || null,
+    rejectedReason: data.rejectedReason || null,
     createdAt: tsToIso(data.createdAt),
     updatedAt: tsToIso(data.updatedAt),
   };

@@ -1,8 +1,13 @@
 // POST /api/inbox/submit — upload a flyer, extract event details with Claude, create inbox doc (admin only)
+// Triage (not-event / past / duplicate) runs too but never auto-rejects here: its result is stored as `triage`
+// and echoed in the response as `warnings` so the admin UI can show badges.
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { inboxCollection, isAdminResponse, requireAdmin, serializeInbox, storeFlyer, type InboxSource } from '@/lib/inbox/admin';
 import { emptyExtraction, extractEventFromFlyer, type SupportedMime } from '@/lib/inbox/extract';
+import { triage, type TriageMeta } from '@/lib/inbox/triage';
+import { notifyAdminsOfSubmission } from '@/lib/inbox/notifyAdmins';
+import { getAdminFirestore } from '@/lib/firebase/admin';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -53,6 +58,18 @@ export async function POST(req: NextRequest) {
     const ref = inboxCollection().doc();
     const { imagePath, imageUrl } = await storeFlyer(ref.id, buffer, mimeType);
 
+    let triageMeta: TriageMeta | null = null;
+    const warnings: { past?: boolean; duplicate?: TriageMeta['duplicate']; notEvent?: boolean } = {};
+    try {
+      const t = await triage(getAdminFirestore(), imageBase64, mimeType as SupportedMime, caption || undefined);
+      triageMeta = t.meta;
+      if (t.decision === 'reject_past') warnings.past = true;
+      if (t.decision === 'reject_duplicate') warnings.duplicate = t.meta.duplicate;
+      if (t.decision === 'reject_not_event') warnings.notEvent = true;
+    } catch (e) {
+      console.error('Flyer triage failed', e);
+    }
+
     let extracted = emptyExtraction();
     let extractionError: string | null = null;
     try {
@@ -76,11 +93,20 @@ export async function POST(req: NextRequest) {
       missingFields: extracted.missingFields,
       publishedEventId: null,
       extractionError,
+      triage: triageMeta,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
     const snap = await ref.get();
-    return NextResponse.json({ item: serializeInbox(ref.id, snap.data()!) }, { status: 201 });
+    notifyAdminsOfSubmission({
+      senderName: admin.email,
+      submittedBy: admin.uid,
+      name: extracted.name,
+      date: extracted.date,
+      confidence: extracted.confidence,
+      missingFields: extracted.missingFields,
+    }).catch((e) => console.error('inbox submit: admin alert failed', e));
+    return NextResponse.json({ item: serializeInbox(ref.id, snap.data()!), warnings }, { status: 201 });
   } catch (e: any) {
     console.error('inbox submit error', e);
     return NextResponse.json({ error: e.message || 'Failed to submit flyer' }, { status: 500 });

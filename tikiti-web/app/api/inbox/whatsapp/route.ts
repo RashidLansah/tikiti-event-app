@@ -11,6 +11,9 @@
 //           event_inbox doc with no image (needsImage: true) when it contains a URL or looks like event
 //           details → auto-reply asking for the flyer
 //   image → if the same sender has a text-only (needsImage) item from the last 30 min, attach the image to it
+//   new image submissions are triaged first (lib/inbox/triage.ts): not-an-event / past / duplicate flyers are
+//           stored as status 'rejected' with rejectedReason and get a tailored reply instead of full extraction;
+//           accepted ones proceed as above and alert admins via WhatsApp (lib/inbox/notifyAdmins.ts)
 //   statuses / other types → ignored
 // Every message id is recorded in whatsapp_messages/{id} so Meta retries are de-duplicated.
 // The route always answers 200 once the signature is valid; Meta retries on non-200.
@@ -26,6 +29,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { inboxCollection, storeFlyer } from '@/lib/inbox/admin';
 import { emptyExtraction, extractEventFromFlyer, type SupportedMime } from '@/lib/inbox/extract';
+import { triage, type TriageResult } from '@/lib/inbox/triage';
+import { notifyAdminsOfSubmission } from '@/lib/inbox/notifyAdmins';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -35,6 +40,7 @@ const PROCESSED_COLLECTION = 'whatsapp_messages';
 const SUPPORTED: SupportedMime[] = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_BYTES = 8 * 1024 * 1024;
 const EXTRACTION_TIMEOUT_MS = 20_000;
+const TRIAGE_TIMEOUT_MS = 15_000;
 
 const REPLY_IMAGE = "Got it! We'll review this event and list it on Tikiti soon. 🎟";
 const REPLY_TEXT = 'Thanks! Please forward the event flyer image too so we can list it.';
@@ -231,12 +237,51 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
     ? [textOnly.data()?.caption, imageCaption].filter(Boolean).join('\n')
     : imageCaption;
   const { imagePath, imageUrl } = await storeFlyer(ref.id, buffer, mimeType);
+  const imageBase64 = buffer.toString('base64');
+
+  // Triage only brand-new image submissions (not image-attach to an existing text item)
+  let triageResult: TriageResult | null = null;
+  if (!textOnly) {
+    try {
+      triageResult = await withTimeout(
+        triage(getAdminFirestore(), imageBase64, mimeType, caption || undefined),
+        TRIAGE_TIMEOUT_MS,
+        'Triage timed out',
+      );
+    } catch (e) {
+      console.error('whatsapp webhook: triage failed, accepting submission', e);
+    }
+  }
+  if (triageResult && triageResult.decision !== 'accept') {
+    const rejectedReason = triageResult.decision.replace(/^reject_/, '') as 'not_event' | 'past' | 'duplicate';
+    const extracted = emptyExtraction();
+    extracted.name = triageResult.meta.eventName || '';
+    extracted.date = triageResult.meta.date || '';
+    extracted.endDate = extracted.date;
+    extracted.missingFields = REQUIRED_FIELDS.filter((f) => !(extracted as any)[f]);
+    await ref.set({
+      ...base,
+      status: 'rejected',
+      rejectedReason,
+      rejectedAt: FieldValue.serverTimestamp(),
+      triage: triageResult.meta,
+      imagePath,
+      imageUrl,
+      caption,
+      extracted,
+      confidence: 0,
+      missingFields: extracted.missingFields,
+      extractionError: null,
+    });
+    await sendReply(message.from, triageResult.reply);
+    return;
+  }
 
   let extracted = emptyExtraction();
   let extractionError: string | null = null;
   try {
     extracted = await withTimeout(
-      extractEventFromFlyer(buffer.toString('base64'), mimeType, caption || undefined),
+      extractEventFromFlyer(imageBase64, mimeType, caption || undefined),
       EXTRACTION_TIMEOUT_MS,
       'Extraction timed out',
     );
@@ -260,6 +305,14 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
       updatedAt: FieldValue.serverTimestamp(),
     });
     await sendReply(message.from, REPLY_IMAGE);
+    notifyAdminsOfSubmission({
+      senderName,
+      submittedBy: message.from,
+      name: extracted.name,
+      date: extracted.date,
+      confidence: extracted.confidence,
+      missingFields: extracted.missingFields,
+    }).catch((e) => console.error('whatsapp webhook: admin alert failed', e));
     return;
   }
 
@@ -272,8 +325,17 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
     confidence: extracted.confidence,
     missingFields: extracted.missingFields,
     extractionError,
+    triage: triageResult ? triageResult.meta : null,
   });
   await sendReply(message.from, REPLY_IMAGE);
+  notifyAdminsOfSubmission({
+    senderName,
+    submittedBy: message.from,
+    name: extracted.name,
+    date: extracted.date,
+    confidence: extracted.confidence,
+    missingFields: extracted.missingFields,
+  }).catch((e) => console.error('whatsapp webhook: admin alert failed', e));
 }
 
 /**

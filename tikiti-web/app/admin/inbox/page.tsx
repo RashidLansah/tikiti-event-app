@@ -272,10 +272,21 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
             <ConfidenceBadge value={item.confidence} />
             <Badge className={`border-0 rounded-full ${item.source === 'whatsapp' ? 'bg-green-100 text-green-700' : 'bg-[#f5f5f7] text-[#333] capitalize'}`}>{item.source === 'whatsapp' ? 'WhatsApp' : item.source}</Badge>
             {item.needsImage && <Badge className="bg-amber-100 text-amber-700 border-0 rounded-full">Needs image</Badge>}
+            {(item.triage?.isPast || item.rejectedReason === 'past') && <Badge className="bg-amber-100 text-amber-700 border-0 rounded-full">Past event</Badge>}
+            {(item.triage?.duplicate || item.rejectedReason === 'duplicate') && (
+              <Badge className="bg-amber-100 text-amber-700 border-0 rounded-full" title={item.triage?.duplicate?.name || ''}>
+                Possible duplicate{item.triage?.duplicate?.name ? ` of ${item.triage.duplicate.name}` : ''}
+              </Badge>
+            )}
+            {(item.triage?.kind === 'not_event' || item.rejectedReason === 'not_event') && <Badge className="bg-red-100 text-red-700 border-0 rounded-full">Not an event</Badge>}
             {item.status !== 'pending' && <Badge className={`border-0 rounded-full capitalize ${item.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{item.status}</Badge>}
           </div>
           {item.source === 'whatsapp' && <p className="text-xs text-[#86868b]">From: {item.senderName ? `${item.senderName} · ` : ''}+{item.submittedBy}</p>}
           {item.caption && <p className="text-xs text-[#86868b] whitespace-pre-wrap">Caption: {item.caption}</p>}
+          {item.rejectedReason && item.triage?.reason && <p className="text-xs text-[#86868b]">Auto-rejected: {item.triage.reason}</p>}
+          {item.triage?.duplicate?.publishedEventId && item.status !== 'published' && (
+            <Link href={`/events/${item.triage.duplicate.publishedEventId}`} target="_blank" className="inline-flex items-center gap-1 text-xs text-[#333] underline"><ExternalLink className="w-3 h-3" /> View existing event</Link>
+          )}
           {item.extractionError && <p className="text-xs text-red-600 flex items-start gap-1"><AlertTriangle className="w-3 h-3 mt-0.5" /> Extraction failed: {item.extractionError}. Fill in the details manually.</p>}
           {item.missingFields.length > 0 && <p className="text-xs text-red-600">Missing: {item.missingFields.map((m) => FIELD_LABELS[m] || m).join(', ')}</p>}
           {item.status === 'published' && item.publishedEventId && (
