@@ -30,7 +30,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 const ADMIN_EMAILS = [
   'admin@tikiti.com',
   'rashid@tikiti.com',
-  'gettikiti@gmail.com'
+  'gettikiti@gmail.com',
+  'pesewabrands@gmail.com'
 ];
 
 interface AdminLayoutProps {

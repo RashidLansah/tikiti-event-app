@@ -4,7 +4,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { getAdminFirestore, verifyRequestUser } from '@/lib/firebase/admin';
 
 /** Must match the admin allowlist in ../firestore.rules and components/layout/AdminLayout.tsx */
-export const ADMIN_EMAILS = ['gettikiti@gmail.com', 'rashid@tikiti.com', 'admin@tikiti.com'];
+export const ADMIN_EMAILS = ['gettikiti@gmail.com', 'rashid@tikiti.com', 'admin@tikiti.com', 'pesewabrands@gmail.com'];
 
 export const INBOX_COLLECTION = 'event_inbox';
 export const INBOX_BUCKET = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'tikiti-45ac4.firebasestorage.app';

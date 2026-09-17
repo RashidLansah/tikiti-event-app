@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Inbox, Upload, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, RefreshCw, X } from 'lucide-react';
 import type { ExtractedEvent, InboxItem, InboxStatus } from '@/lib/inbox/admin';
 
-const DEFAULT_ORG = { id: 'mebjt1Jt38b0c5ePVsl7', name: 'Tikiti - Test Account' };
+const DEFAULT_ORG = { id: '1Mvh7AnKIphfnDeOgWUd', name: 'Tikiti Community' };
 
 async function api(path: string, init?: RequestInit) {
   const token = await auth.currentUser?.getIdToken();

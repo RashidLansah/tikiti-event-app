@@ -13,7 +13,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        request.auth.token.email in ['gettikiti@gmail.com', 'rashid@tikiti.com', 'admin@tikiti.com'];
+        request.auth.token.email in ['gettikiti@gmail.com', 'rashid@tikiti.com', 'admin@tikiti.com', 'pesewabrands@gmail.com'];
     }
 
     function isOrganizer() {
@@ -350,6 +350,12 @@ service cloud.firestore {
         // Admins can read all
         allow read: if isAdmin();
       }
+    }
+
+    // Scraped events — public read, no client writes
+    match /scraped_events/{eventId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // Default rule - deny all other access
