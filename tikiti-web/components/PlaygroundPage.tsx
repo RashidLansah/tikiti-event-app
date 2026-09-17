@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { techEvents } from '@/data/techEvents';
 
 const WHEEL_EVENTS = techEvents.slice(0, 5);
 
-export default function PlaygroundPage() {
+export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const lastInteraction = useRef(0);
@@ -502,6 +502,9 @@ export default function PlaygroundPage() {
             {'BE THERE ✱ BUILD WHAT\'S NEXT ✱ FIND YOUR PEOPLE ✱ SHARE BIG IDEAS ✱ BE THERE ✱ BUILD WHAT\'S NEXT ✱ FIND YOUR PEOPLE ✱ SHARE BIG IDEAS ✱ '}
           </div>
         </div>
+
+        {/* Platform stats */}
+        {stats}
 
         {/* Discovery */}
         <section className="pg-discovery" id="discover">

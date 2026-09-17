@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import ShareButton from '@/components/events/ShareButton';
+import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
 
 const CATEGORIES = ['All', 'Conferences', 'Workshops', 'Meetups', 'Startups', 'Community'];
 
@@ -83,6 +85,8 @@ interface FirestoreEvent {
   isScraped?: boolean;
   registrationUrl?: string;
   isOnline?: boolean;
+  source?: string;
+  stats?: { views?: number; registerClicks?: number };
 }
 
 function formatDateShort(dateStr: string): string {
@@ -302,6 +306,7 @@ export default function EventsPage() {
               const shortName = getShortName(ev.name);
               const imgSrc = getImageSrc(ev);
               const intro = ev.description ? ev.description.split('\n')[0].slice(0, 120) : '';
+              const interested = isExternalEvent(ev) ? interestedLabel(ev.stats) : null;
               const cardContent = (
                 <>
                   <div className="pg-card-img">
@@ -330,14 +335,17 @@ export default function EventsPage() {
                     <h3>{ev.name}</h3>
                     <p>{intro}</p>
                     <div className="pg-card-foot">
-                      <span>{ev.location || 'Accra'}</span>
-                      <span className="pg-card-price">{price}</span>
+                      <span>{ev.location || 'Accra'}{interested ? ` · ${interested}` : ''}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                        <span className="pg-card-price">{price}</span>
+                        <ShareButton eventId={ev.id} title={ev.name} text={intro} variant="icon" />
+                      </span>
                     </div>
                   </div>
                 </>
               );
               return ev.isScraped && ev.registrationUrl ? (
-                <a href={ev.registrationUrl} key={ev.id} className="pg-card" target="_blank" rel="noopener noreferrer">
+                <a href={ev.registrationUrl} key={ev.id} className="pg-card" target="_blank" rel="noopener noreferrer" onClick={() => trackEvent(ev.id, 'register_click')}>
                   {cardContent}
                 </a>
               ) : (

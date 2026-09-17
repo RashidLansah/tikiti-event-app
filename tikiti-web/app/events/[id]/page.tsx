@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import ShareButton from '@/components/events/ShareButton';
+import TrackView from '@/components/events/TrackView';
+import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
 
 const PG = `
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -154,6 +157,8 @@ interface FirestoreEventDetail {
   program?: { sessions?: AgendaItem[] };
   agenda?: AgendaItem[];
   venueType?: string;
+  isScraped?: boolean;
+  stats?: { views?: number; registerClicks?: number };
 }
 
 function formatDateLong(dateStr: string): string {
@@ -212,6 +217,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const shortName = ev ? getShortName(ev.name) : '';
   const category = ev?.category ?? '';
   const intro = ev ? (ev.description?.split('\n')[0] ?? '') : '';
+  const external = ev ? isExternalEvent(ev) : false;
+  const interested = external ? interestedLabel(ev?.stats) : null;
 
   return (
     <>
@@ -237,6 +244,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         ) : ev ? (
           <>
+            <TrackView eventId={id} />
             {/* Hero */}
             <section className="event-hero">
               <div className="event-art">
@@ -273,9 +281,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <p>{ev.venueType === 'virtual' ? 'Online' : ev.venueType === 'hybrid' ? 'In person & online' : 'In person'}</p>
                   </div>
                 </div>
-                <div className="host-line">
-                  <span className="host-avatar">{(ev.organizerName ?? 'TB').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</span>
-                  <span>Hosted by<br /><b>{ev.organizerName || 'Tikiti Builders Community'}</b></span>
+                <div className="host-line" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span className="host-avatar">{(ev.organizerName ?? 'TB').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</span>
+                    <span>Hosted by<br /><b>{ev.organizerName || 'Tikiti Builders Community'}</b></span>
+                  </div>
+                  <ShareButton eventId={id} title={ev.name} text={intro} />
                 </div>
               </div>
             </section>
@@ -405,7 +416,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {ev.registrationUrl ? (
-                  <a href={ev.registrationUrl} target="_blank" rel="noopener noreferrer">
+                  <a href={ev.registrationUrl} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent(id, 'register_click')}>
                     <button style={{ width: '100%', height: 52, background: '#f44929', color: '#fff', border: 0, borderRadius: 40, font: "700 15px 'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', cursor: 'pointer' }}>
                       <span>Register on their site</span>
                       <span>↗</span>
@@ -423,6 +434,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 )}
 
                 <p style={{ fontSize: 11, textAlign: 'center', color: 'rgba(32,34,32,0.45)', marginTop: 14 }}>{ev.registrationUrl ? 'Registration is handled by the organiser' : price > 0 ? 'Secure payment via Paystack · Instant confirmation' : 'No payment required'}</p>
+                {interested && (
+                  <p style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+                    <span style={{ font: "600 12px 'DM Sans', sans-serif", letterSpacing: 0.3, color: '#202220', border: '1px solid #202220', borderRadius: 30, padding: '6px 14px', background: 'rgba(255,255,255,0.6)' }}>{interested}</span>
+                  </p>
+                )}
                 <div style={{ borderTop: '1px dashed rgba(32,34,32,0.2)', margin: '25px -28px -6px', padding: '23px 28px 0', fontSize: 12, textAlign: 'center', color: 'rgba(32,34,32,0.45)', lineHeight: 1.6 }}>Your next connection starts here.</div>
               </aside>
             </div>
