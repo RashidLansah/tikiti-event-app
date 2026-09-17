@@ -76,14 +76,25 @@ interface FirestoreEvent {
   time: string;
   type: string;
   ticketPrice?: number;
+  price?: string;
   coverImage?: string;
   imageUrl?: string;
   status: string;
+  isScraped?: boolean;
+  registrationUrl?: string;
+  isOnline?: boolean;
 }
 
 function formatDateShort(dateStr: string): string {
   if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
+  // Handle "09 Sep 2026" format from scraped events
+  const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) {
+    // Try parsing "DD Mon YYYY"
+    const parts = dateStr.split(' ');
+    if (parts.length === 3) return `${parts[0]} ${parts[1].toUpperCase().slice(0, 3)}`;
+    return dateStr.slice(0, 6);
+  }
   const day = d.getDate().toString().padStart(2, '0');
   const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
   return `${day} ${months[d.getMonth()]}`;
@@ -93,6 +104,29 @@ function formatDateLong(dateStr: string): string {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function getImageSrc(ev: FirestoreEvent): string {
+  if (ev.coverImage) return ev.coverImage;
+  if (ev.imageUrl) return ev.imageUrl;
+  return '';
+}
+
+function getEventPrice(ev: FirestoreEvent): string {
+  if (ev.isScraped) {
+    if (!ev.price || ev.price === '0' || ev.price === 'Free') return 'Free';
+    return ev.price;
+  }
+  const p = ev.ticketPrice ?? 0;
+  return p === 0 ? 'Free' : `₵${p}`;
+}
+
+function isUpcoming(ev: FirestoreEvent, today: Date): boolean {
+  if (!ev.date) return true;
+  // Handle "09 Sep 2026" format
+  const d = new Date(ev.date + (ev.date.includes('T') ? '' : 'T00:00:00'));
+  if (isNaN(d.getTime())) return true; // show in upcoming if unparseable
+  return d >= today;
 }
 
 function getShortName(name: string): string {
@@ -114,17 +148,26 @@ export default function EventsPage() {
   useEffect(() => {
     async function fetchEvents() {
       try {
-        const eventsRef = collection(db, 'events');
-        const snap = await getDocs(eventsRef);
-        const fetched: FirestoreEvent[] = snap.docs.map(doc => ({
-          id: doc.id,
-          ...(doc.data() as Omit<FirestoreEvent, 'id'>),
-        }));
-        // Show published or active events
-        const visible = fetched.filter(e =>
-          e.status === 'published' || e.status === 'active' || e.status === 'draft' || !e.status
-        );
-        setEvents(visible);
+        const [eventsSnap, scrapedSnap] = await Promise.all([
+          getDocs(collection(db, 'events')),
+          getDocs(collection(db, 'scraped_events')),
+        ]);
+
+        const organiserEvents: FirestoreEvent[] = eventsSnap.docs
+          .map(doc => ({ id: doc.id, ...(doc.data() as Omit<FirestoreEvent, 'id'>) }))
+          .filter(e => e.status === 'published' || e.status === 'active' || e.status === 'draft' || !e.status);
+
+        const scrapedEvents: FirestoreEvent[] = scrapedSnap.docs
+          .map(doc => {
+            const d = doc.data();
+            if (d.price && d.price !== '0' && d.price !== 'Free') return null; // free only
+            const loc = (d.location || '').toLowerCase();
+            const isOnline = loc.includes('online') || loc.includes('virtual') || loc.includes('zoom') || loc.includes('remote');
+            return { id: doc.id, ...d, isScraped: true, isOnline } as FirestoreEvent;
+          })
+          .filter(Boolean) as FirestoreEvent[];
+
+        setEvents([...organiserEvents, ...scrapedEvents]);
       } catch (err) {
         console.error('Failed to fetch events:', err);
         setError('Could not load events.');
@@ -138,11 +181,9 @@ export default function EventsPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const tabEvents = events.filter(ev => {
-    if (!ev.date) return tab === 'upcoming';
-    const evDate = new Date(ev.date + 'T00:00:00');
-    return tab === 'upcoming' ? evDate >= today : evDate < today;
-  });
+  const tabEvents = events.filter(ev =>
+    tab === 'upcoming' ? isUpcoming(ev, today) : !isUpcoming(ev, today)
+  );
 
   const filtered = tabEvents.filter(ev => {
     const cat = ev.category ?? '';
@@ -256,13 +297,13 @@ export default function EventsPage() {
         ) : (
           <div className="pg-grid">
             {filtered.map(ev => {
-              const price = ev.type === 'free' ? 0 : (ev.ticketPrice ?? 0);
+              const price = getEventPrice(ev);
               const dateShort = formatDateShort(ev.date);
               const shortName = getShortName(ev.name);
-              const imgSrc = ev.coverImage || ev.imageUrl || '';
+              const imgSrc = getImageSrc(ev);
               const intro = ev.description ? ev.description.split('\n')[0].slice(0, 120) : '';
-              return (
-                <Link href={`/events/${ev.id}`} key={ev.id} className="pg-card">
+              const cardContent = (
+                <>
                   <div className="pg-card-img">
                     {imgSrc ? (
                       <img src={imgSrc} alt={ev.name} />
@@ -274,13 +315,34 @@ export default function EventsPage() {
                     <div className="pg-card-name" style={{ whiteSpace: 'pre-line' }}>{shortName}</div>
                   </div>
                   <div className="pg-card-body">
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
+                      {ev.isScraped && (
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: '#f0efe8', color: '#65675d', border: '1px solid #deded4', borderRadius: 4, padding: '2px 7px' }}>
+                          EXTERNAL ↗
+                        </span>
+                      )}
+                      {ev.isOnline && (
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, background: '#e6f9f0', color: '#1a8c4e', border: '1px solid #b2e8ce', borderRadius: 4, padding: '2px 7px' }}>
+                          ONLINE
+                        </span>
+                      )}
+                    </div>
                     <h3>{ev.name}</h3>
                     <p>{intro}</p>
                     <div className="pg-card-foot">
                       <span>{ev.location || 'Accra'}</span>
-                      <span className="pg-card-price">{price === 0 ? 'Free' : `₵${price}`}</span>
+                      <span className="pg-card-price">{price}</span>
                     </div>
                   </div>
+                </>
+              );
+              return ev.isScraped && ev.registrationUrl ? (
+                <a href={ev.registrationUrl} key={ev.id} className="pg-card" target="_blank" rel="noopener noreferrer">
+                  {cardContent}
+                </a>
+              ) : (
+                <Link href={`/events/${ev.id}`} key={ev.id} className="pg-card">
+                  {cardContent}
                 </Link>
               );
             })}

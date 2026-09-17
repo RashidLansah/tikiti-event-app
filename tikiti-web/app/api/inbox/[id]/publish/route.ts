@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const event: Record<string, any> = {
       name,
       description: str(f.description),
-      venueType: 'in_person',
+      venueType: /online|zoom|virtual|google meet|teams|webinar|livestream/i.test(`${location} ${name}`) ? 'virtual' : 'in_person',
       location,
       date,
       time: startTime,

@@ -17,9 +17,8 @@ export default function EventRedirect({ eventId }: EventRedirectProps) {
   useEffect(() => {
     if (eventId) {
       // Preserve any extra URL params (uid, name, email from app redirect)
-      const currentParams = new URLSearchParams(window.location.search);
-      currentParams.set('eventId', eventId);
-      window.location.href = `/event.html?${currentParams.toString()}`;
+      const qs = window.location.search;
+      window.location.replace(`/events/${eventId}${qs}`);
     }
   }, [eventId]);
 

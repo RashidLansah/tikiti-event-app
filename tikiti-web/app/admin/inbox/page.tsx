@@ -244,7 +244,7 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
           {item.extractionError && <p className="text-xs text-red-600 flex items-start gap-1"><AlertTriangle className="w-3 h-3 mt-0.5" /> Extraction failed: {item.extractionError}. Fill in the details manually.</p>}
           {item.missingFields.length > 0 && <p className="text-xs text-red-600">Missing: {item.missingFields.map((m) => FIELD_LABELS[m] || m).join(', ')}</p>}
           {item.status === 'published' && item.publishedEventId && (
-            <Link href={`/event/${item.publishedEventId}`} target="_blank" className="inline-flex items-center gap-1 text-sm text-[#333] underline"><ExternalLink className="w-4 h-4" /> View event</Link>
+            <Link href={`/events/${item.publishedEventId}`} target="_blank" className="inline-flex items-center gap-1 text-sm text-[#333] underline"><ExternalLink className="w-4 h-4" /> View event</Link>
           )}
         </div>
 

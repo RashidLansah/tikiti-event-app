@@ -145,6 +145,9 @@ interface FirestoreEventDetail {
   price?: number;
   coverImage?: string;
   imageUrl?: string;
+  source?: string;
+  registrationUrl?: string;
+  ticketingDisabled?: boolean;
   status: string;
   organizerName?: string;
   program?: { sessions?: AgendaItem[] };
@@ -241,6 +244,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 ) : (
                   <div style={{ width: '100%', height: '100%', background: '#2a2a2a' }} />
                 )}
+                {ev.source !== 'community' && (
                 <div className="event-art-copy">
                   <span>{category.toUpperCase()}</span>
                   <strong style={{ whiteSpace: 'pre-line' }}>{shortName}</strong>
@@ -249,6 +253,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <b>↗</b>
                   </div>
                 </div>
+                )}
               </div>
 
               <div className="event-overview">
@@ -377,14 +382,25 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <strong style={{ fontSize: 22, color: '#202220' }}>{price === 0 ? 'Free' : `₵${total}`}</strong>
                 </div>
 
-                <Link href="/register">
-                  <button style={{ width: '100%', height: 52, background: '#f44929', color: '#fff', border: 0, borderRadius: 40, font: "700 15px 'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', cursor: 'pointer', transition: 'transform 0.2s' }}>
-                    <span>{price === 0 ? 'Register free' : 'Get tickets'}</span>
-                    <span>↗</span>
-                  </button>
-                </Link>
+                {ev.registrationUrl ? (
+                  <a href={ev.registrationUrl} target="_blank" rel="noopener noreferrer">
+                    <button style={{ width: '100%', height: 52, background: '#f44929', color: '#fff', border: 0, borderRadius: 40, font: "700 15px 'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', cursor: 'pointer' }}>
+                      <span>Register on their site</span>
+                      <span>↗</span>
+                    </button>
+                  </a>
+                ) : ev.ticketingDisabled ? (
+                  <p style={{ fontSize: 14, textAlign: 'center', color: '#202220', padding: '14px 0' }}>Tickets are sold by the organiser directly — check the flyer for details.</p>
+                ) : (
+                  <Link href="/register">
+                    <button style={{ width: '100%', height: 52, background: '#f44929', color: '#fff', border: 0, borderRadius: 40, font: "700 15px 'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', cursor: 'pointer', transition: 'transform 0.2s' }}>
+                      <span>{price === 0 ? 'Register free' : 'Get tickets'}</span>
+                      <span>↗</span>
+                    </button>
+                  </Link>
+                )}
 
-                <p style={{ fontSize: 11, textAlign: 'center', color: 'rgba(32,34,32,0.45)', marginTop: 14 }}>{price > 0 ? 'Secure payment via Paystack · Instant confirmation' : 'No payment required'}</p>
+                <p style={{ fontSize: 11, textAlign: 'center', color: 'rgba(32,34,32,0.45)', marginTop: 14 }}>{ev.registrationUrl ? 'Registration is handled by the organiser' : price > 0 ? 'Secure payment via Paystack · Instant confirmation' : 'No payment required'}</p>
                 <div style={{ borderTop: '1px dashed rgba(32,34,32,0.2)', margin: '25px -28px -6px', padding: '23px 28px 0', fontSize: 12, textAlign: 'center', color: 'rgba(32,34,32,0.45)', lineHeight: 1.6 }}>Your next connection starts here.</div>
               </aside>
             </div>
