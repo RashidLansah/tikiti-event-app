@@ -14,6 +14,11 @@
 //   new image submissions are triaged first (lib/inbox/triage.ts): not-an-event / past / duplicate flyers are
 //           stored as status 'rejected' with rejectedReason and get a tailored reply instead of full extraction;
 //           accepted ones proceed as above and alert admins via WhatsApp (lib/inbox/notifyAdmins.ts)
+//   admin replies (sender in INBOX_ADMIN_PHONES) are handled BEFORE the flyer flow and never create inbox items:
+//           interactive button reply with id `approve:<inboxId>` / `reject:<inboxId>` (from the alert sent by
+//           lib/inbox/notifyAdmins.ts), or a text command: `approve` / `reject` (most recent pending item),
+//           `approve <REF6>` / `reject <REF6>` (item whose id ends with the 6-char ref), `pending` (list up to 5).
+//           Any other admin text/image goes through the normal flyer flow, so admins can still forward flyers.
 //   statuses / other types → ignored
 // Every message id is recorded in whatsapp_messages/{id} so Meta retries are de-duplicated.
 // The route always answers 200 once the signature is valid; Meta retries on non-200.
@@ -26,11 +31,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
-import { getAdminFirestore } from '@/lib/firebase/admin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { inboxCollection, storeFlyer } from '@/lib/inbox/admin';
 import { emptyExtraction, extractEventFromFlyer, type SupportedMime } from '@/lib/inbox/extract';
 import { triage, type TriageResult } from '@/lib/inbox/triage';
-import { notifyAdminsOfSubmission } from '@/lib/inbox/notifyAdmins';
+import { inboxRef, isAdminPhone, notifyAdminsOfSubmission } from '@/lib/inbox/notifyAdmins';
+import { INBOX_DEFAULT_ORG_ID, InboxPublishError, publishInboxItem, rejectInboxItem } from '@/lib/inbox/publish';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -48,6 +54,13 @@ const REPLY_MERGED = 'Added to your event — thanks!';
 const MERGE_WINDOW_MS = 30 * 60 * 1000;
 const REQUIRED_FIELDS = ['name', 'date', 'startTime', 'location'];
 
+const ADMIN_REVIEW_URL = 'https://www.gettikiti.com/admin/inbox';
+const EVENT_URL = (id: string) => `https://www.gettikiti.com/events/${id}`;
+const ADMIN_FALLBACK_UID = 'whatsapp-admin';
+/** `approve` | `reject` | `pending`, optionally followed by a 6-char ref (last 6 chars of the inbox id). */
+const ADMIN_COMMAND_RE = /^(approve|reject|pending)(?:\s+([a-z0-9]{6}))?$/i;
+const PENDING_SCAN_LIMIT = 50;
+
 type WaMessage = {
   id: string;
   from: string;
@@ -55,7 +68,13 @@ type WaMessage = {
   timestamp?: string;
   text?: { body?: string };
   image?: { id: string; mime_type?: string; caption?: string; sha256?: string };
+  interactive?: { type?: string; button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } };
 };
+
+type AdminCommand =
+  | { action: 'approve' | 'reject'; inboxId: string }
+  | { action: 'approve' | 'reject'; ref: string | null }
+  | { action: 'pending' };
 type WaContact = { wa_id?: string; profile?: { name?: string } };
 
 // ---------- GET: verification handshake ----------
@@ -147,6 +166,23 @@ function looksLikeEventText(text: string): boolean {
 
 async function handleMessage(message: WaMessage, contacts: WaContact[], testImage: string | null) {
   if (!message?.id || !message.from) return;
+
+  // Admin approve / reject / pending — handled before (and instead of) the flyer flow
+  const command = isAdminPhone(message.from) ? parseAdminCommand(message) : null;
+  if (command) {
+    if (!(await claimMessage(message))) {
+      console.log('whatsapp webhook: duplicate admin command skipped', message.id);
+      return;
+    }
+    try {
+      await handleAdminCommand(message.from, command);
+    } catch (e) {
+      console.error('whatsapp webhook: admin command failed', message.id, e);
+      await sendReply(message.from, `Something went wrong handling that command. Review here: ${ADMIN_REVIEW_URL}`);
+    }
+    return;
+  }
+
   if (message.type !== 'image' && message.type !== 'text') return;
   if (!(await claimMessage(message))) {
     console.log('whatsapp webhook: duplicate message skipped', message.id);
@@ -306,10 +342,13 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
     });
     await sendReply(message.from, REPLY_IMAGE);
     notifyAdminsOfSubmission({
+      inboxId: ref.id,
       senderName,
       submittedBy: message.from,
       name: extracted.name,
       date: extracted.date,
+      startTime: extracted.startTime,
+      location: extracted.location,
       confidence: extracted.confidence,
       missingFields: extracted.missingFields,
     }).catch((e) => console.error('whatsapp webhook: admin alert failed', e));
@@ -329,13 +368,135 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
   });
   await sendReply(message.from, REPLY_IMAGE);
   notifyAdminsOfSubmission({
+    inboxId: ref.id,
     senderName,
     submittedBy: message.from,
     name: extracted.name,
     date: extracted.date,
+    startTime: extracted.startTime,
+    location: extracted.location,
     confidence: extracted.confidence,
     missingFields: extracted.missingFields,
   }).catch((e) => console.error('whatsapp webhook: admin alert failed', e));
+}
+
+// ---------- admin commands (approve / reject from WhatsApp) ----------
+
+/**
+ * Returns a command only when the admin's message is unambiguously one: an interactive button reply with an
+ * `approve:<id>` / `reject:<id>` id, or a text matching ADMIN_COMMAND_RE. Anything else → null (flyer flow).
+ */
+function parseAdminCommand(message: WaMessage): AdminCommand | null {
+  if (message.type === 'interactive') {
+    const id = (message.interactive?.button_reply?.id || '').trim();
+    const m = id.match(/^(approve|reject):(.+)$/);
+    if (m) return { action: m[1] as 'approve' | 'reject', inboxId: m[2] };
+    return null;
+  }
+  if (message.type === 'text') {
+    const m = (message.text?.body || '').trim().match(ADMIN_COMMAND_RE);
+    if (!m) return null;
+    const action = m[1].toLowerCase() as 'approve' | 'reject' | 'pending';
+    if (action === 'pending') return { action };
+    return { action, ref: m[2] ? m[2].toUpperCase() : null };
+  }
+  return null;
+}
+
+/** Newest pending items (status filtered in code so no composite index is needed). */
+async function listPendingItems(limit: number): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
+  const snap = await inboxCollection().orderBy('createdAt', 'desc').limit(PENDING_SCAN_LIMIT).get();
+  return snap.docs.filter((d) => d.data().status === 'pending').slice(0, limit);
+}
+
+/** Resolves the item a text command targets: by ref (id suffix) or the most recent pending one. */
+async function resolveCommandTarget(ref: string | null): Promise<FirebaseFirestore.DocumentSnapshot | null> {
+  if (ref) {
+    // Any item (not only pending) whose id ends with the ref, so "already published/rejected" can be reported
+    const snap = await inboxCollection().orderBy('createdAt', 'desc').limit(PENDING_SCAN_LIMIT).get();
+    return snap.docs.find((d) => inboxRef(d.id) === ref) || null;
+  }
+  const pending = await listPendingItems(1);
+  return pending[0] || null;
+}
+
+/** Firebase uid for the admin's phone when they have an account with that number; otherwise a stable pseudo-uid. */
+async function adminUidForPhone(waId: string): Promise<string> {
+  try {
+    const user = await getAdminAuth().getUserByPhoneNumber(`+${waId.replace(/^\+/, '')}`);
+    return user.uid;
+  } catch {
+    return ADMIN_FALLBACK_UID;
+  }
+}
+
+function itemName(data: FirebaseFirestore.DocumentData | undefined): string {
+  const n = data?.extracted?.name;
+  return typeof n === 'string' && n.trim() ? n.trim() : '(untitled)';
+}
+
+async function handleAdminCommand(from: string, command: AdminCommand) {
+  if (command.action === 'pending') {
+    const items = await listPendingItems(5);
+    if (!items.length) {
+      await sendReply(from, `No pending flyers. 🎉\n${ADMIN_REVIEW_URL}`);
+      return;
+    }
+    const lines = items.map((d, i) => {
+      const data = d.data();
+      return `${i + 1}. [${inboxRef(d.id)}] "${itemName(data)}" · ${data.extracted?.date || 'date?'}`;
+    });
+    await sendReply(from, `Pending flyers:\n${lines.join('\n')}\n\nReply "approve <REF>" or "reject <REF>".\n${ADMIN_REVIEW_URL}`);
+    return;
+  }
+
+  let target: FirebaseFirestore.DocumentSnapshot | null;
+  if ('inboxId' in command) {
+    target = await inboxCollection().doc(command.inboxId).get();
+    if (!target.exists) target = null;
+  } else {
+    target = await resolveCommandTarget(command.ref);
+  }
+  if (!target) {
+    const what = 'ref' in command && command.ref ? `No flyer with ref ${command.ref}` : 'No pending flyers to act on';
+    await sendReply(from, `${what}. Reply "pending" to list them or review: ${ADMIN_REVIEW_URL}`);
+    return;
+  }
+
+  const data = target.data();
+  const name = itemName(data);
+  if (data?.status === 'published') {
+    const link = data.publishedEventId ? `\n${EVENT_URL(data.publishedEventId)}` : '';
+    await sendReply(from, `Already published "${name}".${link}`);
+    return;
+  }
+  if (data?.status === 'rejected') {
+    await sendReply(from, `Already rejected "${name}".`);
+    return;
+  }
+
+  const db = getAdminFirestore();
+  const uid = await adminUidForPhone(from);
+  if (command.action === 'reject') {
+    const r = await rejectInboxItem(db, target.id, 'Rejected via WhatsApp', uid);
+    await sendReply(from, `Rejected 🗑 "${r.name}"`);
+    return;
+  }
+
+  try {
+    const result = await publishInboxItem(db, target.id, { organizationId: INBOX_DEFAULT_ORG_ID, uid });
+    await sendReply(from, `Published ✅ "${result.name}"\n${EVENT_URL(result.eventId)}`);
+  } catch (e) {
+    if (e instanceof InboxPublishError && e.code === 'validation') {
+      await sendReply(from, `Can't publish yet — ${e.message}. Finish it here: ${ADMIN_REVIEW_URL}`);
+      return;
+    }
+    if (e instanceof InboxPublishError && e.code === 'already_published') {
+      await sendReply(from, `Already published "${name}".${e.eventId ? `\n${EVENT_URL(e.eventId)}` : ''}`);
+      return;
+    }
+    throw e;
+  }
 }
 
 /**

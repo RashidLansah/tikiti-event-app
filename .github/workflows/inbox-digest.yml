@@ -1,0 +1,18 @@
+name: Inbox rejection digest
+
+on:
+  schedule:
+    - cron: '0 7 * * *' # 07:00 UTC = 07:00 Accra
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send daily WhatsApp digest of auto-rejected flyers
+        run: |
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.gettikiti.com/api/inbox/digest)
+          echo "HTTP $code"; cat /tmp/out.json; echo
+          [ "$code" = "200" ]

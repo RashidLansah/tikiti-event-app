@@ -99,10 +99,13 @@ export async function POST(req: NextRequest) {
     });
     const snap = await ref.get();
     notifyAdminsOfSubmission({
+      inboxId: ref.id,
       senderName: admin.email,
       submittedBy: admin.uid,
       name: extracted.name,
       date: extracted.date,
+      startTime: extracted.startTime,
+      location: extracted.location,
       confidence: extracted.confidence,
       missingFields: extracted.missingFields,
     }).catch((e) => console.error('inbox submit: admin alert failed', e));
