@@ -77,7 +77,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   if (!user || !isAdmin) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8 text-center text-[#333]">
+        <div>
+          <p className="text-lg font-semibold">Admin access only</p>
+          <p className="text-sm text-gray-500 mt-1">{user?.email ? `${user.email} isn't on the admin list.` : 'Sign in with an admin account.'}</p>
+        </div>
+      </div>
+    );
   }
 
   const navItems = [
