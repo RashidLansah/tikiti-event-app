@@ -427,7 +427,9 @@ const EventListScreen = ({ navigation }) => {
                     </View>
                   )}
                 </View>
-                <Text style={styles.featureTitle} numberOfLines={2}>{featured.name}</Text>
+                {!getImageUri(featured) && (
+                  <Text style={styles.featureTitle} numberOfLines={2}>{featured.name}</Text>
+                )}
                 <Text style={styles.featureSub}>
                   {money(featured.price) === 'Free' ? 'Free entry' : money(featured.price)}
                 </Text>
