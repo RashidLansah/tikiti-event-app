@@ -18,6 +18,8 @@
 //           interactive button reply with id `approve:<inboxId>` / `reject:<inboxId>` (from the alert sent by
 //           lib/inbox/notifyAdmins.ts), or a text command: `approve` / `reject` (most recent pending item),
 //           `approve <REF6>` / `reject <REF6>` (item whose id ends with the 6-char ref), `pending` (list up to 5).
+//           `reject [REF6] [reason] [note…]` where reason ∈ not_event|past|duplicate|missing|other (default other);
+//           the submitter is messaged with the reason (lib/inbox/notifySubmitter.ts via rejectInboxItem).
 //           Any other admin text/image goes through the normal flyer flow, so admins can still forward flyers.
 //   statuses / other types → ignored
 // Every message id is recorded in whatsapp_messages/{id} so Meta retries are de-duplicated.
@@ -35,7 +37,9 @@ import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { inboxCollection, storeFlyer } from '@/lib/inbox/admin';
 import { emptyExtraction, extractEventFromFlyer, type SupportedMime } from '@/lib/inbox/extract';
 import { triage, type TriageResult } from '@/lib/inbox/triage';
+import type { InboxRejectedReason } from '@/lib/inbox/admin';
 import { inboxRef, isAdminPhone, notifyAdminsOfSubmission } from '@/lib/inbox/notifyAdmins';
+import { REJECT_REASON_TEXT } from '@/lib/inbox/notifySubmitter';
 import { INBOX_DEFAULT_ORG_ID, InboxPublishError, publishInboxItem, rejectInboxItem } from '@/lib/inbox/publish';
 
 export const runtime = 'nodejs';
@@ -57,8 +61,13 @@ const REQUIRED_FIELDS = ['name', 'date', 'startTime', 'location'];
 const ADMIN_REVIEW_URL = 'https://www.gettikiti.com/admin/inbox';
 const EVENT_URL = (id: string) => `https://www.gettikiti.com/events/${id}`;
 const ADMIN_FALLBACK_UID = 'whatsapp-admin';
-/** `approve` | `reject` | `pending`, optionally followed by a 6-char ref (last 6 chars of the inbox id). */
-const ADMIN_COMMAND_RE = /^(approve|reject|pending)(?:\s+([a-z0-9]{6}))?$/i;
+/** `approve` | `pending`, optionally followed by a 6-char ref (last 6 chars of the inbox id). */
+const ADMIN_COMMAND_RE = /^(approve|pending)(?:\s+([a-z0-9]{6}))?$/i;
+/** `reject [REF6] [reason] [note…]` — reason ∈ REJECT_REASON_ALIASES keys; anything after it is the note. */
+const REJECT_COMMAND_RE = /^reject(?:\s+([a-z0-9]{6}))?(?:\s+(not_event|past|duplicate|missing_details|missing|other))?(?:\s+([\s\S]+))?$/i;
+const REJECT_REASON_ALIASES: Record<string, InboxRejectedReason> = {
+  not_event: 'not_event', past: 'past', duplicate: 'duplicate', missing_details: 'missing_details', missing: 'missing_details', other: 'other',
+};
 const PENDING_SCAN_LIMIT = 50;
 
 type WaMessage = {
@@ -71,9 +80,12 @@ type WaMessage = {
   interactive?: { type?: string; button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } };
 };
 
+type RejectDetails = { reason: InboxRejectedReason; note: string | null };
 type AdminCommand =
-  | { action: 'approve' | 'reject'; inboxId: string }
-  | { action: 'approve' | 'reject'; ref: string | null }
+  | { action: 'approve'; inboxId: string }
+  | { action: 'approve'; ref: string | null }
+  | ({ action: 'reject'; inboxId: string } & RejectDetails)
+  | ({ action: 'reject'; ref: string | null } & RejectDetails)
   | { action: 'pending' };
 type WaContact = { wa_id?: string; profile?: { name?: string } };
 
@@ -390,13 +402,25 @@ function parseAdminCommand(message: WaMessage): AdminCommand | null {
   if (message.type === 'interactive') {
     const id = (message.interactive?.button_reply?.id || '').trim();
     const m = id.match(/^(approve|reject):(.+)$/);
-    if (m) return { action: m[1] as 'approve' | 'reject', inboxId: m[2] };
+    if (m?.[1] === 'approve') return { action: 'approve', inboxId: m[2] };
+    if (m?.[1] === 'reject') return { action: 'reject', inboxId: m[2], reason: 'other', note: null };
     return null;
   }
   if (message.type === 'text') {
-    const m = (message.text?.body || '').trim().match(ADMIN_COMMAND_RE);
+    const body = (message.text?.body || '').trim();
+    const r = body.match(REJECT_COMMAND_RE);
+    if (r) {
+      // A 6-char first token that is not a ref but a reason word (e.g. "reject other") can't collide: no reason alias is 6 chars.
+      return {
+        action: 'reject',
+        ref: r[1] ? r[1].toUpperCase() : null,
+        reason: r[2] ? REJECT_REASON_ALIASES[r[2].toLowerCase()] || 'other' : 'other',
+        note: r[3] ? r[3].trim().slice(0, 500) : null,
+      };
+    }
+    const m = body.match(ADMIN_COMMAND_RE);
     if (!m) return null;
-    const action = m[1].toLowerCase() as 'approve' | 'reject' | 'pending';
+    const action = m[1].toLowerCase() as 'approve' | 'pending';
     if (action === 'pending') return { action };
     return { action, ref: m[2] ? m[2].toUpperCase() : null };
   }
@@ -446,7 +470,7 @@ async function handleAdminCommand(from: string, command: AdminCommand) {
       const data = d.data();
       return `${i + 1}. [${inboxRef(d.id)}] "${itemName(data)}" · ${data.extracted?.date || 'date?'}`;
     });
-    await sendReply(from, `Pending flyers:\n${lines.join('\n')}\n\nReply "approve <REF>" or "reject <REF>".\n${ADMIN_REVIEW_URL}`);
+    await sendReply(from, `Pending flyers:\n${lines.join('\n')}\n\nReply "approve <REF>" or "reject <REF> [not_event|past|duplicate|missing|other] [note]".\n${ADMIN_REVIEW_URL}`);
     return;
   }
 
@@ -478,8 +502,9 @@ async function handleAdminCommand(from: string, command: AdminCommand) {
   const db = getAdminFirestore();
   const uid = await adminUidForPhone(from);
   if (command.action === 'reject') {
-    const r = await rejectInboxItem(db, target.id, 'Rejected via WhatsApp', uid);
-    await sendReply(from, `Rejected 🗑 "${r.name}"`);
+    const r = await rejectInboxItem(db, target.id, command.reason, uid, command.note);
+    const notified = data?.source === 'whatsapp' && data?.submittedBy ? ' — submitter notified' : '';
+    await sendReply(from, `Rejected 🗑 "${r.name}" (reason: ${REJECT_REASON_TEXT[r.reason]})${notified}`);
     return;
   }
 

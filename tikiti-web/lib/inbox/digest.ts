@@ -18,6 +18,8 @@ const REASON_LABELS: Record<InboxRejectedReason, string> = {
   not_event: 'Not an event',
   past: 'Past event',
   duplicate: 'Duplicate',
+  missing_details: 'Missing key details',
+  other: 'Other',
 };
 
 export interface DigestItem {

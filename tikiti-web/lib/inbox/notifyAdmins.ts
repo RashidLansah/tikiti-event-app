@@ -58,7 +58,7 @@ export function buildAlertText(item: SubmissionSummary): string {
 }
 
 /** True when Graph rejects a free-form message because the customer-service window is closed. */
-function isWindowClosedError(body: any): boolean {
+export function isWindowClosedError(body: any): boolean {
   const err = body?.error;
   if (!err) return false;
   if (err.code === 131047 || err.error_data?.details?.includes?.('131047')) return true;
@@ -66,7 +66,8 @@ function isWindowClosedError(body: any): boolean {
   return msg.includes('re-engagement') || msg.includes('24');
 }
 
-async function postMessage(phoneNumberId: string, token: string, payload: Record<string, any>) {
+/** Low-level Graph send; shared with lib/inbox/notifySubmitter.ts. */
+export async function postMessage(phoneNumberId: string, token: string, payload: Record<string, any>) {
   const res = await fetch(`${GRAPH}/${phoneNumberId}/messages`, {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },

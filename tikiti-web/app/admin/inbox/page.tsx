@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Inbox, Upload, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, RefreshCw, X, Plus } from 'lucide-react';
-import type { ExtractedEvent, ExtractedSpeaker, InboxItem, InboxStatus } from '@/lib/inbox/admin';
+import type { ExtractedEvent, ExtractedSpeaker, InboxItem, InboxRejectedReason, InboxStatus } from '@/lib/inbox/admin';
 
 const DEFAULT_ORG = { id: '1Mvh7AnKIphfnDeOgWUd', name: 'Tikiti Community' };
 
@@ -43,6 +43,15 @@ const FIELD_LABELS: Record<string, string> = {
   startTime: 'Start time', endTime: 'End time', location: 'Venue', address: 'Address', city: 'City', price: 'Price (GHS)',
   registrationUrl: 'Registration URL', contactPhone: 'Contact phone', organiserName: 'Organiser name',
 };
+
+// Mirrors REJECT_REASON_LABEL in lib/inbox/notifySubmitter.ts (that module is server-only)
+const REJECT_REASONS: { code: InboxRejectedReason; label: string }[] = [
+  { code: 'not_event', label: 'Not an event' },
+  { code: 'past', label: 'Already happened' },
+  { code: 'duplicate', label: 'Duplicate' },
+  { code: 'missing_details', label: 'Missing key details' },
+  { code: 'other', label: 'Other' },
+];
 
 function ConfidenceBadge({ value }: { value: number }) {
   const pct = Math.round((value || 0) * 100);
@@ -224,6 +233,9 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
   const [customOrg, setCustomOrg] = useState('');
   const [working, setWorking] = useState<'publish' | 'reject' | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState<InboxRejectedReason>('other');
+  const [rejectNote, setRejectNote] = useState('');
   const missing = new Set(item.missingFields || []);
   const readOnly = item.status !== 'pending';
 
@@ -248,7 +260,8 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
   const reject = async () => {
     setWorking('reject'); setErr(null);
     try {
-      const d = await api(`/api/inbox/${item.id}/reject`, { method: 'POST', body: JSON.stringify({}) });
+      const d = await api(`/api/inbox/${item.id}/reject`, { method: 'POST', body: JSON.stringify({ reason: rejectReason, note: rejectNote.trim() || undefined }) });
+      setRejectOpen(false);
       onChange(d.item);
     } catch (e: any) { setErr(e.message); }
     setWorking(null);
@@ -284,6 +297,16 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
           {item.source === 'whatsapp' && <p className="text-xs text-[#86868b]">From: {item.senderName ? `${item.senderName} · ` : ''}+{item.submittedBy}</p>}
           {item.caption && <p className="text-xs text-[#86868b] whitespace-pre-wrap">Caption: {item.caption}</p>}
           {item.rejectedReason && item.triage?.reason && <p className="text-xs text-[#86868b]">Auto-rejected: {item.triage.reason}</p>}
+          {item.status === 'rejected' && item.rejectedReason && !item.triage?.reason && (
+            <p className="text-xs text-[#86868b]">Rejected: {REJECT_REASONS.find((r) => r.code === item.rejectedReason)?.label || item.rejectedReason}{item.rejectedNote ? ` · ${item.rejectedNote}` : ''}</p>
+          )}
+          {item.status !== 'pending' && item.submitterNotified && (
+            item.submitterNotified.status === 'sent' || item.submitterNotified.status === 'template' ? (
+              <p className="text-xs text-green-700 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Submitter notified ✓</p>
+            ) : item.submitterNotified.status === 'failed' ? (
+              <p className="text-xs text-amber-700 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Couldn&apos;t notify submitter</p>
+            ) : null
+          )}
           {item.triage?.duplicate?.publishedEventId && item.status !== 'published' && (
             <Link href={`/events/${item.triage.duplicate.publishedEventId}`} target="_blank" className="inline-flex items-center gap-1 text-xs text-[#333] underline"><ExternalLink className="w-3 h-3" /> View existing event</Link>
           )}
@@ -342,11 +365,32 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
                 {orgId === '__custom' && <Input className={`${inputCls} mt-2`} placeholder="Organisation document id" value={customOrg} onChange={(e) => setCustomOrg(e.target.value)} />}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="rounded-full" disabled={working !== null} onClick={reject}>
-                  {working === 'reject' ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-2" />}Reject
+                <Button variant="outline" className="rounded-full" disabled={working !== null} onClick={() => setRejectOpen((o) => !o)}>
+                  <XCircle className="w-4 h-4 mr-2" />Reject
                 </Button>
                 <Button className="rounded-full bg-[#333] text-white hover:bg-black" disabled={working !== null} onClick={publish}>
                   {working === 'publish' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}Publish
+                </Button>
+              </div>
+            </div>
+          )}
+          {!readOnly && rejectOpen && (
+            <div className="rounded-2xl border border-black/10 bg-[#fafafa] p-4 space-y-3">
+              <p className="text-sm font-medium text-[#1d1d1f]">Why is this being rejected?</p>
+              <p className="text-xs text-[#86868b]">{item.source === 'whatsapp' ? 'The submitter will get a WhatsApp message with this reason.' : 'Recorded on the item (no submitter to notify).'}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {REJECT_REASONS.map((r) => (
+                  <label key={r.code} className="flex items-center gap-2 text-sm text-[#333] cursor-pointer">
+                    <input type="radio" name={`reject-reason-${item.id}`} value={r.code} checked={rejectReason === r.code} onChange={() => setRejectReason(r.code)} />
+                    {r.label}
+                  </label>
+                ))}
+              </div>
+              <Textarea className={inputCls} rows={2} maxLength={500} placeholder="Optional note to the submitter (e.g. what to fix and resend)" value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" className="rounded-full" disabled={working !== null} onClick={() => setRejectOpen(false)}>Cancel</Button>
+                <Button className="rounded-full bg-red-600 text-white hover:bg-red-700" disabled={working !== null} onClick={reject}>
+                  {working === 'reject' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XCircle className="w-4 h-4 mr-2" />}Confirm reject
                 </Button>
               </div>
             </div>

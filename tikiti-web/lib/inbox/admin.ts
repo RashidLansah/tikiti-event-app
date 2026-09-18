@@ -41,7 +41,14 @@ export interface ExtractedEvent {
   missingFields: string[];
 }
 
-export type InboxRejectedReason = 'not_event' | 'past' | 'duplicate';
+export type InboxRejectedReason = 'not_event' | 'past' | 'duplicate' | 'missing_details' | 'other';
+
+/** Outcome of the WhatsApp message sent to the submitter when their item was approved / rejected */
+export interface SubmitterNotified {
+  type: 'approved' | 'rejected';
+  at: string | null;
+  status: 'sent' | 'template' | 'failed' | 'skipped';
+}
 
 export interface InboxTriageMeta {
   kind: 'event' | 'not_event' | 'unclear';
@@ -74,8 +81,11 @@ export interface InboxItem {
   extractionError?: string | null;
   /** Pre-extraction triage result (see lib/inbox/triage.ts); null for older items */
   triage?: InboxTriageMeta | null;
-  /** Set when the item was auto-rejected by triage */
+  /** Set when the item was rejected (by triage or an admin) */
   rejectedReason?: InboxRejectedReason | null;
+  /** Optional free-text note an admin attached to the rejection (relayed to the submitter) */
+  rejectedNote?: string | null;
+  submitterNotified?: SubmitterNotified | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -144,6 +154,10 @@ export function serializeInbox(id: string, data: FirebaseFirestore.DocumentData)
     extractionError: data.extractionError || null,
     triage: data.triage || null,
     rejectedReason: data.rejectedReason || null,
+    rejectedNote: data.rejectedNote || null,
+    submitterNotified: data.submitterNotified
+      ? { type: data.submitterNotified.type, status: data.submitterNotified.status, at: tsToIso(data.submitterNotified.at) }
+      : null,
     createdAt: tsToIso(data.createdAt),
     updatedAt: tsToIso(data.updatedAt),
   };

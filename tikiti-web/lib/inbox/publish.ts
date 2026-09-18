@@ -3,8 +3,9 @@
 // (app/api/inbox/whatsapp/route.ts), so both paths create identical events.
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { eventCategories } from '@/lib/data/categories';
-import { INBOX_COLLECTION } from '@/lib/inbox/admin';
+import { INBOX_COLLECTION, type InboxRejectedReason } from '@/lib/inbox/admin';
 import { normaliseSpeakers, toEventSpeakers } from '@/lib/inbox/extract';
+import { notifySubmitterApproved, notifySubmitterRejected } from '@/lib/inbox/notifySubmitter';
 
 /** Default organisation used by the REST publish route when the caller sends none. */
 export const DEFAULT_COMMUNITY_ORG_ID = '1Mvh7AnKIphfnDeOgWUd';
@@ -155,11 +156,25 @@ export async function publishInboxItem(db: Firestore, inboxId: string, opts: Pub
   });
   await batch.commit();
 
+  // Tell the submitter (WhatsApp sources only) — fire-and-forget, never blocks or fails the publish
+  notifySubmitterApproved(db, { id: inboxId, source: inbox.source, submittedBy: inbox.submittedBy, extracted: { name } }, eventRef.id)
+    .catch((e) => console.error('publishInboxItem: submitter notify failed', inboxId, e));
+
   return { eventId: eventRef.id, name, ticketingDisabled, organizationId };
 }
 
-/** Marks an inbox item rejected. Throws InboxPublishError if missing or already published. */
-export async function rejectInboxItem(db: Firestore, inboxId: string, reason: string | null, uid: string): Promise<{ name: string }> {
+/**
+ * Marks an inbox item rejected and notifies the submitter (WhatsApp sources only, fire-and-forget).
+ * `reason` is the reason code stored as `rejectedReason`; `note` is an optional free-text note (`rejectedNote`)
+ * relayed to the submitter. Throws InboxPublishError if missing or already published.
+ */
+export async function rejectInboxItem(
+  db: Firestore,
+  inboxId: string,
+  reason: InboxRejectedReason | null,
+  uid: string,
+  note?: string | null,
+): Promise<{ name: string; reason: InboxRejectedReason }> {
   const ref = db.collection(INBOX_COLLECTION).doc(inboxId);
   const snap = await ref.get();
   if (!snap.exists) throw new InboxPublishError('not_found', 'Inbox item not found');
@@ -167,11 +182,18 @@ export async function rejectInboxItem(db: Firestore, inboxId: string, reason: st
   if (data.status === 'published') {
     throw new InboxPublishError('already_published', 'Already published; unpublish the event instead', { eventId: data.publishedEventId || undefined });
   }
+  const reasonCode: InboxRejectedReason = reason || 'other';
+  const rejectedNote = str(note) || null;
   await ref.update({
     status: 'rejected',
     rejectedBy: uid,
-    rejectReason: reason || null,
+    rejectedReason: reasonCode,
+    rejectedNote,
+    rejectedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
-  return { name: str(data.extracted?.name) || '(untitled)' };
+  const name = str(data.extracted?.name) || '(untitled)';
+  notifySubmitterRejected(db, { id: inboxId, source: data.source, submittedBy: data.submittedBy, extracted: { name } }, reasonCode, rejectedNote)
+    .catch((e) => console.error('rejectInboxItem: submitter notify failed', inboxId, e));
+  return { name, reason: reasonCode };
 }
