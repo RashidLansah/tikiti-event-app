@@ -16,6 +16,7 @@ import { extractEventFromFlyer, type SupportedMime } from '@/lib/inbox/extract';
 import { adminPhones, inboxRef, isAdminPhone, postMessage } from '@/lib/inbox/notifyAdmins';
 import { platformFromUrl } from '@/lib/events/links';
 import { todayInAccra } from '@/lib/inbox/triage';
+import { normaliseContacts, upsertFirstContact } from '@/lib/events/contact';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const EDIT_MODEL = 'claude-haiku-4-5-20251001';
@@ -149,6 +150,17 @@ export function recomputeMissing(extracted: Record<string, any>): string[] {
   const out = prev.filter((k) => !(k in (extracted || {})) || !filled(k));
   for (const k of REQUIRED) if (!filled(k) && !out.includes(k)) out.push(k);
   return out;
+}
+
+/**
+ * Keeps `contacts[0]` in step with an edited `contactPhone` (blank removes the first contact). Mutates and returns
+ * `extracted`. The number comes from the submitter's message text — never from their WhatsApp sender id.
+ */
+export function syncContactsWithPhone(extracted: Record<string, any>, patch: Record<string, any>): Record<string, any> {
+  if (!patch || !('contactPhone' in patch)) return extracted;
+  const phone = String(patch.contactPhone ?? '').trim();
+  extracted.contacts = phone ? upsertFirstContact(extracted.contacts, phone) : normaliseContacts(extracted.contacts).slice(1);
+  return extracted;
 }
 
 // ---------- target resolution ----------
@@ -331,7 +343,7 @@ async function applyPatch(db: Firestore, item: Doc, from: string, patch: EditPat
     return;
   }
 
-  const extracted: Record<string, any> = { ...current, ...patch };
+  const extracted: Record<string, any> = syncContactsWithPhone({ ...current, ...patch }, patch);
   extracted.missingFields = recomputeMissing(extracted);
   const history = [...(Array.isArray(data.editHistory) ? data.editHistory : []), { at: new Date().toISOString(), by: from, before, after: patch, text }]
     .slice(-HISTORY_CAP);
@@ -399,7 +411,7 @@ async function undo(db: Firestore, from: string, inboundId: string) {
   }
   const history = [...data.editHistory];
   const entry = history[best.index];
-  const extracted = { ...(data.extracted || {}), ...(entry.before || {}) };
+  const extracted = syncContactsWithPhone({ ...(data.extracted || {}), ...(entry.before || {}) }, entry.before || {});
   extracted.missingFields = recomputeMissing(extracted);
   history[best.index] = { ...entry, undone: true, undoneAt: new Date().toISOString() };
   await best.doc.ref.update({ extracted, missingFields: extracted.missingFields, editHistory: history, updatedAt: FieldValue.serverTimestamp() });
@@ -444,7 +456,7 @@ async function replaceFlyer(db: Firestore, item: Doc, from: string, caption: str
       extractEventFromFlyer(buffer.toString('base64'), mimeType, fullCaption || undefined), EXTRACTION_TIMEOUT_MS, 'Extraction timed out',
     );
     // Manual edits win over whatever the new flyer says
-    for (const h of Array.isArray(data.editHistory) ? data.editHistory : []) if (!h?.undone) Object.assign(fresh, h.after || {});
+    for (const h of Array.isArray(data.editHistory) ? data.editHistory : []) if (!h?.undone) syncContactsWithPhone(Object.assign(fresh, h.after || {}), h.after || {});
     fresh.missingFields = recomputeMissing(fresh);
     update.extracted = fresh;
     update.confidence = fresh.confidence ?? 0;
@@ -610,7 +622,12 @@ export function eventUpdateFromPatch(patch: Record<string, any>, merged: Record<
     u.type = isFree ? 'free' : 'paid';
     u.price = isFree ? 0 : price;
   }
-  if ('contactPhone' in patch) { u.organizerPhone = patch.contactPhone; u['communityContact.phone'] = patch.contactPhone; }
+  if ('contactPhone' in patch) {
+    u.organizerPhone = patch.contactPhone;
+    u['communityContact.phone'] = patch.contactPhone;
+    // `merged` is the inbox item's extracted AFTER syncContactsWithPhone, so contacts[0] already carries the new number
+    u.contacts = normaliseContacts(merged.contacts);
+  }
   if ('organiserName' in patch) u['communityContact.organiserName'] = patch.organiserName;
   if ('price' in patch || 'isFree' in patch || 'registrationUrl' in patch || 'joinUrl' in patch) {
     u.ticketingDisabled = merged.isFree === false && !merged.registrationUrl && !merged.joinUrl;
@@ -657,7 +674,7 @@ export async function decidePendingEdit(db: Firestore, inboxId: string, approve:
 
   const patch: Record<string, any> = pe.patch || {};
   const { imageUrl, ...fieldPatch } = patch;
-  const extracted = { ...(data.extracted || {}), ...fieldPatch };
+  const extracted = syncContactsWithPhone({ ...(data.extracted || {}), ...fieldPatch }, fieldPatch);
   extracted.missingFields = recomputeMissing(extracted);
   const before: Record<string, any> = {};
   for (const k of Object.keys(fieldPatch)) before[k] = data.extracted?.[k] ?? '';

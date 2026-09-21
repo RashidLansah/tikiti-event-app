@@ -1,20 +1,22 @@
 // Flyer -> event JSON extraction via the Anthropic Messages API (plain fetch; SDK not installed)
 import { eventCategories } from '@/lib/data/categories';
 import { classifyUrl, platformFromUrl } from '@/lib/events/links';
-import type { ExtractedEvent, ExtractedSpeaker } from './admin';
+import { MAX_CONTACTS, REGISTRATION_METHODS } from '@/lib/events/contact';
+import type { ExtractedContact, ExtractedEvent, ExtractedSpeaker } from './admin';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-5';
 
 export const EXTRACTION_FIELDS = [
   'name', 'description', 'category', 'date', 'endDate', 'startTime', 'endTime', 'location', 'address', 'city',
-  'price', 'isFree', 'registrationUrl', 'joinUrl', 'meetingPlatform', 'meetingDetails', 'contactPhone', 'organiserName', 'speakers', 'confidence', 'missingFields',
+  'price', 'isFree', 'registrationUrl', 'joinUrl', 'meetingPlatform', 'meetingDetails', 'contactPhone', 'contacts', 'registrationMethod', 'organiserName', 'speakers', 'confidence', 'missingFields',
 ] as const;
 
 export function emptyExtraction(): ExtractedEvent {
   return {
     name: '', description: '', category: 'other', date: '', endDate: '', startTime: '', endTime: '',
     location: '', address: '', city: '', price: 0, isFree: true, registrationUrl: '', joinUrl: '', meetingPlatform: '', meetingDetails: '', contactPhone: '',
+    contacts: [], registrationMethod: 'unknown',
     organiserName: '', speakers: [], confidence: 0, missingFields: [],
   };
 }
@@ -44,7 +46,14 @@ Return ONLY a JSON object (no markdown, no prose) with exactly these fields:
   the session is joinUrl, a link to SIGN UP is registrationUrl; never put the same URL in both
 - meetingPlatform: one of ["zoom", "google_meet", "teams", "youtube", "other"], or "" if the event is not online
 - meetingDetails: string — read any Meeting ID / Passcode / dial-in printed on the flyer, e.g. "Meeting ID 123 456 7890 · Passcode 9876"; "" if none
-- contactPhone: phone number in international or local format, "" if none
+- contacts: array (max 4) of every ENQUIRY / organiser phone number printed on the flyer or written in the caption, in the order
+  they appear, each { "name": string, "phone": string, "whatsapp": boolean }. "name" is the person or label next to the number
+  ("" if none), "phone" is the number exactly as printed (international or local format), "whatsapp" is true only when the flyer
+  or caption marks that number with a WhatsApp icon or the word WhatsApp. Empty array if there are no numbers
+- contactPhone: the first contact's phone, "" if none
+- registrationMethod: one of ["link", "contact", "walk_in", "unknown"] — how a person attends. "link" = they sign up or join via a
+  URL; "contact" = they must call / WhatsApp / DM someone ("call to register", "DM for tickets", "for tickets call", "RSVP to 024…");
+  "walk_in" = just show up, no sign-up; "unknown" if the flyer does not say
 - organiserName: organiser / host name, "" if unknown
 - speakers: array of people printed on the flyer, each { "name": string, "title": string, "organisation": string, "role": string }.
   Read every named person: speakers, panellists, moderators, discussants, hosts, keynote speakers, research fellows, etc.
@@ -94,6 +103,28 @@ export function toEventSpeakers(speakers: ExtractedSpeaker[]) {
   }));
 }
 
+/** Trims, drops blank numbers, de-duplicates on digits and caps at 4. Numbers stay as printed; publish normalises them. */
+export function normaliseExtractedContacts(raw: any, fallbackPhone = ''): ExtractedContact[] {
+  const str = (v: any) => (v == null ? '' : String(v).trim());
+  const list: any[] = Array.isArray(raw) ? [...raw] : [];
+  if (fallbackPhone) list.push({ phone: fallbackPhone });
+  const out: ExtractedContact[] = [];
+  const seen = new Set<string>();
+  for (const c of list) {
+    const phone = typeof c === 'string' || typeof c === 'number' ? str(c) : str(c?.phone);
+    const digits = phone.replace(/\D/g, '').replace(/^(00233|233|0)/, '');
+    if (digits.length < 7 || seen.has(digits)) continue;
+    seen.add(digits);
+    const entry: ExtractedContact = { phone };
+    const name = str(c?.name);
+    if (name) entry.name = name;
+    if (c?.whatsapp === true) entry.whatsapp = true;
+    out.push(entry);
+    if (out.length >= MAX_CONTACTS) break;
+  }
+  return out;
+}
+
 const PLATFORMS = ['zoom', 'google_meet', 'teams', 'youtube', 'other'];
 
 /**
@@ -136,12 +167,15 @@ function normalise(raw: any): ExtractedEvent {
     meetingPlatform: PLATFORMS.includes(raw?.meetingPlatform) ? raw.meetingPlatform : '',
     meetingDetails: str(raw?.meetingDetails),
     contactPhone: str(raw?.contactPhone),
+    contacts: normaliseExtractedContacts(raw?.contacts, str(raw?.contactPhone)),
+    registrationMethod: REGISTRATION_METHODS.includes(raw?.registrationMethod) ? raw.registrationMethod : 'unknown',
     organiserName: str(raw?.organiserName),
     speakers: normaliseSpeakers(raw?.speakers),
     confidence: Math.max(0, Math.min(1, Number(raw?.confidence) || 0)),
     missingFields: Array.isArray(raw?.missingFields) ? raw.missingFields.map(String) : [],
   };
   if (out.isFree) out.price = 0;
+  out.contactPhone = out.contacts[0]?.phone || '';
   Object.assign(out, reconcileLinks(out, `${out.name} ${out.description}`));
   // Derive missing fields for anything the model left blank but did not flag
   const required: (keyof ExtractedEvent)[] = ['name', 'date', 'startTime', 'location'];

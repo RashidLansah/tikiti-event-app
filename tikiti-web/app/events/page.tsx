@@ -101,7 +101,9 @@ interface FirestoreEvent {
   ticketingDisabled?: boolean;
   isOnline?: boolean;
   source?: string;
-  stats?: { views?: number; registerClicks?: number };
+  contacts?: Array<{ name?: string; phone: string; whatsapp?: boolean }>;
+  registrationMethod?: string;
+  stats?: { views?: number; registerClicks?: number; contactClicks?: number };
 }
 
 function formatDateShort(dateStr: string): string {

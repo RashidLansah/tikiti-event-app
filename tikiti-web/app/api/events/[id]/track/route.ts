@@ -1,6 +1,6 @@
 // POST /api/events/[id]/track — anonymous engagement counters for event pages
-// Body: { type: 'view' | 'register_click' }
-// Increments stats.views / stats.registerClicks on the event doc. No auth;
+// Body: { type: 'view' | 'register_click' | 'contact_click' }
+// Increments stats.views / stats.registerClicks / stats.contactClicks on the event doc. No auth;
 // lightly rate-limited in memory (1 hit per IP+event+type per 10 minutes).
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -12,6 +12,7 @@ const recentHits = new Map<string, number>();
 const FIELD_BY_TYPE: Record<string, string> = {
   view: 'stats.views',
   register_click: 'stats.registerClicks',
+  contact_click: 'stats.contactClicks',
 };
 
 function getIp(req: NextRequest): string {

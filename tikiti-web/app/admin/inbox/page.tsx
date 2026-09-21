@@ -13,7 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Inbox, Upload, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, RefreshCw, X, Plus } from 'lucide-react';
 import { classifyUrl, platformFromUrl, platformLabel, URL_KIND_LABEL } from '@/lib/events/links';
-import type { ExtractedEvent, ExtractedSpeaker, InboxItem, InboxRejectedReason, InboxStatus } from '@/lib/inbox/admin';
+import { MAX_CONTACTS } from '@/lib/events/contact';
+import type { ExtractedContact, ExtractedEvent, ExtractedSpeaker, InboxItem, InboxRejectedReason, InboxStatus } from '@/lib/inbox/admin';
 
 const DEFAULT_ORG = { id: '1Mvh7AnKIphfnDeOgWUd', name: 'Tikiti Community' };
 
@@ -228,8 +229,53 @@ function SpeakersEditor({ speakers, readOnly, onChange }: { speakers: ExtractedS
   );
 }
 
+function ContactsEditor({ contacts, readOnly, idPrefix, onChange }: { contacts: ExtractedContact[]; readOnly: boolean; idPrefix: string; onChange: (c: ExtractedContact[]) => void }) {
+  const update = (i: number, patch: Partial<ExtractedContact>) => onChange(contacts.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
+  const remove = (i: number) => onChange(contacts.filter((_, idx) => idx !== i));
+  const add = () => onChange([...contacts, { name: '', phone: '', whatsapp: false }]);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-[#86868b]">Organiser contacts{contacts.length ? ` (${contacts.length})` : ''} · only numbers printed on the flyer or in the caption</Label>
+        {!readOnly && contacts.length < MAX_CONTACTS && <button type="button" onClick={add} className="text-xs text-[#333] underline flex items-center gap-1"><Plus className="w-3 h-3" /> Add contact</button>}
+      </div>
+      {contacts.length === 0 ? (
+        <p className="text-xs text-[#86868b]">No contact numbers found on the flyer.</p>
+      ) : (
+        <div className="space-y-2">
+          {contacts.map((c, i) => (
+            <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2 items-center">
+              <Input className={`${inputCls} h-8 text-sm`} placeholder="Name (optional)" value={c.name || ''} disabled={readOnly} onChange={(e) => update(i, { name: e.target.value })} />
+              <Input type="tel" className={`${inputCls} h-8 text-sm`} placeholder="Phone e.g. 024 123 4567" value={c.phone || ''} disabled={readOnly} onChange={(e) => update(i, { phone: e.target.value })} />
+              <label htmlFor={`${idPrefix}-wa-${i}`} className="flex items-center gap-1.5 text-xs text-[#333] whitespace-nowrap">
+                <input id={`${idPrefix}-wa-${i}`} type="checkbox" checked={!!c.whatsapp} disabled={readOnly} onChange={(e) => update(i, { whatsapp: e.target.checked })} /> WhatsApp
+              </label>
+              {!readOnly ? (
+                <button type="button" className="text-[#86868b] hover:text-red-600 justify-self-end" onClick={() => remove(i)} aria-label="Remove contact"><X className="w-4 h-4" /></button>
+              ) : <span />}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const REGISTRATION_METHOD_OPTIONS: { value: ExtractedEvent['registrationMethod']; label: string }[] = [
+  { value: 'link', label: 'Link' },
+  { value: 'contact', label: 'Contact organiser' },
+  { value: 'walk_in', label: 'Just show up' },
+  { value: 'unknown', label: 'Not sure' },
+];
+
+/** Older inbox items only have contactPhone; seed the list from it. */
+function initialContacts(e?: Partial<ExtractedEvent>): ExtractedContact[] {
+  if (Array.isArray(e?.contacts) && e!.contacts!.length) return e!.contacts!.slice(0, MAX_CONTACTS);
+  return e?.contactPhone ? [{ phone: e.contactPhone }] : [];
+}
+
 function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions: { id: string; name: string }[]; onChange: (i: InboxItem) => void }) {
-  const [form, setForm] = useState<ExtractedEvent>({ ...item.extracted, joinUrl: item.extracted?.joinUrl || '', meetingPlatform: item.extracted?.meetingPlatform || '', meetingDetails: item.extracted?.meetingDetails || '', speakers: item.extracted?.speakers || [] });
+  const [form, setForm] = useState<ExtractedEvent>({ ...item.extracted, joinUrl: item.extracted?.joinUrl || '', meetingPlatform: item.extracted?.meetingPlatform || '', meetingDetails: item.extracted?.meetingDetails || '', speakers: item.extracted?.speakers || [], contacts: initialContacts(item.extracted), registrationMethod: item.extracted?.registrationMethod || 'unknown' });
   const [orgId, setOrgId] = useState(DEFAULT_ORG.id);
   const [customOrg, setCustomOrg] = useState('');
   const [working, setWorking] = useState<'publish' | 'reject' | null>(null);
@@ -253,7 +299,9 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
     try {
       const organizationId = orgId === '__custom' ? customOrg.trim() : orgId;
       if (!organizationId) throw new Error('Organisation id is required');
-      const d = await api(`/api/inbox/${item.id}/publish`, { method: 'POST', body: JSON.stringify({ ...form, organizationId }) });
+      const contacts = (form.contacts || []).map((c) => ({ ...c, name: (c.name || '').trim(), phone: (c.phone || '').trim() })).filter((c) => c.phone);
+      const payload = { ...form, contacts, contactPhone: contacts[0]?.phone || '', registrationMethod: form.registrationMethod || 'unknown' };
+      const d = await api(`/api/inbox/${item.id}/publish`, { method: 'POST', body: JSON.stringify({ ...payload, organizationId }) });
       onChange(d.item);
     } catch (e: any) { setErr(e.message); }
     setWorking(null);
@@ -350,7 +398,15 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
             {field('location')}
             {field('address')}
             {field('city')}
-            {field('contactPhone')}
+            <div>
+              <Label className="text-xs text-[#86868b]">How do people attend?</Label>
+              <select className="w-full h-9 px-3 border rounded-xl border-black/10 text-sm text-[#333] bg-white" value={form.registrationMethod || 'unknown'} disabled={readOnly} onChange={(e) => set('registrationMethod', e.target.value as ExtractedEvent['registrationMethod'])}>
+                {REGISTRATION_METHOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <ContactsEditor contacts={form.contacts || []} readOnly={readOnly} idPrefix={`contact-${item.id}`} onChange={(c) => set('contacts', c)} />
+            </div>
             <div className="sm:col-span-2">
               <SpeakersEditor speakers={form.speakers || []} readOnly={readOnly} onChange={(s) => set('speakers', s)} />
             </div>

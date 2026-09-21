@@ -1,5 +1,5 @@
 // Client-side helper for anonymous event engagement tracking.
-export type TrackType = 'view' | 'register_click';
+export type TrackType = 'view' | 'register_click' | 'contact_click';
 
 /** Fire-and-forget beacon to /api/events/[id]/track. Safe to call during navigation. */
 export function trackEvent(eventId: string, type: TrackType): void {
@@ -22,8 +22,8 @@ export function isExternalEvent(ev: { registrationUrl?: string; isScraped?: bool
   return Boolean(ev.registrationUrl) || ev.isScraped === true || ev.source === 'community';
 }
 
-/** Returns "~N interested" when at least 3 register clicks, else null. */
-export function interestedLabel(stats?: { registerClicks?: number }): string | null {
-  const n = stats?.registerClicks ?? 0;
+/** Returns "~N interested" when register + contact clicks total at least 3, else null. */
+export function interestedLabel(stats?: { registerClicks?: number; contactClicks?: number }): string | null {
+  const n = (stats?.registerClicks ?? 0) + (stats?.contactClicks ?? 0);
   return n >= 3 ? `~${n} interested` : null;
 }

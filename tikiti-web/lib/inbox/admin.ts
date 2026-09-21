@@ -20,6 +20,12 @@ export interface ExtractedSpeaker {
   role?: string;
 }
 
+export interface ExtractedContact {
+  name?: string;
+  phone: string;
+  whatsapp?: boolean;
+}
+
 export interface ExtractedEvent {
   name: string;
   description: string;
@@ -39,7 +45,12 @@ export interface ExtractedEvent {
   meetingPlatform: '' | 'zoom' | 'google_meet' | 'teams' | 'youtube' | 'other';
   /** Free text such as "Meeting ID 123 456 · Passcode 9876" */
   meetingDetails: string;
+  /** First contact's phone (back-compat); see `contacts` */
   contactPhone: string;
+  /** Enquiry numbers printed on the flyer / written in the caption (max 4). NEVER the WhatsApp sender's number. */
+  contacts: ExtractedContact[];
+  /** How a person attends: via a link, by contacting someone, or by just showing up */
+  registrationMethod: 'link' | 'contact' | 'walk_in' | 'unknown';
   organiserName: string;
   speakers: ExtractedSpeaker[];
   confidence: number;
@@ -152,7 +163,7 @@ export function serializeInbox(id: string, data: FirebaseFirestore.DocumentData)
     senderName: data.senderName || null,
     needsImage: !!data.needsImage,
     extraTexts: Array.isArray(data.extraTexts) ? data.extraTexts : [],
-    extracted: { speakers: [], joinUrl: '', meetingPlatform: '', meetingDetails: '', ...(data.extracted || {}) },
+    extracted: { speakers: [], contacts: [], registrationMethod: 'unknown', joinUrl: '', meetingPlatform: '', meetingDetails: '', ...(data.extracted || {}) },
     confidence: data.confidence ?? 0,
     missingFields: data.missingFields || [],
     publishedEventId: data.publishedEventId || null,

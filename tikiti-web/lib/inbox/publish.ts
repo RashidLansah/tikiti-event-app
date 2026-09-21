@@ -6,6 +6,7 @@ import { eventCategories } from '@/lib/data/categories';
 import { INBOX_COLLECTION, type InboxRejectedReason } from '@/lib/inbox/admin';
 import { normaliseSpeakers, toEventSpeakers } from '@/lib/inbox/extract';
 import { platformFromUrl } from '@/lib/events/links';
+import { normaliseContacts, REGISTRATION_METHODS, type RegistrationMethod } from '@/lib/events/contact';
 import { notifySubmitterApproved, notifySubmitterRejected } from '@/lib/inbox/notifySubmitter';
 
 /** Default organisation used by the REST publish route when the caller sends none. */
@@ -105,6 +106,18 @@ export async function publishInboxItem(db: Firestore, inboxId: string, opts: Pub
       ? f.meetingPlatform
       : platformFromUrl(meetingLink) || 'other')
     : '';
+  // Flyer/caption organiser numbers only — never inbox.submittedBy (the WhatsApp sender).
+  const rawContacts = Array.isArray(f.contacts) ? [...f.contacts] : [];
+  const ov = opts.overrides || {};
+  // An explicitly reviewed contacts list (admin UI) is authoritative; an overridden contactPhone alone leads the list;
+  // otherwise the legacy single contactPhone only backs up an empty list.
+  if (str(f.contactPhone) && !('contacts' in ov)) {
+    if ('contactPhone' in ov) rawContacts.unshift({ phone: str(f.contactPhone) });
+    else rawContacts.push({ phone: str(f.contactPhone) });
+  }
+  const contacts = normaliseContacts(rawContacts);
+  const registrationMethod: RegistrationMethod = REGISTRATION_METHODS.includes(f.registrationMethod) ? f.registrationMethod : 'unknown';
+  const contactPhone = contacts[0]?.phone ? `+${contacts[0].phone}` : ('contacts' in ov ? '' : str(f.contactPhone));
   const ticketingDisabled = !isFree && !registrationUrl && !meetingLink;
   const looksOnline = /online|zoom|virtual|google meet|teams|webinar|livestream|live stream/i.test(`${location} ${name}`);
 
@@ -133,7 +146,7 @@ export async function publishInboxItem(db: Firestore, inboxId: string, opts: Pub
     isActive: true,
     registrationForm: DEFAULT_REGISTRATION_FORM,
     source: 'community',
-    communityContact: { phone: str(f.contactPhone), organiserName: str(f.organiserName) },
+    communityContact: { phone: contactPhone, organiserName: str(f.organiserName) },
     inboxId,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
@@ -148,7 +161,9 @@ export async function publishInboxItem(db: Firestore, inboxId: string, opts: Pub
     event.meetingPlatform = meetingPlatform;
   }
   if (meetingDetails) event.meetingDetails = meetingDetails;
-  if (str(f.contactPhone)) event.organizerPhone = str(f.contactPhone);
+  if (contactPhone) event.organizerPhone = contactPhone;
+  if (contacts.length) event.contacts = contacts;
+  event.registrationMethod = registrationMethod;
   if (ticketingDisabled) event.ticketingDisabled = true;
   const speakers = normaliseSpeakers(f.speakers);
   if (speakers.length) event.speakers = toEventSpeakers(speakers);
@@ -164,7 +179,7 @@ export async function publishInboxItem(db: Firestore, inboxId: string, opts: Pub
       ...(inbox.extracted || {}),
       name, description: str(f.description), category, date, endDate, startTime, endTime: str(f.endTime),
       location, address: str(f.address), city: str(f.city), price: isFree ? 0 : price, isFree,
-      registrationUrl, joinUrl: meetingLink, meetingPlatform, meetingDetails, contactPhone: str(f.contactPhone), organiserName: str(f.organiserName), speakers,
+      registrationUrl, joinUrl: meetingLink, meetingPlatform, meetingDetails, contactPhone, contacts, registrationMethod, organiserName: str(f.organiserName), speakers,
     },
     organizationId,
     updatedAt: FieldValue.serverTimestamp(),

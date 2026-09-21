@@ -1,5 +1,6 @@
 // Link classification + CTA rules for events (shared by the public pages, inbox extraction and publish).
 // No 'use client' and no server-only imports: safe on both sides.
+import { telLink, waLink, type EventContact, canWhatsApp } from './contact';
 
 export type UrlKind = 'join' | 'registration' | 'info';
 export type MeetingPlatform = 'zoom' | 'google_meet' | 'teams' | 'youtube' | 'other';
@@ -87,9 +88,12 @@ export interface CtaEventInput {
   source?: string;
   isScraped?: boolean;
   ticketingDisabled?: boolean;
+  name?: string;
+  contacts?: EventContact[];
+  registrationMethod?: string;
 }
 
-export type CtaKind = 'register_external' | 'join_now' | 'join_later' | 'no_registration' | 'organiser_tickets' | 'tikiti';
+export type CtaKind = 'register_external' | 'join_now' | 'join_later' | 'no_registration' | 'organiser_tickets' | 'contact_organiser' | 'tikiti';
 export type CtaActionType = 'calendar' | 'native';
 export interface CtaAction { label: string; href?: string; action?: CtaActionType }
 export interface EventCta { kind: CtaKind; primary: CtaAction; secondary?: CtaAction; note?: string }
@@ -170,6 +174,20 @@ export function eventCta(ev: CtaEventInput, now: Date = new Date()): EventCta {
     if (today) return { kind: 'join_now', primary: { label: 'Join now', href: ev.meetingLink }, secondary: addToCalendar };
     return { kind: 'join_later', primary: addToCalendar, secondary: { label: 'Join link', href: ev.meetingLink }, note: goesLive(ev) };
   }
+  const contacts = Array.isArray(ev.contacts) ? ev.contacts.filter((c) => c && c.phone) : [];
+  if (contacts.length && (ev.registrationMethod === 'contact' || ev.ticketingDisabled)) {
+    const paid = !isFree(ev);
+    const wa = contacts.find((c) => c.whatsapp) || contacts.find((c) => canWhatsApp(c));
+    const first = contacts[0];
+    return {
+      kind: 'contact_organiser',
+      primary: wa
+        ? { label: paid ? 'WhatsApp for tickets' : 'WhatsApp the organiser', href: waLink(wa.phone, ev.name || 'your event') }
+        : { label: paid ? 'Call for tickets' : 'Call the organiser', href: telLink(first.phone) },
+      secondary: wa ? { label: paid ? 'Call for tickets' : 'Call the organiser', href: telLink(first.phone) } : undefined,
+      note: 'Registration is handled directly by the organiser.',
+    };
+  }
   if ((ev.source === 'community' || ev.isScraped) && isFree(ev)) {
     return { kind: 'no_registration', primary: addToCalendar, note: 'No registration needed — just show up.' };
   }
@@ -184,9 +202,10 @@ export function eventCta(ev: CtaEventInput, now: Date = new Date()): EventCta {
 }
 
 /** Short label for grid cards of external events. */
-export function cardCtaLabel(ev: CtaEventInput, now: Date = new Date()): 'Register' | 'Join online' | 'Details' {
+export function cardCtaLabel(ev: CtaEventInput, now: Date = new Date()): 'Register' | 'Join online' | 'Contact' | 'Details' {
   const kind = eventCta(ev, now).kind;
   if (kind === 'register_external') return 'Register';
+  if (kind === 'contact_organiser') return 'Contact';
   if (kind === 'join_now' || kind === 'join_later') return 'Join online';
   return 'Details';
 }

@@ -11,6 +11,7 @@ import Arrow from '@/components/ui/Arrow';
 import PublicHeader from '@/components/layout/PublicHeader';
 import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
 import { eventCta, platformFromUrl, platformLabel, type CtaAction } from '@/lib/events/links';
+import { displayPhone, normaliseContacts, telLink, waLink, canWhatsApp } from '@/lib/events/contact';
 
 const PG = `
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -57,6 +58,13 @@ const PG = `
   .event-facts span { font-size: 11px; letter-spacing: 1.5px; display: block; color: var(--muted); margin-bottom: 8px; }
   .event-facts strong { font-weight: 500; font-size: 16px; }
   .event-facts p { color: var(--muted); font-size: 14px; margin: 5px 0; }
+  .contact-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 4px 0; }
+  .contact-row + .contact-row { margin-top: 6px; }
+  .contact-pills { display: flex; gap: 8px; }
+  .contact-pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--fg); border-radius: 30px; padding: 7px 13px; font-size: 12px; font-weight: 700; min-height: 34px; background: #fffef9; transition: background 0.15s, color 0.15s; }
+  .contact-pill:hover { background: var(--fg); color: #fff; }
+  .contact-pill.wa { border-color: #128c4a; color: #0d6b38; }
+  .contact-pill.wa:hover { background: #128c4a; color: #fff; }
   .host-line { display: flex; align-items: center; gap: 12px; font-size: 13px; line-height: 1.6; border-top: 1px solid var(--line); padding-top: 22px; margin-top: 6px; }
   .host-avatar { background: var(--accent); color: #151515; border-radius: 50%; width: 44px; height: 44px; display: grid; place-items: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
 
@@ -178,7 +186,25 @@ interface FirestoreEventDetail {
   agenda?: AgendaItem[];
   venueType?: string;
   isScraped?: boolean;
-  stats?: { views?: number; registerClicks?: number };
+  contacts?: Array<{ name?: string; phone: string; whatsapp?: boolean }>;
+  registrationMethod?: string;
+  stats?: { views?: number; registerClicks?: number; contactClicks?: number };
+}
+
+function WhatsAppIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" style={{ flexShrink: 0 }}>
+      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 1.67c2.2 0 4.26.86 5.82 2.42a8.2 8.2 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24zM8.53 7.33c-.16 0-.43.06-.66.31-.22.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.29-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.15.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.16.04-.31-.02-.43-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01z" />
+    </svg>
+  );
+}
+
+function PhoneIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" style={{ flexShrink: 0 }}>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  );
 }
 
 function formatDateLong(dateStr: string): string {
@@ -239,7 +265,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const intro = ev ? (ev.description?.split('\n')[0] ?? '') : '';
   const external = ev ? isExternalEvent(ev) : false;
   const interested = external ? interestedLabel(ev?.stats) : null;
-  const cta = ev ? eventCta(ev) : null;
+  // Organiser numbers from the flyer/caption only (events.contacts) — never the submitter's number.
+  const contacts = ev ? normaliseContacts(ev.contacts) : [];
+  const cta = ev ? eventCta({ ...ev, contacts }) : null;
+  const isContactHref = (href?: string) => !!href && (href.startsWith('tel:') || href.startsWith('https://wa.me/'));
   const calendarHref = `/api/events/${id}/calendar`;
   const isVirtual = ev ? ev.venueType === 'virtual' || (!!ev.meetingLink && ev.venueType !== 'hybrid' && ev.venueType !== 'in_person') : false;
   const platform = ev ? platformLabel(ev.meetingPlatform || (ev.meetingLink ? platformFromUrl(ev.meetingLink) : null)) : '';
@@ -247,6 +276,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const ctaLink = (a: CtaAction) => {
     if (a.action === 'calendar') return { href: calendarHref };
     if (!a.href) return { href: '#tickets' };
+    if (a.href.startsWith('tel:')) return { href: a.href, onClick: () => trackEvent(id, 'contact_click') };
+    if (isContactHref(a.href)) return { href: a.href, target: '_blank', rel: 'noopener noreferrer', onClick: () => trackEvent(id, 'contact_click') };
     return { href: a.href, target: '_blank', rel: 'noopener noreferrer', onClick: () => trackEvent(id, 'register_click') };
   };
 
@@ -303,6 +334,26 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <strong>{isVirtual ? `Online${platform ? ` · ${platform}` : ''}` : (ev.location || 'Accra · venue to be announced')}</strong>
                     <p>{isVirtual ? (ev.location && !/^online$/i.test(ev.location.trim()) ? ev.location : 'Join from anywhere') : ev.venueType === 'hybrid' ? `In person & online${platform ? ` · ${platform}` : ''}` : 'In person'}</p>
                   </div>
+                  {contacts.length > 0 && (
+                    <div>
+                      <span>CONTACT</span>
+                      {contacts.map((c) => (
+                        <div key={c.phone} className="contact-row">
+                          <strong>{c.name ? `${c.name} · ` : ''}{displayPhone(c.phone)}</strong>
+                          <div className="contact-pills">
+                            {canWhatsApp(c) && (
+                              <a className="contact-pill wa" href={waLink(c.phone, ev.name)} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent(id, 'contact_click')} aria-label={`WhatsApp ${c.name || displayPhone(c.phone)}`}>
+                                <WhatsAppIcon /> WhatsApp
+                              </a>
+                            )}
+                            <a className="contact-pill" href={telLink(c.phone)} onClick={() => trackEvent(id, 'contact_click')} aria-label={`Call ${c.name || displayPhone(c.phone)}`}>
+                              <PhoneIcon /> Call
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="host-line" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

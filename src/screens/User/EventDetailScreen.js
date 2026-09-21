@@ -60,6 +60,35 @@ const getExternalCta = (event, now = new Date()) => {
     : { kind: 'join_later', label: 'Join link', leftLabel: 'GOES LIVE', leftValue: dateLabel };
 };
 
+// Organiser contacts (event.contacts) — mirrors tikiti-web/lib/events/contact.ts. These are ONLY numbers printed on the
+// flyer / written in the caption; never show the submitter's (WhatsApp sender's) number.
+const contactDigits = (phone) => String(phone || '').replace(/\D/g, '');
+const getEventContacts = (event) =>
+  (Array.isArray(event?.contacts) ? event.contacts : [])
+    .filter((c) => c && contactDigits(c.phone).length >= 8)
+    .slice(0, 4);
+const formatContactPhone = (phone) => {
+  const d = contactDigits(phone);
+  return d.startsWith('233') && d.length === 12 ? `+233 ${d.slice(3, 5)} ${d.slice(5, 8)} ${d.slice(8)}` : `+${d}`;
+};
+const callContact = (contact) => Linking.openURL(`tel:+${contactDigits(contact.phone)}`).catch(() => {});
+const whatsappContact = (contact, eventName) =>
+  Linking.openURL(
+    `https://wa.me/${contactDigits(contact.phone)}?text=${encodeURIComponent(`Hi, I saw "${eventName || 'your event'}" on Tikiti and would like more details.`)}`
+  ).catch(() => {});
+// Book-bar contact case: no registrationUrl, no meetingLink, contacts present and the organiser handles registration.
+const getContactCta = (event) => {
+  if (!event || event.registrationUrl || event.meetingLink) return null;
+  const contacts = getEventContacts(event);
+  if (!contacts.length || !(event.registrationMethod === 'contact' || event.ticketingDisabled)) return null;
+  const isMobileNumber = (c) => {
+    const d = String(c.phone || '').replace(/\D/g, '');
+    return d.startsWith('233') ? /^233[25]\d{8}$/.test(d) : d.length >= 8;
+  };
+  const wa = contacts.find((c) => c.whatsapp) || contacts.find(isMobileNumber);
+  return { contact: wa || contacts[0], whatsapp: !!wa };
+};
+
 const EventDetailScreen = ({ navigation, route }) => {
   const { event: eventParam } = route.params;
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -1453,6 +1482,27 @@ const EventDetailScreen = ({ navigation, route }) => {
             </View>
           </View>
 
+          {/* organiser contacts (from the flyer) */}
+          {getEventContacts(event).map((c) => (
+            <View key={contactDigits(c.phone)} style={styles.infoLine}>
+              <Feather name="phone" size={18} color="#65675d" style={{ marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <TouchableOpacity
+                  onPress={() => callContact(c)}
+                  onLongPress={() => whatsappContact(c, event.name)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Call ${c.name || formatContactPhone(c.phone)}`}
+                >
+                  <Text style={styles.infoMain}>{formatContactPhone(c.phone)}</Text>
+                  {c.name ? <Text style={styles.infoSub}>{c.name}</Text> : null}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => whatsappContact(c, event.name)} accessibilityRole="link">
+                  <Text style={styles.infoLink}>WhatsApp</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+
           {/* attendees */}
           {attendeeCount > 0 && (
             <View style={styles.infoLine}>
@@ -1516,6 +1566,7 @@ const EventDetailScreen = ({ navigation, route }) => {
       {/* ── Book bar ──────────────────────────────────────── */}
       {(() => {
         const externalCta = getExternalCta(event);
+        const contactCta = getContactCta(event);
         const paid = event.price && event.price !== '0';
         return (
           <View style={styles.bookBar}>
@@ -1534,6 +1585,9 @@ const EventDetailScreen = ({ navigation, route }) => {
                   Linking.openURL(event.registrationUrl);
                 } else if (externalCta) {
                   Linking.openURL(event.meetingLink);
+                } else if (contactCta) {
+                  if (contactCta.whatsapp) whatsappContact(contactCta.contact, event.name);
+                  else callContact(contactCta.contact);
                 } else {
                   setShowRegistrationModal(true);
                 }
@@ -1541,9 +1595,9 @@ const EventDetailScreen = ({ navigation, route }) => {
               activeOpacity={0.85}
             >
               <Text style={styles.bookBarBtnText}>
-                {event.registrationUrl ? 'Register on their site' : externalCta ? externalCta.label : (paid ? 'Get tickets' : 'Register for free')}
+                {event.registrationUrl ? 'Register on their site' : externalCta ? externalCta.label : contactCta ? 'Contact organiser' : (paid ? 'Get tickets' : 'Register for free')}
               </Text>
-              <Feather name={event.registrationUrl || externalCta ? 'external-link' : 'arrow-right'} size={18} color="#fff" />
+              <Feather name={event.registrationUrl || externalCta ? 'external-link' : contactCta ? (contactCta.whatsapp ? 'message-circle' : 'phone') : 'arrow-right'} size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         );
