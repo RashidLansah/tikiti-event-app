@@ -10,6 +10,7 @@ import TrackView from '@/components/events/TrackView';
 import Arrow from '@/components/ui/Arrow';
 import PublicHeader from '@/components/layout/PublicHeader';
 import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
+import { eventCta, platformFromUrl, platformLabel, type CtaAction } from '@/lib/events/links';
 
 const PG = `
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -165,6 +166,11 @@ interface FirestoreEventDetail {
   source?: string;
   speakers?: Array<{ name: string; title?: string; company?: string; role?: string; photo?: string }>;
   registrationUrl?: string;
+  meetingLink?: string;
+  meetingPlatform?: string;
+  meetingDetails?: string;
+  startTime?: string;
+  endTime?: string;
   ticketingDisabled?: boolean;
   status: string;
   organizerName?: string;
@@ -233,6 +239,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const intro = ev ? (ev.description?.split('\n')[0] ?? '') : '';
   const external = ev ? isExternalEvent(ev) : false;
   const interested = external ? interestedLabel(ev?.stats) : null;
+  const cta = ev ? eventCta(ev) : null;
+  const calendarHref = `/api/events/${id}/calendar`;
+  const isVirtual = ev ? ev.venueType === 'virtual' || (!!ev.meetingLink && ev.venueType !== 'hybrid' && ev.venueType !== 'in_person') : false;
+  const platform = ev ? platformLabel(ev.meetingPlatform || (ev.meetingLink ? platformFromUrl(ev.meetingLink) : null)) : '';
+  /** Resolves a CTA action to anchor props; register + join clicks are tracked. */
+  const ctaLink = (a: CtaAction) => {
+    if (a.action === 'calendar') return { href: calendarHref };
+    if (!a.href) return { href: '#tickets' };
+    return { href: a.href, target: '_blank', rel: 'noopener noreferrer', onClick: () => trackEvent(id, 'register_click') };
+  };
 
   return (
     <>
@@ -284,8 +300,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                   <div>
                     <span>WHERE</span>
-                    <strong>{ev.location || 'Accra · venue to be announced'}</strong>
-                    <p>{ev.venueType === 'virtual' ? 'Online' : ev.venueType === 'hybrid' ? 'In person & online' : 'In person'}</p>
+                    <strong>{isVirtual ? `Online${platform ? ` · ${platform}` : ''}` : (ev.location || 'Accra · venue to be announced')}</strong>
+                    <p>{isVirtual ? (ev.location && !/^online$/i.test(ev.location.trim()) ? ev.location : 'Join from anywhere') : ev.venueType === 'hybrid' ? `In person & online${platform ? ` · ${platform}` : ''}` : 'In person'}</p>
                   </div>
                 </div>
                 <div className="host-line" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -422,25 +438,37 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <strong style={{ fontSize: 22, color: '#202220' }}>{price === 0 ? 'Free' : `₵${total}`}</strong>
                 </div>
 
-                {ev.registrationUrl ? (
-                  <a href={ev.registrationUrl} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent(id, 'register_click')}>
-                    <button className="ticket-cta">
-                      <span>Register on their site</span>
-                      <Arrow dir="ne" size={16} />
-                    </button>
-                  </a>
-                ) : ev.ticketingDisabled ? (
-                  <p style={{ fontSize: 14, textAlign: 'center', color: '#202220', padding: '14px 0' }}>Tickets are sold by the organiser directly — check the flyer for details.</p>
-                ) : (
+                {cta && (cta.kind === 'organiser_tickets' ? (
+                  <p style={{ fontSize: 14, textAlign: 'center', color: '#202220', padding: '14px 0' }}>{cta.note}</p>
+                ) : cta.kind === 'tikiti' ? (
                   <Link href="/register">
                     <button className="ticket-cta">
-                      <span>{price === 0 ? 'Register free' : 'Get tickets'}</span>
+                      <span>{cta.primary.label}</span>
                       <Arrow dir="ne" size={16} />
                     </button>
                   </Link>
+                ) : (
+                  <>
+                    <a {...ctaLink(cta.primary)}>
+                      <button className="ticket-cta">
+                        <span>{cta.primary.label}</span>
+                        <Arrow dir="ne" size={16} />
+                      </button>
+                    </a>
+                    {cta.secondary && (
+                      <a {...ctaLink(cta.secondary)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, fontSize: 14, fontWeight: 700, color: '#202220', textDecoration: 'underline' }}>
+                        {cta.secondary.label} <Arrow dir="ne" size={13} />
+                      </a>
+                    )}
+                  </>
+                ))}
+                {ev.meetingLink && ev.meetingDetails && (
+                  <p style={{ fontSize: 12, textAlign: 'center', color: '#202220', marginTop: 12, lineHeight: 1.5, overflowWrap: 'anywhere' }}>{ev.meetingDetails}</p>
                 )}
 
-                <p style={{ fontSize: 11, textAlign: 'center', color: 'rgba(32,34,32,0.45)', marginTop: 14 }}>{ev.registrationUrl ? 'Registration is handled by the organiser' : price > 0 ? 'Secure payment via Paystack · Instant confirmation' : 'No payment required'}</p>
+                {cta && cta.kind !== 'organiser_tickets' && (
+                  <p style={{ fontSize: 11, textAlign: 'center', color: 'rgba(32,34,32,0.45)', marginTop: 14 }}>{cta.note ?? (cta.kind === 'join_now' ? 'Opens the live session' : price > 0 ? 'Secure payment via Paystack · Instant confirmation' : 'No payment required')}</p>
+                )}
                 {interested && (
                   <p style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
                     <span style={{ font: "600 12px 'DM Sans', sans-serif", letterSpacing: 0.3, color: '#202220', border: '1px solid #202220', borderRadius: 30, padding: '6px 14px', background: 'rgba(255,255,255,0.6)' }}>{interested}</span>
@@ -465,15 +493,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       </footer>
 
       {/* Mobile sticky bar */}
-      {ev && (
+      {ev && cta && (
         <div className="mobile-ticket">
           <span>{price === 0 ? 'Free' : `₵${price}`}</span>
-          {ev.registrationUrl ? (
-            <a href={ev.registrationUrl} target="_blank" rel="noopener noreferrer">Register on their site <Arrow dir="ne" size={14} /></a>
-          ) : ev.ticketingDisabled ? (
-            <a href="#tickets">Ticket details <Arrow dir="ne" size={14} /></a>
+          {cta.kind === 'organiser_tickets' || cta.kind === 'tikiti' ? (
+            <a href="#tickets">{cta.kind === 'tikiti' && price > 0 ? 'Choose ticket' : cta.primary.label} <Arrow dir="ne" size={14} /></a>
           ) : (
-            <a href="#tickets">{price === 0 ? 'Register free' : 'Choose ticket'} <Arrow dir="ne" size={14} /></a>
+            <a {...ctaLink(cta.primary)}>{cta.primary.label} <Arrow dir="ne" size={14} /></a>
           )}
         </div>
       )}

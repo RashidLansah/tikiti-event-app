@@ -5,6 +5,7 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { eventCategories } from '@/lib/data/categories';
 import { INBOX_COLLECTION, type InboxRejectedReason } from '@/lib/inbox/admin';
 import { normaliseSpeakers, toEventSpeakers } from '@/lib/inbox/extract';
+import { platformFromUrl } from '@/lib/events/links';
 import { notifySubmitterApproved, notifySubmitterRejected } from '@/lib/inbox/notifySubmitter';
 
 /** Default organisation used by the REST publish route when the caller sends none. */
@@ -97,12 +98,21 @@ export async function publishInboxItem(db: Firestore, inboxId: string, opts: Pub
   const category = eventCategories.some((c) => c.id === f.category) ? f.category : 'other';
   const startTime = str(f.startTime);
   const endDate = str(f.endDate) || date;
-  const ticketingDisabled = !isFree && !registrationUrl;
+  const meetingLink = str(f.joinUrl || f.meetingLink);
+  const meetingDetails = str(f.meetingDetails);
+  const meetingPlatform = meetingLink
+    ? (['zoom', 'google_meet', 'teams', 'youtube', 'other'].includes(f.meetingPlatform) && platformFromUrl(meetingLink) === 'other'
+      ? f.meetingPlatform
+      : platformFromUrl(meetingLink) || 'other')
+    : '';
+  const ticketingDisabled = !isFree && !registrationUrl && !meetingLink;
+  const looksOnline = /online|zoom|virtual|google meet|teams|webinar|livestream|live stream/i.test(`${location} ${name}`);
 
   const event: Record<string, any> = {
     name,
     description: str(f.description),
-    venueType: /online|zoom|virtual|google meet|teams|webinar|livestream/i.test(`${location} ${name}`) ? 'virtual' : 'in_person',
+    // An in-person venue with a join link is a hybrid event
+    venueType: looksOnline ? 'virtual' : meetingLink ? 'hybrid' : 'in_person',
     location,
     date,
     time: startTime,
@@ -133,6 +143,11 @@ export async function publishInboxItem(db: Firestore, inboxId: string, opts: Pub
   if (str(f.city)) event.city = str(f.city);
   if (str(f.endTime)) event.endTime = str(f.endTime);
   if (registrationUrl) event.registrationUrl = registrationUrl;
+  if (meetingLink) {
+    event.meetingLink = meetingLink;
+    event.meetingPlatform = meetingPlatform;
+  }
+  if (meetingDetails) event.meetingDetails = meetingDetails;
   if (str(f.contactPhone)) event.organizerPhone = str(f.contactPhone);
   if (ticketingDisabled) event.ticketingDisabled = true;
   const speakers = normaliseSpeakers(f.speakers);
@@ -149,7 +164,7 @@ export async function publishInboxItem(db: Firestore, inboxId: string, opts: Pub
       ...(inbox.extracted || {}),
       name, description: str(f.description), category, date, endDate, startTime, endTime: str(f.endTime),
       location, address: str(f.address), city: str(f.city), price: isFree ? 0 : price, isFree,
-      registrationUrl, contactPhone: str(f.contactPhone), organiserName: str(f.organiserName), speakers,
+      registrationUrl, joinUrl: meetingLink, meetingPlatform, meetingDetails, contactPhone: str(f.contactPhone), organiserName: str(f.organiserName), speakers,
     },
     organizationId,
     updatedAt: FieldValue.serverTimestamp(),

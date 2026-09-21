@@ -8,6 +8,7 @@ import ShareButton from '@/components/events/ShareButton';
 import Arrow from '@/components/ui/Arrow';
 import PublicHeader from '@/components/layout/PublicHeader';
 import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
+import { cardCtaLabel } from '@/lib/events/links';
 
 const CATEGORIES = ['All', 'Conferences', 'Workshops', 'Meetups', 'Startups', 'Community'];
 
@@ -48,7 +49,7 @@ const PG = `
   .pg-card-body { padding: 20px; background: #fff; flex: 1; display: flex; flex-direction: column; gap: 8px; }
   .pg-card-body h3 { font-size: 16px; font-weight: 700; }
   .pg-card-body p { font-size: 13px; color: #65675d; line-height: 1.5; flex: 1; }
-  .pg-card-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.07); }
+  .pg-card-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.07); }
   .pg-card-foot span { font-size: 12px; color: #999; }
   .pg-card-price { font-size: 15px; font-weight: 700; color: #f44929; }
   .pg-tabs { display: flex; gap: 0; border-bottom: 2px solid rgba(0,0,0,0.08); margin-bottom: 0; }
@@ -94,6 +95,10 @@ interface FirestoreEvent {
   status: string;
   isScraped?: boolean;
   registrationUrl?: string;
+  meetingLink?: string;
+  endDate?: string;
+  endTime?: string;
+  ticketingDisabled?: boolean;
   isOnline?: boolean;
   source?: string;
   stats?: { views?: number; registerClicks?: number };
@@ -308,6 +313,7 @@ export default function EventsPage() {
               const imgSrc = getImageSrc(ev);
               const intro = ev.description ? ev.description.split('\n')[0].slice(0, 120) : '';
               const interested = isExternalEvent(ev) ? interestedLabel(ev.stats) : null;
+              const ctaLabel = isExternalEvent(ev) ? cardCtaLabel(ev) : null;
               const cardContent = (
                 <>
                   <div className="pg-card-img">
@@ -337,6 +343,11 @@ export default function EventsPage() {
                     <p>{intro}</p>
                     <div className="pg-card-foot">
                       <span>{ev.location || 'Accra'}{interested ? ` · ${interested}` : ''}</span>
+                      {ctaLabel && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 700, color: '#202220', whiteSpace: 'nowrap' }}>
+                          {ctaLabel}{ctaLabel !== 'Details' && <Arrow dir="ne" size={11} strokeWidth={2.5} />}
+                        </span>
+                      )}
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
                         <span className="pg-card-price">{price}</span>
                         <ShareButton eventId={ev.id} title={ev.name} text={intro} variant="icon" />

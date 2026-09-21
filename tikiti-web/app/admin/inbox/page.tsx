@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Inbox, Upload, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, RefreshCw, X, Plus } from 'lucide-react';
+import { classifyUrl, platformFromUrl, platformLabel, URL_KIND_LABEL } from '@/lib/events/links';
 import type { ExtractedEvent, ExtractedSpeaker, InboxItem, InboxRejectedReason, InboxStatus } from '@/lib/inbox/admin';
 
 const DEFAULT_ORG = { id: '1Mvh7AnKIphfnDeOgWUd', name: 'Tikiti Community' };
@@ -41,7 +42,7 @@ const inputCls = 'bg-white rounded-xl border-black/10 text-[#333]';
 const FIELD_LABELS: Record<string, string> = {
   name: 'Event name', description: 'Description', category: 'Category', date: 'Date', endDate: 'End date',
   startTime: 'Start time', endTime: 'End time', location: 'Venue', address: 'Address', city: 'City', price: 'Price (GHS)',
-  registrationUrl: 'Registration URL', contactPhone: 'Contact phone', organiserName: 'Organiser name',
+  registrationUrl: 'Registration URL', joinUrl: 'Join link (Zoom/Meet…)', meetingDetails: 'Meeting details', contactPhone: 'Contact phone', organiserName: 'Organiser name',
 };
 
 // Mirrors REJECT_REASON_LABEL in lib/inbox/notifySubmitter.ts (that module is server-only)
@@ -228,7 +229,7 @@ function SpeakersEditor({ speakers, readOnly, onChange }: { speakers: ExtractedS
 }
 
 function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions: { id: string; name: string }[]; onChange: (i: InboxItem) => void }) {
-  const [form, setForm] = useState<ExtractedEvent>({ ...item.extracted, speakers: item.extracted?.speakers || [] });
+  const [form, setForm] = useState<ExtractedEvent>({ ...item.extracted, joinUrl: item.extracted?.joinUrl || '', meetingPlatform: item.extracted?.meetingPlatform || '', meetingDetails: item.extracted?.meetingDetails || '', speakers: item.extracted?.speakers || [] });
   const [orgId, setOrgId] = useState(DEFAULT_ORG.id);
   const [customOrg, setCustomOrg] = useState('');
   const [working, setWorking] = useState<'publish' | 'reject' | null>(null);
@@ -267,7 +268,18 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
     setWorking(null);
   };
 
-  const noTicketing = !form.isFree && !form.registrationUrl;
+  const noTicketing = !form.isFree && !form.registrationUrl && !form.joinUrl;
+  const urlHint = (url: string, expected: 'registration' | 'join') => {
+    if (!url.trim()) return null;
+    const kind = classifyUrl(url, `${form.name} ${form.description}`);
+    const platform = kind === 'join' ? platformLabel(platformFromUrl(url)) : '';
+    const wrong = kind !== 'info' && kind !== expected;
+    return (
+      <p className={`text-[11px] mt-1 ${wrong ? 'text-amber-700' : 'text-[#86868b]'}`}>
+        Detected: {URL_KIND_LABEL[kind]}{platform ? ` · ${platform}` : ''}{wrong ? ` — looks like it belongs in "${expected === 'join' ? FIELD_LABELS.registrationUrl : FIELD_LABELS.joinUrl}"` : ''}
+      </p>
+    );
+  };
 
   return (
     <Card className="rounded-[24px] border-black/10 bg-white shadow-none">
@@ -342,7 +354,9 @@ function InboxCard({ item, orgOptions, onChange }: { item: InboxItem; orgOptions
             <div className="sm:col-span-2">
               <SpeakersEditor speakers={form.speakers || []} readOnly={readOnly} onChange={(s) => set('speakers', s)} />
             </div>
-            <div className="sm:col-span-2">{field('registrationUrl', 'url')}</div>
+            <div>{field('registrationUrl', 'url')}{urlHint(form.registrationUrl || '', 'registration')}</div>
+            <div>{field('joinUrl', 'url')}{urlHint(form.joinUrl || '', 'join')}</div>
+            <div className="sm:col-span-2">{field('meetingDetails')}</div>
             <div className="flex items-center gap-2 pt-5">
               <input id={`free-${item.id}`} type="checkbox" checked={form.isFree} disabled={readOnly} onChange={(e) => { set('isFree', e.target.checked); if (e.target.checked) set('price', 0); }} />
               <Label htmlFor={`free-${item.id}`} className="text-sm text-[#333]">Free event</Label>

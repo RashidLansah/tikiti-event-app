@@ -37,6 +37,29 @@ import { EventDetailSkeleton } from '../../components/Skeleton';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// Mirrors eventCta() in tikiti-web/lib/events/links.ts for the book bar (Africa/Accra is UTC+0, so wall-clock = UTC).
+const getExternalCta = (event, now = new Date()) => {
+  if (!event || event.registrationUrl || !event.meetingLink) return null;
+  const day = (d) => {
+    const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+  };
+  const start = day(event.date);
+  let live = false;
+  if (start != null) {
+    const last = Math.max(day(event.endDate) ?? start, start);
+    const t = String(event.endTime || '').match(/^(\d{1,2}):(\d{2})/);
+    const end = t ? last + (Number(t[1]) * 60 + Number(t[2]) + 120) * 60000 : last + 24 * 3600000;
+    live = now.getTime() >= start && now.getTime() < end;
+  }
+  const dateLabel = start != null
+    ? new Date(start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+    : String(event.date || '');
+  return live
+    ? { kind: 'join_now', label: 'Join now' }
+    : { kind: 'join_later', label: 'Join link', leftLabel: 'GOES LIVE', leftValue: dateLabel };
+};
+
 const EventDetailScreen = ({ navigation, route }) => {
   const { event: eventParam } = route.params;
   const { user, userProfile, updateUserProfile } = useAuth();
@@ -1491,32 +1514,40 @@ const EventDetailScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* ── Book bar ──────────────────────────────────────── */}
-      <View style={styles.bookBar}>
-        <View>
-          <Text style={styles.bookBarLabel}>
-            {event.price && event.price !== '0' ? 'PER PERSON' : 'ENTRY'}
-          </Text>
-          <Text style={styles.bookBarPrice}>
-            {event.price && event.price !== '0' ? `₵${event.price}` : 'Free'}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.bookBarBtn}
-          onPress={() => {
-            if (event.registrationUrl) {
-              Linking.openURL(event.registrationUrl);
-            } else {
-              setShowRegistrationModal(true);
-            }
-          }}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.bookBarBtnText}>
-            {event.registrationUrl ? 'Register on their site' : (event.price && event.price !== '0' ? 'Get tickets' : 'Register for free')}
-          </Text>
-          <Feather name={event.registrationUrl ? 'external-link' : 'arrow-right'} size={18} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      {(() => {
+        const externalCta = getExternalCta(event);
+        const paid = event.price && event.price !== '0';
+        return (
+          <View style={styles.bookBar}>
+            <View>
+              <Text style={styles.bookBarLabel}>
+                {externalCta?.leftLabel || (paid ? 'PER PERSON' : 'ENTRY')}
+              </Text>
+              <Text style={styles.bookBarPrice}>
+                {externalCta?.leftValue || (paid ? `₵${event.price}` : 'Free')}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.bookBarBtn}
+              onPress={() => {
+                if (event.registrationUrl) {
+                  Linking.openURL(event.registrationUrl);
+                } else if (externalCta) {
+                  Linking.openURL(event.meetingLink);
+                } else {
+                  setShowRegistrationModal(true);
+                }
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.bookBarBtnText}>
+                {event.registrationUrl ? 'Register on their site' : externalCta ? externalCta.label : (paid ? 'Get tickets' : 'Register for free')}
+              </Text>
+              <Feather name={event.registrationUrl || externalCta ? 'external-link' : 'arrow-right'} size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
 
       {/* ──── Registration Bottom Sheet Modal ──────────────── */}
       <Modal

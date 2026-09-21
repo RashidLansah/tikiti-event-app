@@ -34,6 +34,11 @@ export interface ExtractedEvent {
   price: number;
   isFree: boolean;
   registrationUrl: string;
+  /** Link to JOIN the online session (Zoom/Meet/Teams/YouTube live) — published as events.meetingLink */
+  joinUrl: string;
+  meetingPlatform: '' | 'zoom' | 'google_meet' | 'teams' | 'youtube' | 'other';
+  /** Free text such as "Meeting ID 123 456 · Passcode 9876" */
+  meetingDetails: string;
   contactPhone: string;
   organiserName: string;
   speakers: ExtractedSpeaker[];
@@ -147,7 +152,7 @@ export function serializeInbox(id: string, data: FirebaseFirestore.DocumentData)
     senderName: data.senderName || null,
     needsImage: !!data.needsImage,
     extraTexts: Array.isArray(data.extraTexts) ? data.extraTexts : [],
-    extracted: { speakers: [], ...(data.extracted || {}) },
+    extracted: { speakers: [], joinUrl: '', meetingPlatform: '', meetingDetails: '', ...(data.extracted || {}) },
     confidence: data.confidence ?? 0,
     missingFields: data.missingFields || [],
     publishedEventId: data.publishedEventId || null,

@@ -1,5 +1,6 @@
 // Flyer -> event JSON extraction via the Anthropic Messages API (plain fetch; SDK not installed)
 import { eventCategories } from '@/lib/data/categories';
+import { classifyUrl, platformFromUrl } from '@/lib/events/links';
 import type { ExtractedEvent, ExtractedSpeaker } from './admin';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -7,13 +8,13 @@ const MODEL = 'claude-sonnet-5';
 
 export const EXTRACTION_FIELDS = [
   'name', 'description', 'category', 'date', 'endDate', 'startTime', 'endTime', 'location', 'address', 'city',
-  'price', 'isFree', 'registrationUrl', 'contactPhone', 'organiserName', 'speakers', 'confidence', 'missingFields',
+  'price', 'isFree', 'registrationUrl', 'joinUrl', 'meetingPlatform', 'meetingDetails', 'contactPhone', 'organiserName', 'speakers', 'confidence', 'missingFields',
 ] as const;
 
 export function emptyExtraction(): ExtractedEvent {
   return {
     name: '', description: '', category: 'other', date: '', endDate: '', startTime: '', endTime: '',
-    location: '', address: '', city: '', price: 0, isFree: true, registrationUrl: '', contactPhone: '',
+    location: '', address: '', city: '', price: 0, isFree: true, registrationUrl: '', joinUrl: '', meetingPlatform: '', meetingDetails: '', contactPhone: '',
     organiserName: '', speakers: [], confidence: 0, missingFields: [],
   };
 }
@@ -38,7 +39,11 @@ Return ONLY a JSON object (no markdown, no prose) with exactly these fields:
 - city: city or town, "" if unknown
 - price: number in GHS (0 if free). If several tiers, use the cheapest general ticket
 - isFree: boolean
-- registrationUrl: URL or "" — a website, ticket link or registration link printed on the flyer
+- registrationUrl: URL or "" — a link to SIGN UP: a registration form, ticket page or the event website (Google Forms, Eventbrite, Luma, bit.ly…)
+- joinUrl: URL or "" — a link to JOIN the session itself (Zoom, Google Meet, Microsoft Teams, YouTube/Facebook live). A link to JOIN
+  the session is joinUrl, a link to SIGN UP is registrationUrl; never put the same URL in both
+- meetingPlatform: one of ["zoom", "google_meet", "teams", "youtube", "other"], or "" if the event is not online
+- meetingDetails: string — read any Meeting ID / Passcode / dial-in printed on the flyer, e.g. "Meeting ID 123 456 7890 · Passcode 9876"; "" if none
 - contactPhone: phone number in international or local format, "" if none
 - organiserName: organiser / host name, "" if unknown
 - speakers: array of people printed on the flyer, each { "name": string, "title": string, "organisation": string, "role": string }.
@@ -89,6 +94,24 @@ export function toEventSpeakers(speakers: ExtractedSpeaker[]) {
   }));
 }
 
+const PLATFORMS = ['zoom', 'google_meet', 'teams', 'youtube', 'other'];
+
+/**
+ * Fixes links the model filed under the wrong field: a join-type URL in registrationUrl moves to joinUrl and a
+ * registration-type URL in joinUrl moves to registrationUrl (swapped when both are wrong; never overwrites a correct one).
+ */
+export function reconcileLinks<T extends { registrationUrl: string; joinUrl: string; meetingPlatform: ExtractedEvent['meetingPlatform'] }>(f: T, text = ''): Pick<T, 'registrationUrl' | 'joinUrl' | 'meetingPlatform'> {
+  let { registrationUrl, joinUrl } = f;
+  const regKind = registrationUrl ? classifyUrl(registrationUrl, text) : null;
+  const joinKind = joinUrl ? classifyUrl(joinUrl, text) : null;
+  if (regKind === 'join' && joinKind === 'registration') [registrationUrl, joinUrl] = [joinUrl, registrationUrl];
+  else if (regKind === 'join' && (!joinUrl || joinUrl === registrationUrl)) { joinUrl = registrationUrl; registrationUrl = ''; }
+  else if (joinKind === 'registration' && (!registrationUrl || registrationUrl === joinUrl)) { registrationUrl = joinUrl; joinUrl = ''; }
+  const detected = joinUrl ? platformFromUrl(joinUrl) : null;
+  const meetingPlatform = (joinUrl ? (detected && detected !== 'other' ? detected : f.meetingPlatform || 'other') : f.meetingPlatform) as T['meetingPlatform'];
+  return { registrationUrl, joinUrl, meetingPlatform };
+}
+
 function normalise(raw: any): ExtractedEvent {
   const base = emptyExtraction();
   const str = (v: any) => (v == null ? '' : String(v).trim());
@@ -109,6 +132,9 @@ function normalise(raw: any): ExtractedEvent {
     price: Number.isFinite(price) && price > 0 ? price : 0,
     isFree: typeof raw?.isFree === 'boolean' ? raw.isFree : !(Number.isFinite(price) && price > 0),
     registrationUrl: str(raw?.registrationUrl),
+    joinUrl: str(raw?.joinUrl),
+    meetingPlatform: PLATFORMS.includes(raw?.meetingPlatform) ? raw.meetingPlatform : '',
+    meetingDetails: str(raw?.meetingDetails),
     contactPhone: str(raw?.contactPhone),
     organiserName: str(raw?.organiserName),
     speakers: normaliseSpeakers(raw?.speakers),
@@ -116,6 +142,7 @@ function normalise(raw: any): ExtractedEvent {
     missingFields: Array.isArray(raw?.missingFields) ? raw.missingFields.map(String) : [],
   };
   if (out.isFree) out.price = 0;
+  Object.assign(out, reconcileLinks(out, `${out.name} ${out.description}`));
   // Derive missing fields for anything the model left blank but did not flag
   const required: (keyof ExtractedEvent)[] = ['name', 'date', 'startTime', 'location'];
   for (const f of required) {
