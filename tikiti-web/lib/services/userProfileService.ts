@@ -19,6 +19,7 @@ import {
   arrayRemove,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { INTEREST_TAGS } from '../audience/interests';
 
 // ─── Collections ────────────────────────────────────────────────────────────
 
@@ -72,25 +73,9 @@ export interface AudienceProfile {
   profileUpdatedAt?: Timestamp;
 }
 
-// Interest tag options shown to users
-export const INTEREST_TAGS = [
-  'Technology',
-  'Business',
-  'Arts & Culture',
-  'Health & Wellness',
-  'Education',
-  'Finance',
-  'Sports',
-  'Music',
-  'Networking',
-  'Food & Drink',
-  'Fashion',
-  'Social Impact',
-  'Startup',
-  'Faith',
-  'Entertainment',
-  'Workshops',
-];
+// Interest tag options shown to users. The list lives in lib/audience/interests.ts so server code and
+// scripts can import it without pulling in the client Firebase SDK.
+export { INTEREST_TAGS };
 
 export const INDUSTRY_OPTIONS = [
   'Technology',

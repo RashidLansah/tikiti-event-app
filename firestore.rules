@@ -359,6 +359,11 @@ service cloud.firestore {
     }
 
     // Default rule - deny all other access
+    // Audience contacts (marketing consent + signals). Server only — the Admin SDK bypasses these rules.
+    match /audience/{id} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

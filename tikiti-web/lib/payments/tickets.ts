@@ -3,6 +3,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { sendTicketEmail } from '@/lib/email/ticketEmail';
 import { sendTicketSms } from '@/lib/sms/ticketSms';
 import { ensureTicketToken, ticketBaseUrl, ticketUrl } from '@/lib/tickets/ticketToken';
+import { cityFromLocation, recordSignal, upsertContact } from '@/lib/audience/contacts';
+import { AUDIENCE_CHANNELS, type AudienceChannel } from '@/lib/audience/types';
 
 export const TIKITI_FEE_PERCENT = Number(process.env.TIKITI_FEE_PERCENT ?? 5);
 export const MIN_PAYOUT_GHS = Number(process.env.MIN_PAYOUT_GHS ?? 20);
@@ -71,6 +73,7 @@ export async function deliverTicket(db: Firestore, bookingId: string) {
   const snap = await ref.get();
   const b = snap.data();
   if (!b) return;
+  await recordAudience(db, bookingId, b);
   const emailDone = b.ticketEmailStatus === 'sent';
   const smsDone = b.ticketSmsStatus === 'sent';
   if (emailDone && smsDone) return;
@@ -86,6 +89,51 @@ export async function deliverTicket(db: Firestore, bookingId: string) {
     update.ticketSmsAt = new Date();
   }
   await ref.update(update);
+}
+
+/**
+ * Audience capture for a confirmed booking: one contact per person plus a registration / paid_booking signal.
+ * Runs once per booking (`audienceRecorded`). Channel consent is stored ONLY when the booking carries
+ * `marketingConsent`. Sends nothing and never throws.
+ */
+async function recordAudience(db: Firestore, bookingId: string, b: FirebaseFirestore.DocumentData): Promise<void> {
+  try {
+    if (b.audienceRecorded === true) return;
+    const ref = db.collection('bookings').doc(bookingId);
+    // Claim the flag first so concurrent webhook + verify calls can't double count.
+    const claimed = await db.runTransaction(async (tx) => {
+      const fresh = await tx.get(ref);
+      if (!fresh.exists || fresh.data()!.audienceRecorded === true) return false;
+      tx.update(ref, { audienceRecorded: true });
+      return true;
+    });
+    if (!claimed) return;
+
+    const mc = b.marketingConsent;
+    const channels: AudienceChannel[] = Array.isArray(mc?.channels)
+      ? mc.channels.filter((c: unknown): c is AudienceChannel => AUDIENCE_CHANNELS.includes(c as AudienceChannel))
+      : [];
+    const contact = await upsertContact(db, {
+      phone: b.phoneNumber,
+      email: b.userEmail,
+      name: b.userName,
+      city: cityFromLocation(b.eventLocation),
+      uid: b.userId,
+      source: b.source === 'ussd' ? 'ussd' : 'registration',
+      consent: channels.length ? { channels, wordingVersion: typeof mc?.wordingVersion === 'string' ? mc.wordingVersion : undefined } : undefined,
+    });
+    if (!contact) return;
+    const ev = b.eventId ? (await db.collection('events').doc(String(b.eventId)).get()).data() : undefined;
+    const paid = b.paymentStatus === 'paid' && Number(b.gross) > 0;
+    await recordSignal(db, contact.id, {
+      type: paid ? 'paid_booking' : 'registration',
+      category: ev?.category,
+      city: cityFromLocation(ev?.city || b.eventLocation || ev?.location),
+      amountPesewas: paid ? Number(b.gross) : undefined,
+    });
+  } catch (err) {
+    console.error('[audience] booking capture failed', bookingId, err);
+  }
 }
 
 export interface EarningsSummary {

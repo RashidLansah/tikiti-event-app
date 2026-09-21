@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebase/admin';
+import { cityFromLocation, isContactId, recordSignal } from '@/lib/audience/contacts';
+import type { SignalType } from '@/lib/audience/types';
 
 const WINDOW_MS = 10 * 60 * 1000;
 const recentHits = new Map<string, number>();
@@ -61,6 +63,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     // Native/community events live in `events`; scraped listings in `scraped_events`.
     const eventRef = db.collection('events').doc(id);
     const eventSnap = await eventRef.get();
+    let eventData = eventSnap.data();
     if (eventSnap.exists) {
       await eventRef.update(update);
     } else {
@@ -68,6 +71,17 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const scrapedSnap = await scrapedRef.get();
       if (!scrapedSnap.exists) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
       await scrapedRef.update(update);
+      eventData = scrapedSnap.data();
+    }
+
+    // Known audience contact (cookie set by /api/audience/subscribe): mirror the hit onto their signals.
+    const cid = req.cookies.get('tk_cid')?.value;
+    if (isContactId(cid)) {
+      await recordSignal(db, cid, {
+        type: type as SignalType,
+        category: eventData?.category,
+        city: cityFromLocation(eventData?.city || eventData?.location),
+      });
     }
 
     return NextResponse.json({ ok: true });
