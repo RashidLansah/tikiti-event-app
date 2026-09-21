@@ -18,7 +18,7 @@ export function ticketQrPayload(booking: any, bookingId: string) {
 }
 
 /** Emails the attendee their ticket with an inline QR. No-op when RESEND_API_KEY is unset. */
-export async function sendTicketEmail(bookingId: string, booking: any, ticketUrl?: string): Promise<'sent' | 'skipped' | 'failed'> {
+export async function sendTicketEmail(bookingId: string, booking: any, ticketUrl?: string, opts: { subjectPrefix?: string; qrPayload?: string; onId?: (id: string) => void } = {}): Promise<'sent' | 'skipped' | 'failed'> {
   const apiKey = process.env.RESEND_API_KEY;
   const to = booking.userEmail;
   if (!apiKey || !to) return 'skipped';
@@ -27,7 +27,7 @@ export async function sendTicketEmail(bookingId: string, booking: any, ticketUrl
   const qty = booking.quantity || 1;
   const isPaid = booking.registrationType === 'paid';
   const amount = isPaid ? `GH₵${((booking.gross || 0) / 100).toFixed(2)}` : 'Free';
-  const qrPng = await QRCode.toBuffer(ticketQrPayload(booking, bookingId), { width: 360, margin: 1, color: { dark: '#202220', light: '#ffffff' } });
+  const qrPng = await QRCode.toBuffer(opts.qrPayload || ticketQrPayload(booking, bookingId), { width: 360, margin: 1, color: { dark: '#202220', light: '#ffffff' } });
 
   const html = `
   <div style="background:#faf9f2;padding:32px 16px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#202220">
@@ -62,7 +62,7 @@ export async function sendTicketEmail(bookingId: string, booking: any, ticketUrl
     body: JSON.stringify({
       from: FROM,
       to: [to],
-      subject: `Your ticket · ${booking.eventName || 'Tikiti event'} (${refId})`,
+      subject: `${opts.subjectPrefix || ''}Your ticket · ${booking.eventName || 'Tikiti event'} (${refId})`,
       html,
       attachments: [{ filename: 'ticket-qr.png', content: qrPng.toString('base64'), content_id: 'ticket-qr' }],
       tags: [{ name: 'type', value: 'ticket' }],
@@ -72,6 +72,7 @@ export async function sendTicketEmail(bookingId: string, booking: any, ticketUrl
     console.error('[ticketEmail] Resend error', res.status, await res.text().catch(() => ''));
     return 'failed';
   }
+  if (opts.onId) { const j = await res.json().catch(() => null); if (j?.id) opts.onId(String(j.id)); }
   return 'sent';
 }
 

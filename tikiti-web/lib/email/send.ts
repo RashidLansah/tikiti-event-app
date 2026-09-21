@@ -7,6 +7,8 @@ export function escapeHtml(s: unknown): string {
 
 export async function sendEmail(input: {
   to: string; subject: string; html: string; text?: string; tag?: string; headers?: Record<string, string>;
+  /** Optional: receives the Resend message id on success. */
+  onId?: (id: string) => void;
 }): Promise<'sent' | 'skipped' | 'failed'> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey || !input.to) return 'skipped';
@@ -23,5 +25,6 @@ export async function sendEmail(input: {
     console.error('[email] Resend error', res.status, (await res.text().catch(() => '')).slice(0, 300));
     return 'failed';
   }
+  if (input.onId) { const j = await res.json().catch(() => null); if (j?.id) input.onId(String(j.id)); }
   return 'sent';
 }
