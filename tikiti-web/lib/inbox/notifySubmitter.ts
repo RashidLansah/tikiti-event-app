@@ -28,6 +28,7 @@ export const REJECT_REASON_TEXT: Record<InboxRejectedReason, string> = {
   past: 'the event has already taken place',
   duplicate: "it's already listed on Tikiti",
   missing_details: 'key details (date, venue or how to register) are missing',
+  withdrawn: 'it was withdrawn by the organiser',
   other: 'of an issue with the listing',
 };
 
@@ -36,6 +37,7 @@ export const REJECT_REASON_LABEL: Record<InboxRejectedReason, string> = {
   past: 'Already happened',
   duplicate: 'Duplicate',
   missing_details: 'Missing key details',
+  withdrawn: 'Withdrawn by submitter',
   other: 'Other',
 };
 
