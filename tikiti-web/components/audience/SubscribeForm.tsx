@@ -179,7 +179,7 @@ export default function SubscribeForm({ fields, source, eventId, defaultChannels
         )}
         {fields.phone && (
           <label className="tk-sub-field" htmlFor={`${uid}-phone`}>
-            <span>WhatsApp number</span>
+            <span>WhatsApp / phone number</span>
             <input id={`${uid}-phone`} type="tel" inputMode="tel" autoComplete="tel" placeholder="024 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched((t) => ({ ...t, phone: true }))} aria-invalid={touched.phone && phoneBad ? true : undefined} disabled={busy} maxLength={24} />
             {touched.phone && phoneBad && <small className="tk-sub-hint">Enter a valid phone number, e.g. 024 123 4567.</small>}
           </label>
