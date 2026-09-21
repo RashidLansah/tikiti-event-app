@@ -74,7 +74,28 @@ export async function postMessage(phoneNumberId: string, token: string, payload:
     body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', ...payload }),
   });
   const body: any = await res.json().catch(() => ({}));
+  if (res.ok) await logOutbound(body?.messages?.[0]?.id, payload);
   return { ok: res.ok, status: res.status, body };
+}
+
+/**
+ * Records each sent wamid in wa_outbound/{wamid} so a later WhatsApp *reply* to one of our messages can be mapped
+ * back to its inbox item (lib/inbox/submitterEdits.ts) — e.g. the "event is live" notice, which carries the event URL.
+ * Never throws.
+ */
+async function logOutbound(wamid: unknown, payload: Record<string, any>): Promise<void> {
+  if (typeof wamid !== 'string' || !wamid) return;
+  try {
+    const text: string = payload?.text?.body || payload?.interactive?.body?.text || '';
+    const eventId = text.match(/gettikiti\.com\/events\/([A-Za-z0-9_-]+)/)?.[1] || null;
+    const { getAdminFirestore } = await import('@/lib/firebase/admin');
+    const { FieldValue } = await import('firebase-admin/firestore');
+    await getAdminFirestore().collection('wa_outbound').doc(wamid).set({
+      to: String(payload?.to || ''), type: String(payload?.type || ''), eventId, sentAt: FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    console.error('notifyAdmins: could not log outbound message', e);
+  }
 }
 
 function alertPayload(to: string, item: SubmissionSummary, text: string): Record<string, any> {

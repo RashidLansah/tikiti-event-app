@@ -41,6 +41,7 @@ import type { InboxRejectedReason } from '@/lib/inbox/admin';
 import { inboxRef, isAdminPhone, notifyAdminsOfSubmission } from '@/lib/inbox/notifyAdmins';
 import { REJECT_REASON_TEXT } from '@/lib/inbox/notifySubmitter';
 import { INBOX_DEFAULT_ORG_ID, InboxPublishError, publishInboxItem, rejectInboxItem } from '@/lib/inbox/publish';
+import { decidePendingEdit, handleSubmitterMessage, recordWaMessageIds } from '@/lib/inbox/submitterEdits';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -78,6 +79,8 @@ type WaMessage = {
   text?: { body?: string };
   image?: { id: string; mime_type?: string; caption?: string; sha256?: string };
   interactive?: { type?: string; button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } };
+  /** Present when the message is a WhatsApp *reply*; `id` is the wamid being replied to */
+  context?: { id?: string; from?: string };
 };
 
 type RejectDetails = { reason: InboxRejectedReason; note: string | null };
@@ -86,7 +89,8 @@ type AdminCommand =
   | { action: 'approve'; ref: string | null }
   | ({ action: 'reject'; inboxId: string } & RejectDetails)
   | ({ action: 'reject'; ref: string | null } & RejectDetails)
-  | { action: 'pending' };
+  | { action: 'pending' }
+  | { action: 'editok' | 'editno'; inboxId: string };
 type WaContact = { wa_id?: string; profile?: { name?: string } };
 
 // ---------- GET: verification handshake ----------
@@ -201,6 +205,9 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
     return;
   }
 
+  // Submitter edits / withdraw / undo / flyer replacement (never throws; no triage or new-item extraction on this path)
+  if (await handleSubmitterMessage(message, { fetchImage: () => fetchImage(message, testImage) })) return;
+
   const senderName = senderNameFor(message, contacts);
   const base = {
     status: 'pending',
@@ -246,7 +253,7 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
         update.extractionError = e?.message || 'Extraction failed';
       }
       await recent.ref.update(update);
-      await sendReply(message.from, REPLY_MERGED);
+      await recordWaMessageIds(recent.ref, [message.id, await sendReply(message.from, REPLY_MERGED)]);
       return;
     }
 
@@ -256,8 +263,10 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
     }
     const extracted = emptyExtraction();
     extracted.missingFields = [...REQUIRED_FIELDS];
-    await inboxCollection().doc().set({
+    const textRef = inboxCollection().doc();
+    await textRef.set({
       ...base,
+      waMessageIds: [message.id],
       imagePath: '',
       imageUrl: null,
       caption: text,
@@ -267,7 +276,7 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
       missingFields: extracted.missingFields,
       extractionError: null,
     });
-    await sendReply(message.from, REPLY_TEXT);
+    await recordWaMessageIds(textRef, [await sendReply(message.from, REPLY_TEXT)]);
     return;
   }
 
@@ -352,7 +361,7 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
       extractionError,
       updatedAt: FieldValue.serverTimestamp(),
     });
-    await sendReply(message.from, REPLY_IMAGE);
+    await recordWaMessageIds(ref, [message.id, await sendReply(message.from, REPLY_IMAGE)]);
     notifyAdminsOfSubmission({
       inboxId: ref.id,
       senderName,
@@ -378,7 +387,7 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
     extractionError,
     triage: triageResult ? triageResult.meta : null,
   });
-  await sendReply(message.from, REPLY_IMAGE);
+  await recordWaMessageIds(ref, [message.id, await sendReply(message.from, REPLY_IMAGE)]);
   notifyAdminsOfSubmission({
     inboxId: ref.id,
     senderName,
@@ -401,6 +410,8 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
 function parseAdminCommand(message: WaMessage): AdminCommand | null {
   if (message.type === 'interactive') {
     const id = (message.interactive?.button_reply?.id || '').trim();
+    const edit = id.match(/^(editok|editno):(.+)$/);
+    if (edit) return { action: edit[1] as 'editok' | 'editno', inboxId: edit[2] };
     const m = id.match(/^(approve|reject):(.+)$/);
     if (m?.[1] === 'approve') return { action: 'approve', inboxId: m[2] };
     if (m?.[1] === 'reject') return { action: 'reject', inboxId: m[2], reason: 'other', note: null };
@@ -460,6 +471,12 @@ function itemName(data: FirebaseFirestore.DocumentData | undefined): string {
 }
 
 async function handleAdminCommand(from: string, command: AdminCommand) {
+  // Submitter asked to change / withdraw a PUBLISHED item (lib/inbox/submitterEdits.ts)
+  if (command.action === 'editok' || command.action === 'editno') {
+    const uid = await adminUidForPhone(from);
+    await sendReply(from, await decidePendingEdit(getAdminFirestore(), command.inboxId, command.action === 'editok', uid));
+    return;
+  }
   if (command.action === 'pending') {
     const items = await listPendingItems(5);
     if (!items.length) {
@@ -581,12 +598,13 @@ async function fetchImage(message: WaMessage, testImage: string | null): Promise
   return { buffer: Buffer.from(await binRes.arrayBuffer()), mimeType };
 }
 
-async function sendReply(to: string, body: string) {
+/** Sends a text reply; resolves with the sent message's wamid (null when not sent). Never throws. */
+async function sendReply(to: string, body: string): Promise<string | null> {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!token || !phoneNumberId) {
     console.warn('whatsapp webhook: reply skipped, WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID not configured');
-    return;
+    return null;
   }
   try {
     const res = await fetch(`${GRAPH}/${phoneNumberId}/messages`, {
@@ -594,9 +612,15 @@ async function sendReply(to: string, body: string) {
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body } }),
     });
-    if (!res.ok) console.error('whatsapp webhook: reply failed', res.status, (await res.text().catch(() => '')).slice(0, 300));
+    if (!res.ok) {
+      console.error('whatsapp webhook: reply failed', res.status, (await res.text().catch(() => '')).slice(0, 300));
+      return null;
+    }
+    const json: any = await res.json().catch(() => ({}));
+    return (json?.messages?.[0]?.id as string) || null;
   } catch (e) {
     console.error('whatsapp webhook: reply error', e);
+    return null;
   }
 }
 

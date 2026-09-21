@@ -16,6 +16,7 @@ const MAX_LISTED = 8;
 
 const REASON_LABELS: Record<InboxRejectedReason, string> = {
   not_event: 'Not an event',
+  withdrawn: 'Withdrawn by submitter',
   past: 'Past event',
   duplicate: 'Duplicate',
   missing_details: 'Missing key details',

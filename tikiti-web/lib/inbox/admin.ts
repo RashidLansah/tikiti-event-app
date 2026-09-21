@@ -46,7 +46,7 @@ export interface ExtractedEvent {
   missingFields: string[];
 }
 
-export type InboxRejectedReason = 'not_event' | 'past' | 'duplicate' | 'missing_details' | 'other';
+export type InboxRejectedReason = 'not_event' | 'past' | 'duplicate' | 'missing_details' | 'withdrawn' | 'other';
 
 /** Outcome of the WhatsApp message sent to the submitter when their item was approved / rejected */
 export interface SubmitterNotified {
