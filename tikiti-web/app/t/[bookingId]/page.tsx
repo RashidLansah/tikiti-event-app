@@ -98,6 +98,9 @@ export default async function PublicTicketPage({
       <a href={pngHref} download={`tikiti-ticket-${t.refId}.png`} style={{ display: 'block', textAlign: 'center', marginTop: 18, background: C.red, color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 15, padding: '14px 28px', borderRadius: 999 }}>
         Save ticket image
       </a>
+      <p style={{ fontSize: 13, lineHeight: 1.5, color: C.fg, margin: '16px 0 0', padding: '12px 14px', border: `1px solid ${C.red}`, borderRadius: 14, background: '#fff4f1' }}>
+        <strong>Keep this ticket to yourself.</strong> It works once — the first scan at the gate uses it up. Don&apos;t share this link or the QR code.
+      </p>
       <p style={{ fontSize: 12, color: C.muted, marginTop: 18, textAlign: 'center' }}>Please don’t share this link or QR code.</p>
     </Shell>
   );

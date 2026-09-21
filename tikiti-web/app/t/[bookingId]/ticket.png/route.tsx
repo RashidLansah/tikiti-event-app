@@ -7,15 +7,19 @@ export const dynamic = 'force-dynamic';
 
 const C = { bg: '#faf9f2', fg: '#202220', muted: '#65675d', line: '#deded4', red: '#f44929', purple: '#6256e8' };
 const W = 720, H = 1100;
-const headers = { 'Cache-Control': 'no-store' };
+const baseHeaders = { 'Cache-Control': 'no-store' };
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ bookingId: string }> }) {
   const { bookingId } = await ctx.params;
   const token = req.nextUrl.searchParams.get('k') ?? undefined;
+  // ?download=1 (the email button) saves the PNG instead of opening it in the browser.
+  const headers: Record<string, string> = req.nextUrl.searchParams.get('download') === '1'
+    ? { ...baseHeaders, 'Content-Disposition': `attachment; filename="tikiti-ticket-${bookingId.slice(-8).toUpperCase()}.png"` }
+    : baseHeaders;
   const t = await loadPublicTicket(bookingId, token);
 
   if (!t || t.state === 'inactive') {
-    return new Response('Ticket not found', { status: 404, headers });
+    return new Response('Ticket not found', { status: 404, headers: baseHeaders });
   }
 
   if (t.state === 'used') {
@@ -73,6 +77,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ bookingId: 
             <img src={qr} width={380} height={380} style={{ border: `2px solid ${C.line}`, borderRadius: 20, padding: 12, background: '#fff' }} />
             <div style={{ fontSize: 22, color: C.muted, marginTop: 24, textAlign: 'center' }}>{t.refId}</div>
             <div style={{ fontSize: 20, color: C.muted, marginTop: 6 }}>{`Scan at the door · ${t.amount.replace('GH₵', 'GHS ')}`}</div>
+            <div style={{ fontSize: 18, color: C.red, fontWeight: 700, marginTop: 10 }}>One-time use. Do not share.</div>
           </div>
         </div>
       </div>
