@@ -21,6 +21,10 @@
 //           `reject [REF6] [reason] [note…]` where reason ∈ not_event|past|duplicate|missing|other (default other);
 //           the submitter is messaged with the reason (lib/inbox/notifySubmitter.ts via rejectInboxItem).
 //           Any other admin text/image goes through the normal flyer flow, so admins can still forward flyers.
+//   discovery / Q&A bot (lib/bot, docs/whatsapp-bot.md): AFTER the admin branch and the submitter-edit hook, every TEXT
+//           message and every `menu:*` button reply is offered to planBotReply. A plan → sendBotPlan + session + bot_logs
+//           and the message stops there (no needsImage item). null (event details being submitted, or a bot error)
+//           → the text flow above, unchanged. Images never go to the bot.
 //   statuses / other types → ignored
 // Every message id is recorded in whatsapp_messages/{id} so Meta retries are de-duplicated.
 // The route always answers 200 once the signature is valid; Meta retries on non-200.
@@ -42,6 +46,9 @@ import { inboxRef, isAdminPhone, notifyAdminsOfSubmission } from '@/lib/inbox/no
 import { REJECT_REASON_TEXT } from '@/lib/inbox/notifySubmitter';
 import { INBOX_DEFAULT_ORG_ID, InboxPublishError, publishInboxItem, rejectInboxItem } from '@/lib/inbox/publish';
 import { decidePendingEdit, handleSubmitterMessage, recordWaMessageIds } from '@/lib/inbox/submitterEdits';
+import { planBotReply } from '@/lib/bot/plan';
+import { sendBotPlan } from '@/lib/bot/send';
+import { logBotPlan, persistBotSession } from '@/lib/bot/store';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -199,7 +206,9 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
     return;
   }
 
-  if (message.type !== 'image' && message.type !== 'text') return;
+  const buttonId = message.type === 'interactive' ? (message.interactive?.button_reply?.id || '').trim() : '';
+  const isMenuButton = buttonId.startsWith('menu:');
+  if (message.type !== 'image' && message.type !== 'text' && !isMenuButton) return;
   if (!(await claimMessage(message))) {
     console.log('whatsapp webhook: duplicate message skipped', message.id);
     return;
@@ -207,6 +216,12 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
 
   // Submitter edits / withdraw / undo / flyer replacement (never throws; no triage or new-item extraction on this path)
   if (await handleSubmitterMessage(message, { fetchImage: () => fetchImage(message, testImage) })) return;
+
+  // Discovery / Q&A bot: text + menu buttons only. Handled → stop; null or any error → existing flow below.
+  if (message.type === 'text' || isMenuButton) {
+    if (await handleBotMessage(message, isMenuButton ? buttonId : undefined)) return;
+    if (isMenuButton) return; // nothing else understands button replies
+  }
 
   const senderName = senderNameFor(message, contacts);
   const base = {
@@ -399,6 +414,26 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
     confidence: extracted.confidence,
     missingFields: extracted.missingFields,
   }).catch((e) => console.error('whatsapp webhook: admin alert failed', e));
+}
+
+// ---------- discovery / Q&A bot ----------
+/** True when the bot consumed the message. Never throws: any failure means "fall through to the existing flow". */
+async function handleBotMessage(message: WaMessage, buttonId?: string): Promise<boolean> {
+  try {
+    const db = getAdminFirestore();
+    const hasRecentFlyer = !!(await findRecentPending(message.from, () => true));
+    const plan = await planBotReply(db, { from: message.from, text: message.text?.body, buttonId, hasRecentFlyer });
+    if (!plan) return false;
+    const wamids = await sendBotPlan(message.from, plan);
+    await Promise.all([persistBotSession(db, message.from, plan), logBotPlan(db, plan)]);
+    // "My submissions" about a single item: remember the wamids so a WhatsApp reply to it resolves to that item
+    const itemIds = Array.isArray(plan.log.itemIds) ? (plan.log.itemIds as string[]) : [];
+    if (itemIds.length === 1) await recordWaMessageIds(inboxCollection().doc(itemIds[0]), [message.id, ...wamids]);
+    return true;
+  } catch (e) {
+    console.error('whatsapp webhook: bot failed, falling through', message?.id, e);
+    return false;
+  }
 }
 
 // ---------- admin commands (approve / reject from WhatsApp) ----------
@@ -605,6 +640,10 @@ async function sendReply(to: string, body: string): Promise<string | null> {
   if (!token || !phoneNumberId) {
     console.warn('whatsapp webhook: reply skipped, WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID not configured');
     return null;
+  }
+  if (process.env.WHATSAPP_DRY_RUN === '1' && process.env.NODE_ENV !== 'production') {
+    console.log('[whatsapp dry-run]', JSON.stringify({ to, type: 'text', text: { body } }));
+    return `dryrun.${Date.now()}`;
   }
   try {
     const res = await fetch(`${GRAPH}/${phoneNumberId}/messages`, {

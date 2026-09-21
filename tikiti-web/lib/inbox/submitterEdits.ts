@@ -518,7 +518,7 @@ async function handle(message: SubmitterWaMessage, deps: SubmitterEditDeps): Pro
     const id = (session.candidateIds || [])[n - 1];
     if (!id) { await sendText(from, SUBMITTER_REPLIES.pickInvalid); return true; }
     const doc = await db.collection(INBOX_COLLECTION).doc(id).get();
-    await sessionRef.delete().catch(() => {});
+    await sessionRef.set({ awaiting: FieldValue.delete(), pendingText: FieldValue.delete(), candidateIds: FieldValue.delete() }, { merge: true }).catch(() => {});
     if (!doc.exists) return false;
     picked = doc;
     text = String(session.pendingText || '');
@@ -587,11 +587,11 @@ async function handle(message: SubmitterWaMessage, deps: SubmitterEditDeps): Pro
     await sessionRef.set({
       awaiting: 'pick_item', pendingText: text, candidateIds: candidates.map((d) => d.id),
       expiresAt: Date.now() + SESSION_TTL_MS, createdAt: FieldValue.serverTimestamp(),
-    });
+    }, { merge: true });
     await sendText(from, SUBMITTER_REPLIES.pickPrompt(lines));
     return true;
   }
-  if (session) await sessionRef.delete().catch(() => {});
+  if (session) await sessionRef.set({ awaiting: FieldValue.delete(), pendingText: FieldValue.delete(), candidateIds: FieldValue.delete() }, { merge: true }).catch(() => {});
 
   try {
     if (result.intent === 'withdraw') await withdraw(db, target, from, text, message.id);

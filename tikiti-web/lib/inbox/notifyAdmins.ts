@@ -68,6 +68,10 @@ export function isWindowClosedError(body: any): boolean {
 
 /** Low-level Graph send; shared with lib/inbox/notifySubmitter.ts. */
 export async function postMessage(phoneNumberId: string, token: string, payload: Record<string, any>) {
+  if (process.env.WHATSAPP_DRY_RUN === '1' && process.env.NODE_ENV !== 'production') {
+    console.log('[whatsapp dry-run]', JSON.stringify(payload));
+    return { ok: true, status: 200, body: { messages: [{ id: `dryrun.${Date.now()}.${Math.random().toString(36).slice(2, 8)}` }] } };
+  }
   const res = await fetch(`${GRAPH}/${phoneNumberId}/messages`, {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
