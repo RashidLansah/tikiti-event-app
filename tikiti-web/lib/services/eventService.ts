@@ -53,6 +53,8 @@ export interface Event {
   organizerName?: string;
   organizerEmail?: string;
   organizerPhone?: string;
+  /** Public enquiry contacts (phone = E.164 digits without plus). Rendered on the event page. */
+  contacts?: Array<{ name?: string; phone: string; whatsapp?: boolean }>;
   imageUrl?: string;
   imageBase64?: string;
   promoVideoUrl?: string; // Firebase Storage download URL for organizer promo video
@@ -159,6 +161,9 @@ export const eventService = {
       }
       if (eventData.organizerPhone) {
         eventWithDefaults.organizerPhone = eventData.organizerPhone;
+      }
+      if (Array.isArray(eventData.contacts) && eventData.contacts.length > 0) {
+        eventWithDefaults.contacts = deepCleanUndefined(eventData.contacts) || [];
       }
       if (eventData.imageUrl) {
         eventWithDefaults.imageUrl = eventData.imageUrl;
@@ -365,6 +370,11 @@ export const eventService = {
           }
         }
       });
+
+      // deepCleanUndefined drops empty arrays; an explicit [] must persist so organisers can clear contacts
+      if (Array.isArray(updates.contacts)) {
+        cleanUpdates.contacts = deepCleanUndefined(updates.contacts) || [];
+      }
 
       // If status changes to published, set publishedAt
       if (updates.status === 'published') {

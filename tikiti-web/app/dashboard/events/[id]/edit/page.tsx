@@ -22,6 +22,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { AIDescriptionHelper } from '@/components/AIDescriptionHelper';
+import { ContactsEditor, ContactRow, contactsToRows, validateContactRows } from '@/components/events/ContactsEditor';
 import EventUpdateConfirmationModal from '@/components/modals/EventUpdateConfirmationModal';
 
 interface Change {
@@ -65,6 +66,8 @@ export default function EditEventPage() {
     totalTickets: 100,
   });
   const [isMultiDay, setIsMultiDay] = useState(false);
+  const [contactRows, setContactRows] = useState<ContactRow[]>(contactsToRows([]));
+  const [contactErrors, setContactErrors] = useState<Record<number, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -98,6 +101,7 @@ export default function EditEventPage() {
           totalTickets: event.totalTickets || 100,
         };
         setFormData(data as any);
+        setContactRows(contactsToRows(event.contacts));
         if (event.endDate) {
           setIsMultiDay(true);
         }
@@ -238,6 +242,17 @@ export default function EditEventPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const { errors } = validateContactRows(contactRows);
+    setContactErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast({
+        title: 'Check contact numbers',
+        description: 'One of the enquiry contact numbers is not usable.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Check for important changes
     const importantChanges = detectImportantChanges();
 
@@ -284,6 +299,8 @@ export default function EditEventPage() {
         price: formData.type === 'paid' ? formData.price : undefined,
         totalTickets: formData.totalTickets,
         availableTickets,
+        // [] clears previously saved contacts
+        contacts: validateContactRows(contactRows).contacts,
       };
 
       // Handle image update
@@ -744,6 +761,23 @@ export default function EditEventPage() {
                     </p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact for enquiries (optional)</CardTitle>
+                <CardDescription>Up to 3 numbers people can call or message</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ContactsEditor
+                  rows={contactRows}
+                  onChange={(rows) => {
+                    setContactRows(rows);
+                    setContactErrors({});
+                  }}
+                  errors={contactErrors}
+                />
               </CardContent>
             </Card>
 

@@ -27,6 +27,7 @@ import {
   Link,
 } from 'lucide-react';
 import { AIDescriptionHelper } from '@/components/AIDescriptionHelper';
+import { ContactsEditor, ContactRow, contactsToRows, validateContactRows } from '@/components/events/ContactsEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { eventMediaService } from '@/lib/services/eventMediaService';
 import { storage } from '@/lib/firebase/config';
@@ -127,6 +128,8 @@ export default function CreateEventPage() {
   });
   const [isMultiDay, setIsMultiDay] = useState(false);
   const [hasCohorts, setHasCohorts] = useState(false);
+  const [contactRows, setContactRows] = useState<ContactRow[]>(contactsToRows([]));
+  const [contactErrors, setContactErrors] = useState<Record<number, string>>({});
   const [promoVideoFile, setPromoVideoFile] = useState<File | null>(null);
   const [promoVideoPreview, setPromoVideoPreview] = useState<string | null>(null);
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
@@ -159,7 +162,7 @@ export default function CreateEventPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, formData]);
+  }, [currentStep, formData, contactRows]);
 
   const updateFormData = (field: keyof Event, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -238,6 +241,11 @@ export default function CreateEventPage() {
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1 && canProceed()) {
+      if (STEPS[currentStep].id === 'location') {
+        const { errors } = validateContactRows(contactRows);
+        setContactErrors(errors);
+        if (Object.keys(errors).length > 0) return;
+      }
       setDirection(1);
       setCurrentStep(currentStep + 1);
       setError('');
@@ -258,6 +266,13 @@ export default function CreateEventPage() {
       return;
     }
 
+    const { contacts, errors: contactIssues } = validateContactRows(contactRows);
+    if (Object.keys(contactIssues).length > 0) {
+      setContactErrors(contactIssues);
+      setError('One of the enquiry contact numbers is not usable. Go back to the venue step to fix it.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -272,6 +287,7 @@ export default function CreateEventPage() {
         soldTickets: 0,
         status: 'draft',
         isActive: true,
+        contacts,
       };
 
       // Add cohorts if enabled
@@ -738,6 +754,22 @@ export default function CreateEventPage() {
                 </p>
               </div>
             )}
+
+            <div className="space-y-3 pt-6 border-t border-[#333]/10">
+              <label className="text-lg font-medium text-[#333]">
+                Contact for enquiries
+                <span className="text-sm font-normal text-[#86868b] ml-2">(optional)</span>
+              </label>
+              <ContactsEditor
+                size="lg"
+                rows={contactRows}
+                onChange={(rows) => {
+                  setContactRows(rows);
+                  setContactErrors({});
+                }}
+                errors={contactErrors}
+              />
+            </div>
           </div>
         );
 
