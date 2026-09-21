@@ -79,6 +79,32 @@ Tokens: `unsubscribeToken(contactId)` = `${contactId}.${first 16 hex of HMAC-SHA
 Returns `segmentCounts`: totals, reachable per channel, paid before, new in 7/30 days, by city (top 10), by
 interest, by source. Shown at `/admin/audience`. No contact records, no export.
 
+## Promoting an event
+
+`/admin/audience/promote` (admin only): pick an upcoming event, choose a match mode, read the counts, pick ONE channel,
+send yourself a test, then type the recipient number to confirm. The browser only ever receives counts.
+
+- `lib/audience/match.ts` `matchAudienceForEvent(db, eventId, { mode, cooldownDays })`. Interest = the contact's
+  `interests` contains `categoryToInterest(event.category)` or `signals.categories` has a positive count for the
+  category / tag. City = `contact.city` equals the event city or `signals.cities` has it. Modes: `both` (default;
+  interest only when the event is online or has no city), `interest`, `city`, `either`.
+  Always excluded, and counted separately: no opted-in channel with an identifier, already holds a
+  confirmed / used / paid booking for the event, `lastContactedAt` within `cooldownDays` (default 3).
+- `lib/audience/send.ts` `sendEventPromo`. Limit default 200, hard max 1000, best match first (interest + city, then
+  paid before, then most recently active). Consent is re-read per contact right before sending. Success sets
+  `lastContactedAt`. Every run writes one `audience_sends` doc (counts, admin email, up to 5 scrubbed errors).
+  - WhatsApp: template only. Set `WHATSAPP_TPL_EVENT_PROMO` to an approved **marketing** template whose body takes
+    `{{1}}` event name, `{{2}}` date, `{{3}}` venue, `{{4}}` link (`WHATSAPP_TPL_EVENT_PROMO_LANG`, default `en`).
+    Unset → the send is `blocked` and nothing goes out. Free-form text is never used for promos.
+  - SMS: Arkesel (`ARKESEL_API_KEY`), ≤ 300 chars, ends "Reply STOP to opt out".
+  - Email: Resend (`RESEND_API_KEY`, `RESEND_FROM`) with a per-contact `/unsubscribe?t=` link (`AUDIENCE_SECRET`).
+  - `dryRun: true`, or `WHATSAPP_DRY_RUN=1` outside production, does everything except the network send and the
+    `lastContactedAt` write. `testTo` sends one message to that address and touches no contact.
+- API: `GET /api/admin/audience/match`, `POST /api/admin/audience/send` (real sends need `confirmCount` equal to the
+  number that will be sent, else 409 with the current number), `GET /api/admin/audience/events`,
+  `GET /api/admin/audience/sends`.
+- `npx tsx scripts/promo-sim.ts` prints match counts for the 3 soonest events in every mode plus a dry-run send. It never sends.
+
 ## How `tk_cid` links later activity
 
 `/api/audience/subscribe` sets `tk_cid=<contactId>` (httpOnly, sameSite lax, secure in production, 1 year).

@@ -364,6 +364,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Log of event promo sends (counts only). Server only.
+    match /audience_sends/{id} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

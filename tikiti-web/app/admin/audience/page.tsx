@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase/config';
 import { Card, CardContent } from '@/components/ui/card';
@@ -82,9 +83,12 @@ export default function AudiencePage() {
           <h1 className="text-2xl font-semibold text-[#1d1d1f] flex items-center gap-2"><Megaphone className="w-6 h-6" /> Audience</h1>
           <p className="text-sm text-[#86868b] mt-1">People Tikiti knows about, and who has agreed to hear about events.</p>
         </div>
-        <Button variant="outline" className="rounded-full" onClick={load} disabled={loading}>
-          {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild className="rounded-full"><Link href="/admin/audience/promote">Promote an event</Link></Button>
+          <Button variant="outline" className="rounded-full" onClick={load} disabled={loading}>
+            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}Refresh
+          </Button>
+        </div>
       </div>
 
       <p className="text-sm text-[#333] bg-[#f5f5f7] rounded-2xl px-4 py-3">
