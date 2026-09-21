@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { techEvents } from '@/data/techEvents';
 import Arrow from '@/components/ui/Arrow';
 import PublicHeader from '@/components/layout/PublicHeader';
+import WhatsOnSignup from '@/components/audience/WhatsOnSignup';
 
 const WHEEL_EVENTS = techEvents.slice(0, 5);
 
@@ -555,6 +556,9 @@ export default function PlaygroundPage({ stats }: { stats?: ReactNode }) {
             </a>
           </div>
         </section>
+
+        {/* Weekly what's-on signup */}
+        <WhatsOnSignup />
 
         {/* Footer */}
         <footer className="pg-footer">

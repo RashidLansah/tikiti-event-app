@@ -9,6 +9,7 @@ import ShareButton from '@/components/events/ShareButton';
 import TrackView from '@/components/events/TrackView';
 import Arrow from '@/components/ui/Arrow';
 import PublicHeader from '@/components/layout/PublicHeader';
+import EventsLikeThis from '@/components/audience/EventsLikeThis';
 import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
 import { eventCta, platformFromUrl, platformLabel, type CtaAction } from '@/lib/events/links';
 import { displayPhone, normaliseContacts, telLink, waLink, canWhatsApp } from '@/lib/events/contact';
@@ -117,6 +118,7 @@ const PG = `
 
   /* Mobile ticket bar */
   .mobile-ticket { display: none; }
+  .like-mobile { display: none; }
 
   .mobile-ticket a { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
   .ticket-cta { width: 100%; height: 52px; background: var(--accent); color: #fff; border: 0; border-radius: 40px; font: 700 15px 'DM Sans', sans-serif; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; cursor: pointer; transition: transform 0.2s; }
@@ -136,6 +138,8 @@ const PG = `
     .event-editorial h2 { font-size: clamp(30px, 8vw, 42px); }
     .ticket-panel { position: static; top: auto; box-shadow: 5px 5px 0 #202220; }
     .detail-main { padding-bottom: 120px; }
+    .like-mobile { display: block; }
+    .like-desktop { display: none; }
     .mobile-ticket { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: #202220; color: #fff; padding: 14px 20px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); align-items: center; justify-content: space-between; gap: 12px; z-index: 200; border-top: 1px solid rgba(255,255,255,0.1); }
     .mobile-ticket span { font-size: 20px; font-weight: 700; }
     .mobile-ticket a { background: var(--accent); color: #fff; border-radius: 30px; padding: 12px 22px; font-size: 14px; font-weight: 700; min-height: 44px; }
@@ -355,6 +359,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     </div>
                   )}
                 </div>
+                {external && <div className="like-mobile" style={{ marginBottom: 24 }}><EventsLikeThis eventId={id} /></div>}
                 <div className="host-line" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span className="host-avatar">{(ev.organizerName ?? 'TB').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}</span>
@@ -525,6 +530,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <span style={{ font: "600 12px 'DM Sans', sans-serif", letterSpacing: 0.3, color: '#202220', border: '1px solid #202220', borderRadius: 30, padding: '6px 14px', background: 'rgba(255,255,255,0.6)' }}>{interested}</span>
                   </p>
                 )}
+                {external && <div className="like-desktop"><EventsLikeThis eventId={id} /></div>}
                 <div style={{ borderTop: '1px dashed rgba(32,34,32,0.2)', margin: '25px -28px -6px', padding: '23px 28px 0', fontSize: 12, textAlign: 'center', color: 'rgba(32,34,32,0.45)', lineHeight: 1.6 }}>Your next connection starts here.</div>
               </aside>
             </div>

@@ -3,6 +3,8 @@
 // happen elsewhere (lib/bot/store.ts, lib/bot/send.ts). Returning null = "not for the bot, use the existing flow".
 import type { Firestore } from 'firebase-admin/firestore';
 import { compactRow, eventFacts, formatDay, loadCatalogue, placeLabel, priceLabel, type CatalogueEvent } from './catalogue';
+import { categoryToInterest, cityFromLocation, contactIdFor, optOut, recordSignal, upsertContact } from '@/lib/audience/contacts';
+import { CONSENT_VERSION } from '@/lib/audience/consent';
 import type { BotInput, BotIntent, BotMessage, BotPlan, BotSession, SessionEventRef } from './types';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -14,6 +16,10 @@ const SITE = 'https://www.gettikiti.com';
 const CONTEXT_TTL_MS = 30 * 60 * 1000;
 const NUDGE_GAP_MS = 6 * 60 * 60 * 1000;
 const MAX_CATALOGUE_ROWS = 150;
+const AUDIENCE = 'audience';
+const OPT_IN_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
+const OPT_IN_OFFER_GAP_MS = 7 * 24 * 60 * 60 * 1000;
+const OPT_OUT_QUIET_MS = 90 * 24 * 60 * 60 * 1000;
 export const DAILY_LIMIT = 40;
 
 export const BOT_TEXT = {
@@ -27,6 +33,8 @@ export const BOT_TEXT = {
   nudge: 'I can help you find events or list yours. What would you like to do?',
   limit: `You've reached today's limit for questions — browse everything at ${SITE}/events`,
   notInListing: "That isn't in the listing",
+  optedOut: "Done — you won't get event alerts from Tikiti. You can still ask me about events or send flyers anytime.",
+  optedIn: "You're in ✓ I'll send a short weekly round-up here. Reply STOP anytime to opt out.",
 };
 export const MENU_BUTTONS = [
   { id: 'menu:find', title: 'Find events' },
@@ -35,6 +43,16 @@ export const MENU_BUTTONS = [
 ];
 
 const GREETING_RE = /^(hi|hello|hey|good (morning|afternoon|evening)|menu|help|start)\b/i;
+const OPT_OUT_RE = /^(stop|unsubscribe|opt ?out|cancel alerts|no more)\b/i;
+const OPT_IN_YES_RE = /^(yes|yeah|yep|sure|ok|okay|y|please|subscribe)\b[\s!.]*$/i;
+/** STOP-style message (≤ 4 words). Exported so the webhook can route it to the bot ahead of the submitter-edit hook. */
+export function isOptOutText(raw: unknown): boolean {
+  const body = String(raw ?? '').trim();
+  return !!body && OPT_OUT_RE.test(body) && body.split(/\s+/).length <= 4;
+}
+export function optInOfferText(interest: string | null, city: string): string {
+  return `Want a short weekly round-up of ${interest ? `${interest.toLowerCase()} ` : ''}events${city ? ` in ${city}` : ''}? Reply YES.\n(You can stop anytime by replying STOP.)`;
+}
 const BUTTON_INTENTS: Record<string, BotIntent> = { 'menu:find': 'menu_find', 'menu:list': 'menu_list', 'menu:mine': 'menu_mine' };
 
 export function accraDay(now: Date): string {
@@ -115,6 +133,10 @@ async function readSession(db: Firestore, from: string, now: number): Promise<{ 
       lastNudgeAt: Number(d.lastNudgeAt) || 0,
       botCount: Number(d.botCount) || 0,
       botDay: typeof d.botDay === 'string' ? d.botDay : '',
+      optInOfferedAt: Number(d.optInOfferedAt) || 0,
+      optInPending: d.optInPending && now - Number(d.optInPending.at) < OPT_IN_PENDING_TTL_MS
+        ? { interest: typeof d.optInPending.interest === 'string' ? d.optInPending.interest : null, city: String(d.optInPending.city || ''), at: Number(d.optInPending.at) }
+        : null,
     },
   };
 }
@@ -224,6 +246,28 @@ async function planQuestion(db: Firestore, question: string, pick: number | null
   return { messages: [text(`${answer}\n\n${event.link}`, true)], event };
 }
 
+// ---------- audience opt-in ----------
+const toMs = (v: any): number => (v && typeof v.toMillis === 'function' ? v.toMillis() : v ? new Date(v).getTime() || 0 : 0);
+
+/** The weekly round-up offer for this sender, or null when they must not be asked (opted in, recently opted out / offered). Never throws. */
+async function optInOffer(db: Firestore, from: string, session: Partial<BotSession>, event: CatalogueEvent, nowMs: number, contact?: Record<string, any> | null) {
+  try {
+    if (nowMs - (session.optInOfferedAt || 0) < OPT_IN_OFFER_GAP_MS) return null;
+    const id = contactIdFor({ phone: from });
+    if (!id) return null;
+    const c = contact !== undefined ? contact : (await db.collection(AUDIENCE).doc(id).get()).data() || null;
+    const wa = c?.channels?.whatsapp;
+    if (wa?.optedIn === true) return null;
+    if (wa && wa.optedIn === false && nowMs - toMs(wa.at) < OPT_OUT_QUIET_MS) return null;
+    const interest = categoryToInterest(event.category);
+    const city = event.online ? '' : cityFromLocation(event.city);
+    return { message: text(optInOfferText(interest, city)), patch: { optInPending: { interest, city, at: nowMs }, optInOfferedAt: nowMs } as Partial<BotSession> };
+  } catch (e) {
+    console.error('bot: opt-in offer skipped', e);
+    return null;
+  }
+}
+
 // ---------- entry point ----------
 export async function planBotReply(db: Firestore, input: BotInput): Promise<BotPlan | null> {
   const started = Date.now();
@@ -232,6 +276,18 @@ export async function planBotReply(db: Firestore, input: BotInput): Promise<BotP
   const body = (input.text || '').trim();
   const buttonIntent = input.buttonId ? BUTTON_INTENTS[input.buttonId.trim()] : undefined;
   if (!buttonIntent && !body) return null;
+
+  // STOP — before everything else, for every sender. Opts out an existing contact; never creates one.
+  if (!input.buttonId && isOptOutText(body)) {
+    const id = contactIdFor({ phone: input.from });
+    const found = id ? await optOut(db, id, 'all', 'whatsapp_bot').catch((e) => { console.error('bot: optOut failed', e); return false; }) : false;
+    return {
+      intent: 'opt_out',
+      messages: [text(BOT_TEXT.optedOut)],
+      session: { optInPending: null, updatedAt: nowMs },
+      log: { from: input.from, text: body.slice(0, 500), intent: 'opt_out', pickedIds: [], eventId: null, contactFound: found, ms: Date.now() - started },
+    };
+  }
 
   const { pickActive, session } = await readSession(db, input.from, nowMs);
   if (pickActive) return null; // submitter-edit "pick a number" prompt owns this conversation
@@ -245,6 +301,16 @@ export async function planBotReply(db: Firestore, input: BotInput): Promise<BotP
     session: { ...patch, botDay: today, botCount: count + (messages.length ? 1 : 0), updatedAt: nowMs },
     log: { ...base, intent, pickedIds: [], eventId: null, ...extra, ms: Date.now() - started },
   });
+
+  // YES to a live weekly round-up offer. Without a valid pending offer a "yes" subscribes nobody and is classified as usual.
+  if (!buttonIntent && session.optInPending && OPT_IN_YES_RE.test(body)) {
+    const { interest, city } = session.optInPending;
+    const saved = await upsertContact(db, {
+      phone: input.from, name: input.profileName || undefined, city: city || undefined, interests: interest ? [interest] : [],
+      source: 'whatsapp_bot', consent: { channels: ['whatsapp'], wordingVersion: CONSENT_VERSION },
+    });
+    if (saved) return finish('opt_in', [text(BOT_TEXT.optedIn)], { optInPending: null }, { contactCreated: saved.created });
+  }
 
   // Cheap rules
   let intent: BotIntent | null = buttonIntent || null;
@@ -285,13 +351,25 @@ export async function planBotReply(db: Firestore, input: BotInput): Promise<BotP
       const patch: Partial<BotSession> = r.picked.length
         ? { lastResults: r.picked.map(toRef), focusEvent: toRef(r.picked[0]), lastQuery: body.slice(0, 200), expiresAt: nowMs + CONTEXT_TTL_MS }
         : { lastQuery: body.slice(0, 200) };
-      return finish(intent, r.messages, patch, { pickedIds: r.picked.map((e) => e.id), catalogueSize: r.catalogueSize });
+      let messages = r.messages;
+      if (r.picked.length) {
+        const top = r.picked[0];
+        const id = contactIdFor({ phone: input.from });
+        const contact = id ? (await db.collection(AUDIENCE).doc(id).get().catch(() => null))?.data() || null : null;
+        // Signal only for people who already have a contact doc; bot usage alone never creates one.
+        if (id && contact) void recordSignal(db, id, { type: 'bot_query', category: top.category, city: top.online ? '' : cityFromLocation(top.city) });
+        const offer = await optInOffer(db, input.from, session, top, nowMs, contact);
+        if (offer) { messages = [...messages, offer.message]; Object.assign(patch, offer.patch); }
+      }
+      return finish(intent, messages, patch, { pickedIds: r.picked.map((e) => e.id), catalogueSize: r.catalogueSize });
     }
     case 'event_question': {
       const question = pick != null ? 'Tell me about it.' : body;
       const r = await planQuestion(db, question, pick, session, now);
       const patch: Partial<BotSession> = r.event ? { focusEvent: toRef(r.event), expiresAt: nowMs + CONTEXT_TTL_MS } : {};
-      return finish(intent, r.messages, patch, { eventId: r.event?.id || null });
+      const offer = r.event ? await optInOffer(db, input.from, session, r.event, nowMs) : null;
+      if (offer) Object.assign(patch, offer.patch);
+      return finish(intent, offer ? [...r.messages, offer.message] : r.messages, patch, { eventId: r.event?.id || null });
     }
     default: {
       if (/^(thanks?( you| a lot| so much)?|thank u|thx|ty|cheers|medaase|ok(ay)?|great|nice|cool|alright)[\s!.👍🙏]*$/i.test((input.text || '').trim())) {

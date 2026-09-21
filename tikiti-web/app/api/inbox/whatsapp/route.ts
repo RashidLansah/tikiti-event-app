@@ -46,7 +46,7 @@ import { inboxRef, isAdminPhone, notifyAdminsOfSubmission } from '@/lib/inbox/no
 import { REJECT_REASON_TEXT } from '@/lib/inbox/notifySubmitter';
 import { INBOX_DEFAULT_ORG_ID, InboxPublishError, publishInboxItem, rejectInboxItem } from '@/lib/inbox/publish';
 import { decidePendingEdit, handleSubmitterMessage, recordWaMessageIds } from '@/lib/inbox/submitterEdits';
-import { planBotReply } from '@/lib/bot/plan';
+import { isOptOutText, planBotReply } from '@/lib/bot/plan';
 import { sendBotPlan } from '@/lib/bot/send';
 import { logBotPlan, persistBotSession } from '@/lib/bot/store';
 
@@ -215,11 +215,13 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
   }
 
   // Submitter edits / withdraw / undo / flyer replacement (never throws; no triage or new-item extraction on this path)
-  if (await handleSubmitterMessage(message, { fetchImage: () => fetchImage(message, testImage) })) return;
+  // STOP (audience opt-out) goes straight to the bot: "cancel alerts" must never be read as an edit / withdraw request
+  const isStop = message.type === 'text' && isOptOutText(message.text?.body);
+  if (!isStop && await handleSubmitterMessage(message, { fetchImage: () => fetchImage(message, testImage) })) return;
 
   // Discovery / Q&A bot: text + menu buttons only. Handled → stop; null or any error → existing flow below.
   if (message.type === 'text' || isMenuButton) {
-    if (await handleBotMessage(message, isMenuButton ? buttonId : undefined)) return;
+    if (await handleBotMessage(message, isMenuButton ? buttonId : undefined, senderNameFor(message, contacts))) return;
     if (isMenuButton) return; // nothing else understands button replies
   }
 
@@ -418,11 +420,11 @@ async function handleMessage(message: WaMessage, contacts: WaContact[], testImag
 
 // ---------- discovery / Q&A bot ----------
 /** True when the bot consumed the message. Never throws: any failure means "fall through to the existing flow". */
-async function handleBotMessage(message: WaMessage, buttonId?: string): Promise<boolean> {
+async function handleBotMessage(message: WaMessage, buttonId?: string, profileName?: string | null): Promise<boolean> {
   try {
     const db = getAdminFirestore();
     const hasRecentFlyer = !!(await findRecentPending(message.from, () => true));
-    const plan = await planBotReply(db, { from: message.from, text: message.text?.body, buttonId, hasRecentFlyer });
+    const plan = await planBotReply(db, { from: message.from, text: message.text?.body, buttonId, hasRecentFlyer, profileName });
     if (!plan) return false;
     const wamids = await sendBotPlan(message.from, plan);
     await Promise.all([persistBotSession(db, message.from, plan), logBotPlan(db, plan)]);

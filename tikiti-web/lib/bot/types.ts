@@ -2,7 +2,8 @@
 
 export type BotIntent =
   | 'greeting' | 'menu_find' | 'menu_list' | 'menu_mine'
-  | 'discover' | 'event_question' | 'submit_text' | 'other';
+  | 'discover' | 'event_question' | 'submit_text' | 'other'
+  | 'opt_in' | 'opt_out';
 
 export type BotMessage =
   | { kind: 'text'; body: string; previewUrl?: boolean }
@@ -24,6 +25,10 @@ export interface BotSession {
   updatedAt: number;
   /** Epoch ms after which lastResults / focusEvent / lastQuery are ignored */
   expiresAt: number;
+  /** Weekly round-up offer awaiting a YES (valid 24h). Separate from `awaiting`, which the submitter-edit flow owns. */
+  optInPending: { interest: string | null; city: string; at: number } | null;
+  /** Epoch ms of the last opt-in offer (at most one per 7 days) */
+  optInOfferedAt: number;
 }
 
 export interface BotPlan {
@@ -38,5 +43,7 @@ export interface BotInput {
   text?: string;
   buttonId?: string;
   hasRecentFlyer: boolean;
+  /** Sender's WhatsApp profile name, when the webhook has it */
+  profileName?: string | null;
   now?: Date;
 }

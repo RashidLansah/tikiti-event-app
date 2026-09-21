@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase/config';
 import ShareButton from '@/components/events/ShareButton';
 import Arrow from '@/components/ui/Arrow';
 import PublicHeader from '@/components/layout/PublicHeader';
+import WhatsOnSignup from '@/components/audience/WhatsOnSignup';
 import { trackEvent, isExternalEvent, interestedLabel } from '@/lib/events/track';
 import { cardCtaLabel } from '@/lib/events/links';
 
@@ -371,6 +372,8 @@ export default function EventsPage() {
           </div>
         )}
       </main>
+
+      <WhatsOnSignup />
 
       <footer style={{ background: '#faf9f2', padding: '40px 5%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(0,0,0,0.08)', flexWrap: 'wrap', gap: 12 }}>
         <Link href="/" style={{ fontSize: 26, fontWeight: 700, letterSpacing: -1.5, color: '#202220' }}>tikiti<span style={{ color: '#f44929' }}>{'✳︎'}</span></Link>

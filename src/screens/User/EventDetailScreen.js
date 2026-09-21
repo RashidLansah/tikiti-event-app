@@ -119,6 +119,7 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [formValues, setFormValues] = useState({});
   const [selectedCohort, setSelectedCohort] = useState(null);
   const [submittingRegistration, setSubmittingRegistration] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [detailTab, setDetailTab] = useState('About');
 
   // Tabs for the registered/post-RSVP view
@@ -571,6 +572,11 @@ const EventDetailScreen = ({ navigation, route }) => {
     return values;
   };
 
+  // Marketing opt-in is never pre-ticked: reset every time the sheet opens
+  useEffect(() => {
+    if (showRegistrationModal) setMarketingOptIn(false);
+  }, [showRegistrationModal]);
+
   // Re-populate form with user data once user loads (handles async auth timing)
   useEffect(() => {
     if (showRegistrationModal && user) {
@@ -704,8 +710,21 @@ const EventDetailScreen = ({ navigation, route }) => {
         }
       });
 
+      // Explicit marketing consent only (never defaulted). Channels follow the identifiers the attendee gave.
+      const marketingConsent = marketingOptIn
+        ? {
+            channels: [
+              ...(String(bookingData.phoneNumber || '').trim() ? ['whatsapp', 'sms'] : []),
+              ...(String(bookingData.userEmail || '').trim() ? ['email'] : []),
+            ],
+            wordingVersion: 'v1-2026-09',
+          }
+        : null;
+      if (marketingConsent && marketingConsent.channels.length) bookingData.marketingConsent = marketingConsent;
+
       if (isPaidEvent) {
         const paid = await payForTickets({
+          ...(bookingData.marketingConsent ? { marketingConsent: bookingData.marketingConsent } : {}),
           userEmail: bookingData.userEmail,
           userName: bookingData.userName,
           firstName, lastName,
@@ -1860,6 +1879,27 @@ const EventDetailScreen = ({ navigation, route }) => {
                 <View style={{ height: 20 }} />
               </ScrollView>
 
+              {/* Marketing opt-in — unticked by default */}
+              <TouchableOpacity
+                style={registeredStyles.optInRow}
+                onPress={() => setMarketingOptIn((v) => !v)}
+                activeOpacity={0.7}
+                disabled={submittingRegistration}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: marketingOptIn }}
+                accessibilityLabel="Tell me about similar events"
+              >
+                <View style={[registeredStyles.optInBox, marketingOptIn && registeredStyles.optInBoxChecked]}>
+                  {marketingOptIn ? <Feather name="check" size={14} color="#fff" /> : null}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={registeredStyles.optInLabel}>Tell me about similar events</Text>
+                  <Text style={registeredStyles.optInSmall}>
+                    Tikiti may send me events that match my interests. I can stop anytime by replying STOP or using the unsubscribe link.
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
               {/* Submit Button */}
               <TouchableOpacity
                 style={[registeredStyles.regSubmitButton, submittingRegistration && { opacity: 0.6 }]}
@@ -3002,6 +3042,14 @@ const registeredStyles = StyleSheet.create({
   totalRowStrong: { borderTopWidth: 1, borderTopColor: '#deded4', marginTop: 6, paddingTop: 10 },
   totalLabel: { fontSize: 13, color: '#65675d' },
   totalStrong: { fontSize: 16, fontWeight: '800', color: '#202220' },
+  optInRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#deded4' },
+  optInBox: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: '#deded4', backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center', marginTop: 1,
+  },
+  optInBoxChecked: { backgroundColor: '#6256e8', borderColor: '#6256e8' },
+  optInLabel: { fontFamily: Typography.fontFamily.semibold, fontSize: 14, fontWeight: '600', color: '#202220' },
+  optInSmall: { fontSize: 12, lineHeight: 17, color: '#65675d', marginTop: 3 },
   regSubmitButton: {
     backgroundColor: '#202220',
     borderRadius: 14,

@@ -31,6 +31,17 @@ export async function POST(req: NextRequest) {
     const payerEmail = email || auth.email;
     if (!payerEmail) return NextResponse.json({ error: 'An email is required for payment' }, { status: 400 });
 
+    // Marketing consent is only ever what the attendee explicitly ticked; absent or invalid → not stored.
+    const ALLOWED_CHANNELS = ['whatsapp', 'sms', 'email'];
+    const rawChannels = attendee?.marketingConsent?.channels;
+    const consentChannels: string[] = Array.isArray(rawChannels) && rawChannels.length <= 3
+      ? Array.from(new Set(rawChannels.filter((c: unknown): c is string => typeof c === 'string' && ALLOWED_CHANNELS.includes(c))))
+      : [];
+    const wording = attendee?.marketingConsent?.wordingVersion;
+    const marketingConsent = consentChannels.length
+      ? { channels: consentChannels, ...(typeof wording === 'string' && wording ? { wordingVersion: wording.slice(0, 40) } : {}) }
+      : null;
+
     const bookingRef = db.collection('bookings').doc();
     const reference = `TKT-${bookingRef.id}`;
     await bookingRef.set({
@@ -59,6 +70,7 @@ export async function POST(req: NextRequest) {
       gender: attendee.gender || '',
       cohortId: attendee.cohortId || null,
       cohortName: attendee.cohortName || null,
+      ...(marketingConsent ? { marketingConsent } : {}),
       eventName: event.name,
       eventDate: event.date,
       eventTime: event.startTime || event.time || '',

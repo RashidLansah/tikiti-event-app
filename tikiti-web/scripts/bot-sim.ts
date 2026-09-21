@@ -31,6 +31,48 @@ const STEPS: Step[] = [
   { text: "please list my event, it's on 5th October at Alisa Hotel" },
 ];
 
+// Second run: audience opt-in / STOP. The sender must be phone-like so contactIdFor() yields a contact id.
+const OPTIN_FROM = '233200000003';
+const OPTIN_STEPS: Array<{ text: string; expect: string }> = [
+  { text: 'any free events this weekend?', expect: 'results + the opt-in offer' },
+  { text: 'yes', expect: 'opt-in confirmation' },
+  { text: 'any tech events?', expect: 'results and NO second offer' },
+  { text: 'STOP', expect: 'opt-out reply' },
+  { text: 'yes', expect: 'must NOT subscribe' },
+];
+
+async function runOptIn(db: FirebaseFirestore.Firestore) {
+  const { planBotReply } = await import('../lib/bot/plan');
+  const { persistBotSession, logBotPlan } = await import('../lib/bot/store');
+  const sessionRef = db.collection('wa_sessions').doc(OPTIN_FROM);
+  const contactRef = db.collection('audience').doc(OPTIN_FROM);
+  await Promise.all([sessionRef.delete().catch(() => {}), contactRef.delete().catch(() => {})]);
+  console.log(`\n\n════ Opt-in run (sim-bot-optin, sender ${OPTIN_FROM}) ════`);
+  try {
+    for (const [i, step] of OPTIN_STEPS.entries()) {
+      console.log(`\n── ${i + 1}. user: ${JSON.stringify(step.text)}   [expect: ${step.expect}]`);
+      try {
+        const plan = await planBotReply(db, { from: OPTIN_FROM, hasRecentFlyer: false, text: step.text, profileName: 'Sim Optin' });
+        if (!plan) console.log('   null → falls through to the existing flyer/text flow');
+        else {
+          console.log(`   intent: ${plan.intent}`);
+          if (!plan.messages.length) console.log('   (no messages — consumed silently)');
+          for (const m of plan.messages) console.log(`   • ${m.kind}\n${m.body.split('\n').map((l) => `       ${l}`).join('\n')}`);
+          await persistBotSession(db, OPTIN_FROM, plan);
+          await logBotPlan(db, plan, { sim: true });
+        }
+      } catch (e) {
+        console.log(`   ERROR: ${(e as Error)?.message || e}`);
+      }
+      const c = (await contactRef.get()).data();
+      console.log(`   → contact: ${c ? `channels.whatsapp.optedIn = ${c.channels?.whatsapp?.optedIn}, interests = ${JSON.stringify(c.interests || [])}, botQueries = ${c.signals?.botQueries ?? 0}` : '(no contact doc)'}`);
+    }
+  } finally {
+    await Promise.all([sessionRef.delete().catch(() => {}), contactRef.delete().catch(() => {})]);
+    console.log(`\nCleanup: deleted audience/${OPTIN_FROM} and wa_sessions/${OPTIN_FROM}.`);
+  }
+}
+
 async function main() {
   if (!getApps().length) initializeApp({ credential: applicationDefault(), projectId: PROJECT_ID });
   const db = getFirestore();
@@ -58,6 +100,7 @@ async function main() {
         console.log(`   ERROR (the webhook would fall through): ${(e as Error)?.message || e}`);
       }
     }
+    await runOptIn(db);
   } finally {
     await sessionRef.delete().catch(() => {});
     const logs = await db.collection('bot_logs').where('sim', '==', true).get();
