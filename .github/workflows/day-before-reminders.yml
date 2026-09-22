@@ -1,0 +1,18 @@
+name: Day-before ticket reminders
+
+on:
+  schedule:
+    - cron: '0 9 * * *' # 09:00 UTC = 09:00 Accra
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Text tomorrow's ticket holders
+        run: |
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.gettikiti.com/api/reminders/day-before)
+          echo "HTTP $code"; cat /tmp/out.json; echo
+          [ "$code" = "200" ]

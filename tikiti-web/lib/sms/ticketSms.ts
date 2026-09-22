@@ -1,9 +1,11 @@
 import { sendSms } from '@/lib/sms/send';
+import { friendlyDate } from '@/lib/sms/format';
 
 export function buildTicketSmsMessage(bookingId: string, booking: any, ticketUrl?: string): string {
   const refId = bookingId.slice(-8).toUpperCase();
   const name = booking.eventName || 'your event';
-  const date = booking.eventDate ? ` on ${booking.eventDate}` : '';
+  const pretty = friendlyDate(booking.eventDate, booking.eventTime);
+  const date = pretty ? ` on ${pretty}` : '';
   if (ticketUrl) {
     // Keep under ~160 chars: trim the event name if the link makes it long.
     const build = (n: string) => `Tikiti: ticket for ${n}${date} confirmed. Ref ${refId}. One-time use, don't share: ${ticketUrl}`;
