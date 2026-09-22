@@ -1,4 +1,4 @@
-import { sendSms } from '@/lib/sms/arkesel';
+import { sendSms } from '@/lib/sms/send';
 
 export function buildTicketSmsMessage(bookingId: string, booking: any, ticketUrl?: string): string {
   const refId = bookingId.slice(-8).toUpperCase();

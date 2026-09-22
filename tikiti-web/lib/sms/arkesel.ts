@@ -8,10 +8,10 @@ export function normaliseGhanaPhone(raw: string): string | null {
   return null;
 }
 
-export async function sendSms(to: string, message: string): Promise<'sent' | 'skipped' | 'failed'> {
+/** Single Arkesel attempt, no retries — use `sendSms` from lib/sms/send.ts everywhere else. `phone` must already be 233XXXXXXXXX. */
+export async function sendViaArkesel(phone: string, message: string): Promise<'sent' | 'skipped' | 'failed'> {
   const apiKey = process.env.ARKESEL_API_KEY;
   const sender = process.env.ARKESEL_SENDER_ID || 'Tikiti';
-  const phone = normaliseGhanaPhone(to);
   if (!apiKey || !phone || !message) return 'skipped';
   try {
     const res = await fetch(ARKESEL_V2_SEND, {

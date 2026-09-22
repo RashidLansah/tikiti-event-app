@@ -3,7 +3,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { normaliseGhPhone } from '@/lib/events/contact';
 import { postMessage } from '@/lib/inbox/notifyAdmins';
-import { sendSms } from '@/lib/sms/arkesel';
+import { sendSms } from '@/lib/sms/send';
 import { escapeHtml, sendEmail } from '@/lib/email/send';
 import { normaliseEmail, unsubscribeToken } from './contacts';
 import { matchAudienceForEvent, type MatchEvent, type MatchMode } from './match';

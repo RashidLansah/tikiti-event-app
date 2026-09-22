@@ -140,3 +140,7 @@ npx tsx scripts/backfill-audience.ts --commit                   # contacts (no c
 
 The backfill dry run counts a person twice if one booking has their phone and another only their email; the
 commit path merges them when a booking carries both.
+
+## SMS delivery: retries and backup provider
+
+`lib/sms/send.ts` is the only SMS entry point. Arkesel is tried up to 3 times (0.5s, then 1.5s back-off). If all three fail, one attempt goes through the backup provider chosen by `SMS_BACKUP_PROVIDER` (`mnotify` needs `MNOTIFY_API_KEY`; `hubtel` needs `HUBTEL_CLIENT_ID` + `HUBTEL_CLIENT_SECRET`; optional `SMS_BACKUP_SENDER_ID`). With no backup configured the failure is reported as-is. A `skipped` result (no API key, bad number) is never retried. `scripts/sms-retry-sim.ts` proves the rules without sending.
