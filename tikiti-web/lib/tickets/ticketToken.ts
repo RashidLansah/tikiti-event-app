@@ -23,5 +23,8 @@ export function ticketUrl(baseUrl: string, bookingId: string, token: string): st
 
 /** Public ticket base URL. Prod: NEXT_PUBLIC_APP_URL; falls back to gettikiti.com. */
 export function ticketBaseUrl() {
-  return (process.env.TICKET_LINK_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://gettikiti.com').replace(/\/$/, '');
+  const raw = (process.env.TICKET_LINK_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://www.gettikiti.com').replace(/\/$/, '');
+  // Never put a localhost link in a real SMS/email, whatever the env says.
+  if (process.env.NODE_ENV === 'production' && /localhost|127\.0\.0\.1/.test(raw)) return 'https://www.gettikiti.com';
+  return raw;
 }
