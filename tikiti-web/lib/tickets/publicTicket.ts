@@ -1,5 +1,6 @@
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { ticketQrPayload } from '@/lib/email/ticketEmail';
+import { friendlyDate } from '@/lib/sms/format';
 
 export type PublicTicketState = 'active' | 'used' | 'inactive';
 
@@ -47,7 +48,7 @@ export async function loadPublicTicket(bookingId: string, token: string | undefi
     refId: bookingId.slice(-8).toUpperCase(),
     state,
     eventName: b.eventName || 'Event',
-    eventDate: b.eventDate || 'TBA',
+    eventDate: friendlyDate(b.eventDate) || b.eventDate || 'TBA',
     eventTime: b.eventTime || '',
     eventLocation: b.eventLocation || 'Venue to be announced',
     category: b.eventCategory || b.category || (isPaid ? 'Paid ticket' : 'Free ticket'),
