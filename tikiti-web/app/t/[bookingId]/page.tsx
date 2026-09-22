@@ -91,7 +91,7 @@ export default async function PublicTicketPage({
         </div>
         <div style={{ padding: 22, textAlign: 'center' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrSrc} width={220} height={220} alt="Your ticket QR code" style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: 8, background: '#fff', maxWidth: '100%', height: 'auto' }} />
+          <img src={qrSrc} width={220} height={220} alt="Your ticket QR code" style={{ display: 'block', margin: '0 auto', border: `1px solid ${C.line}`, borderRadius: 12, padding: 8, background: '#fff', maxWidth: '100%', height: 'auto' }} />
           <div style={{ fontSize: 12, color: C.muted, marginTop: 12 }}>{t.refId}<br />Scan at the door · {t.amount}</div>
         </div>
       </div>
