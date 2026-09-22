@@ -1,3 +1,4 @@
+import { friendlyDate } from '@/lib/sms/format';
 import QRCode from 'qrcode';
 
 const RESEND_URL = 'https://api.resend.com/emails';
@@ -50,7 +51,7 @@ export async function sendTicketEmail(bookingId: string, booking: any, ticketUrl
           <div style="font-size:13px;margin-top:8px">${escapeHtml(booking.eventLocation || 'Venue to be announced')}</div>
         </div>
         <table style="width:100%;border-collapse:collapse;border-bottom:1px dashed #b6b6ad"><tr>
-          <td style="padding:18px 20px;font-size:11px;color:#65675d">DATE<br><span style="font-size:14px;font-weight:700;color:#202220">${escapeHtml(booking.eventDate || 'TBA')}${booking.eventTime ? ' · ' + escapeHtml(booking.eventTime) : ''}</span></td>
+          <td style="padding:18px 20px;font-size:11px;color:#65675d">DATE<br><span style="font-size:14px;font-weight:700;color:#202220">${escapeHtml(friendlyDate(booking.eventDate) || booking.eventDate || 'TBA')}${booking.eventTime ? ' · ' + escapeHtml(booking.eventTime) : ''}</span></td>
           <td style="padding:18px 20px;font-size:11px;color:#65675d">ATTENDEE<br><span style="font-size:14px;font-weight:700;color:#202220">${escapeHtml(booking.userName || to)}</span></td>
           <td style="padding:18px 20px;font-size:11px;color:#65675d;text-align:right">ADMISSION<br><span style="font-size:14px;font-weight:700;color:#202220">${qty} ${qty === 1 ? 'person' : 'people'}</span></td>
         </tr></table>
