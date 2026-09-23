@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryProvider } from "@/components/providers/ReactQueryProvider";
+import TawkChat from "@/components/TawkChat";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -94,6 +95,7 @@ export default function RootLayout({
             {children}
           </AuthProvider>
         </ReactQueryProvider>
+        <TawkChat />
       </body>
     </html>
   );
